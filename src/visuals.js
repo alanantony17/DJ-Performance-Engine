@@ -96,32 +96,24 @@ export class VisualPipeline {
     // Aspect ratio multiplier for 16:9 canvas (1080 / 1920 = 0.5625)
     const getAspectX = () => (window.innerHeight && window.innerWidth ? window.innerHeight / window.innerWidth : 9 / 16);
 
-    // STYLE 0: "Pure Spin & Breathe"
-    // Exactly ONE copy of the asset, spinning cleanly on its central axis,
-    // with 1:1 true aspect ratio on 16:9 screen.
-    // 100% of artwork details preserved with NO circular crop!
-    if (style.mode === 'pure') {
-      const getPureScale = () => {
-        const breathe = Math.sin(this.audioValues.beatPhase * Math.PI * 2) * 0.04;
-        const kickPunch = this.audioValues.kickLevel * 0.16 * (this.midiValues.audioSensitivity * 0.6);
-        return 0.90 * (1.0 + breathe + kickPunch);
-      };
-
+    // STYLE 0: "Raw Asset (As-Is)"
+    // 100% untouched raw artwork, zero transformations, zero crop, zero zoom!
+    if (style.mode === 'raw') {
       src(s0)
-        .rotate(getRotation)
-        .scale(getPureScale, getAspectX, 1)
-        .mask(
-          shape(4, 0.505, 0.001)
-            .rotate(getRotation)
-            .scale(getPureScale, getAspectX, 1)
-        )
-        .hue(getHueRotation)
-        .color(getColorR, getColorG, getColorB)
-        .blend(o0, getFeedbackDecay)
         .brightness(getBrightness)
         .out(o0);
+      console.log('[Visuals] Mounted Style 0: Raw Asset (As-Is, no transformations).');
+      return;
+    }
 
-      console.log('[Visuals] Mounted Style: Pure Spin & Breathe (full uncropped asset on axis).');
+    // STYLE 1: "Pure Axis Spin"
+    // Full artwork turning cleanly on its central axis to BPM, zero crop, zero masks, zero zoom!
+    if (style.mode === 'pure') {
+      src(s0)
+        .rotate(getRotation)
+        .brightness(getBrightness)
+        .out(o0);
+      console.log('[Visuals] Mounted Style 1: Pure Axis Spin (spinning on axis, uncropped).');
       return;
     }
 

@@ -14,12 +14,12 @@ export const CONFIG = {
   // Asset Pipeline
   assets: {
     list: [
-      { id: 0, name: 'Beauty', path: 'assets/beauty.png' },
-      { id: 1, name: 'Diya', path: 'assets/diya.png' },
-      { id: 2, name: 'Jalebi', path: 'assets/Jalebi.png' },
-      { id: 3, name: 'Taj Mahal', path: 'assets/taj%20mahal.png' },
-      { id: 4, name: 'Truck Art', path: 'assets/truck%20art.png' },
-      { id: 5, name: 'Wheel', path: 'assets/wheel.png' },
+      { id: 0, name: 'Wheel', path: 'assets/wheel.png' },
+      { id: 1, name: 'Beauty', path: 'assets/beauty.png' },
+      { id: 2, name: 'Diya', path: 'assets/diya.png' },
+      { id: 3, name: 'Jalebi', path: 'assets/Jalebi.png' },
+      { id: 4, name: 'Taj Mahal', path: 'assets/taj%20mahal.png' },
+      { id: 5, name: 'Truck Art', path: 'assets/truck%20art.png' },
     ],
     previewDurationMs: 2500, // On-screen preview display duration when asset is switched
   },
@@ -102,10 +102,11 @@ export const CONFIG = {
 
   // Visual Styles Matrix (Toggled via Pad 5 / Key 5 / V)
   visualStyles: [
-    { id: 0, name: 'Pure Spin & Breathe', desc: 'Original artwork turning & pulsing smoothly to BPM', kaleid: 1, mode: 'pure' },
-    { id: 1, name: 'Hypnotic Vortex', desc: '8-petal sacred mandala symmetry with liquid ripples', kaleid: 8, mode: 'vortex' },
-    { id: 2, name: 'Flower of Life', desc: '6-petal hexagonal sacred geometry', kaleid: 6, mode: 'flower' },
-    { id: 3, name: 'Psychedelic Warp', desc: 'Deep liquid feedback warping & infinite tunnel', kaleid: 1, mode: 'warp' },
+    { id: 0, name: 'Raw Asset (As-Is)', desc: '100% untouched raw artwork, zero transformations', mode: 'raw' },
+    { id: 1, name: 'Pure Axis Spin', desc: 'Full artwork turning cleanly on its central axis to BPM', mode: 'pure' },
+    { id: 2, name: 'Hypnotic Vortex', desc: '8-petal sacred mandala symmetry with liquid ripples', mode: 'vortex' },
+    { id: 3, name: 'Flower of Life', desc: '6-petal hexagonal sacred geometry', mode: 'flower' },
+    { id: 4, name: 'Psychedelic Warp', desc: 'Deep liquid feedback warping & infinite tunnel', mode: 'warp' },
   ],
 
   // Web Audio Transient Detection

@@ -93,7 +93,7 @@ export function showStylePreview(style) {
     stylePreviewTag.textContent = `Style [${style.id + 1}/${CONFIG.visualStyles.length}]`;
   }
   if (stylePreviewMode) {
-    stylePreviewMode.textContent = `KALEID: ${style.kaleid}`;
+    stylePreviewMode.textContent = style.kaleid ? `KALEID: ${style.kaleid}` : style.mode.toUpperCase();
   }
   if (stylePreviewName) {
     stylePreviewName.textContent = style.name;
