@@ -25,11 +25,14 @@ export class AudioEngine {
       sourceName: this.currentSourceName,
       sourceType: this.currentSourceType,
       kickLevel: 0.0,      // Continuous smoothed kick envelope (0.0 - 1.0)
-      kickTrigger: false,   // Discrete beat strike impulse
+      kickPunch: 0.0,      // Dynamic expanded kick punch (non-linear power curve + drop boost)
+      kickTrigger: false,   // Discrete beat strike impulse (edge-triggered onset)
       highLevel: 0.0,      // Continuous high frequency envelope
       highTrigger: false,
       bpm: 128.0,          // Dynamic detected BPM
       beatPhase: 0.0,      // 0.0 to 1.0 phase within beat
+      dropIntensity: 0.0,  // 0.0 (quiet/breakdown) to 1.0 (peak drop slam)
+      energyLevel: 0.0,    // Full-spectrum average energy
       fft: new Float32Array(CONFIG.audio.fftSize / 2), // Normalized [0, 1] FFT bins
       rawFft: new Uint8Array(CONFIG.audio.fftSize / 2), // Raw 0-255 bytes
     };
@@ -37,8 +40,12 @@ export class AudioEngine {
     // Rolling thresholds for transient detection & BPM estimation
     this.kickHistory = [];
     this.highHistory = [];
-    this.historyLength = 30; // ~0.5s window at 60fps
+    this.bassEnergyHistory = [];
+    this.overallEnergyHistory = [];
+    this.historyLength = 30; // ~0.5s window at 60fps for transient thresholding
+    this.longHistoryLength = CONFIG.audio.dynamics?.longWindowFrames || 180; // ~3.0s window for drop baseline
     this.lastKickTime = 0;
+    this.prevKickEnergy = 0.0;
     this.beatIntervals = [];
     this.lastUpdateTime = performance.now();
   }
@@ -356,7 +363,9 @@ export class AudioEngine {
   update(sensitivityMultiplier = 1.0) {
     if (!this.analyser || !this.isInitialized) {
       this.state.kickLevel *= 0.9;
+      this.state.kickPunch *= 0.85;
       this.state.highLevel *= 0.9;
+      this.state.dropIntensity *= 0.95;
       this.state.kickTrigger = false;
       this.state.highTrigger = false;
       return this.state;
@@ -366,25 +375,53 @@ export class AudioEngine {
 
     // Normalize FFT array to 0.0 - 1.0
     const binCount = this.state.rawFft.length;
+    let totalSpectrumEnergy = 0;
     for (let i = 0; i < binCount; i++) {
-      this.state.fft[i] = (this.state.rawFft[i] / 255) * sensitivityMultiplier;
+      const norm = this.state.rawFft[i] / 255;
+      this.state.fft[i] = norm * sensitivityMultiplier;
+      totalSpectrumEnergy += norm;
     }
+    const overallSpectrumAvg = totalSpectrumEnergy / binCount;
+    this.state.energyLevel = overallSpectrumAvg;
 
-    // 1. Kick Band Analysis (Sub-bass, bins 0 to 3)
+    // 1. Kick Band Analysis (Sub-bass & Bass, bins 0 to 4)
     const kickCfg = CONFIG.audio.kick;
-    let kickEnergy = 0;
+    let rawKickEnergy = 0;
     const kickBinCount = (kickCfg.maxBin - kickCfg.minBin + 1);
     for (let i = kickCfg.minBin; i <= kickCfg.maxBin; i++) {
-      kickEnergy += this.state.fft[i];
+      rawKickEnergy += (this.state.rawFft[i] / 255);
     }
-    kickEnergy = (kickEnergy / kickBinCount);
+    rawKickEnergy = rawKickEnergy / kickBinCount;
+    const kickEnergy = Math.min(1.5, rawKickEnergy * sensitivityMultiplier);
 
+    // Short-term kick history (~0.5s) for transient onset thresholding
     this.kickHistory.push(kickEnergy);
     if (this.kickHistory.length > this.historyLength) {
       this.kickHistory.shift();
     }
     const kickAvg = this.kickHistory.reduce((a, b) => a + b, 0) / this.kickHistory.length;
     const dynamicKickThreshold = Math.max(kickCfg.threshold, kickAvg * 1.25);
+
+    // Long-term history (~3.0s) for Drop & High Energy Section Detection
+    this.bassEnergyHistory.push(rawKickEnergy);
+    if (this.bassEnergyHistory.length > this.longHistoryLength) {
+      this.bassEnergyHistory.shift();
+    }
+    this.overallEnergyHistory.push(overallSpectrumAvg);
+    if (this.overallEnergyHistory.length > this.longHistoryLength) {
+      this.overallEnergyHistory.shift();
+    }
+
+    // Dynamic Drop & High Energy Section Detection:
+    // In drops: sub-bass is heavy (rawKickEnergy > 0.35) AND full spectrum is dense (overallSpectrumAvg > 0.15)
+    // In breakdowns: low bass or sparse spectrum reduces energyScore
+    const energyScore = (rawKickEnergy * 0.65 + overallSpectrumAvg * 0.35);
+    if (energyScore > 0.22) {
+      const targetDrop = Math.min(1.0, (energyScore - 0.20) / 0.45);
+      this.state.dropIntensity = this.state.dropIntensity * 0.94 + targetDrop * 0.06;
+    } else {
+      this.state.dropIntensity *= 0.95;
+    }
 
     // Continuous envelope follower: tracks instantaneous kickEnergy smoothly
     if (kickEnergy > this.state.kickLevel) {
@@ -393,12 +430,43 @@ export class AudioEngine {
       this.state.kickLevel *= kickCfg.decay;
     }
 
-    // Discrete transient trigger impulse
-    if (kickEnergy > dynamicKickThreshold && kickEnergy > 0.10) {
+    // Discrete transient onset trigger impulse (edge-triggered with cooldown)
+    const now = performance.now();
+    const timeSinceLastKick = now - this.lastKickTime;
+    const kickOnset = kickEnergy - this.prevKickEnergy;
+    this.prevKickEnergy = kickEnergy;
+
+    const cooldown = kickCfg.cooldownMs || 220;
+    if (kickEnergy > dynamicKickThreshold && kickEnergy > 0.12 && kickOnset > 0.02 && timeSinceLastKick > cooldown) {
       this.state.kickTrigger = true;
+      this.lastKickTime = now;
+
+      // Track dynamic BPM intervals on clean onset strikes
+      if (this.lastKickTime > 0) {
+        const intervalMs = timeSinceLastKick;
+        if (intervalMs >= 320 && intervalMs <= 750) {
+          this.beatIntervals.push(intervalMs);
+          if (this.beatIntervals.length > 6) this.beatIntervals.shift();
+
+          const sorted = [...this.beatIntervals].sort((a, b) => a - b);
+          const medianInterval = sorted[Math.floor(sorted.length / 2)];
+          const detectedBpm = 60000 / medianInterval;
+          this.state.bpm = this.state.bpm * 0.8 + detectedBpm * 0.2;
+        }
+      }
     } else {
       this.state.kickTrigger = false;
     }
+
+    // HIGH CONTRAST DYNAMIC RANGE EXPANSION (kickPunch):
+    // 1. Power curve gamma (2.4): squashes quiet background bass, massively boosts peaks
+    const gamma = CONFIG.audio.dynamics?.powerGamma || 2.4;
+    const normKick = Math.min(1.0, this.state.kickLevel);
+    const contrastCurve = Math.pow(normKick, gamma);
+
+    // 2. Drop multiplier: drops get up to +60% additional punch
+    const dropMultiplier = 1.0 + (this.state.dropIntensity * 0.6);
+    this.state.kickPunch = Math.min(1.5, contrastCurve * dropMultiplier * (sensitivityMultiplier * 0.7));
 
     // 2. High Band Analysis (Claps & Hats, bins 18 to 65)
     const clapCfg = CONFIG.audio.clap;
@@ -429,27 +497,9 @@ export class AudioEngine {
       this.state.highTrigger = false;
     }
 
-    // 3. Dynamic BPM Tracker & Phase Accumulator
-    const now = performance.now();
+    // 3. Dynamic BPM Phase Accumulator
     const dt = Math.min(0.1, (now - this.lastUpdateTime) / 1000);
     this.lastUpdateTime = now;
-
-    if (this.state.kickTrigger) {
-      if (this.lastKickTime > 0) {
-        const intervalMs = now - this.lastKickTime;
-        // Accept musical intervals between ~320ms and ~750ms (80 - 185 BPM)
-        if (intervalMs >= 320 && intervalMs <= 750) {
-          this.beatIntervals.push(intervalMs);
-          if (this.beatIntervals.length > 6) this.beatIntervals.shift();
-
-          const sorted = [...this.beatIntervals].sort((a, b) => a - b);
-          const medianInterval = sorted[Math.floor(sorted.length / 2)];
-          const detectedBpm = 60000 / medianInterval;
-          this.state.bpm = this.state.bpm * 0.8 + detectedBpm * 0.2;
-        }
-      }
-      this.lastKickTime = now;
-    }
 
     // Advance continuous beat phase (0.0 to 1.0 ramp per beat)
     const bps = this.state.bpm / 60;

@@ -57,11 +57,14 @@ export class StrobeEngine {
     // Clear frame for screen blend compositing
     ctx.clearRect(0, 0, this.width, this.height);
 
-    // 2. Audio Kick Transient Integration
+    // 2. Audio Kick Transient Integration with High Contrast Dynamic Kick Punch
     if (audioState && audioState.kickTrigger) {
-      this.audioBoost = Math.min(1.0, audioState.kickLevel * (computedMidi.audioSensitivity * 0.7));
+      // In quiet sections (kickPunch ~ 0.04), audioBoost stays subtle (~0.03)
+      // In drops (kickPunch ~ 1.2), audioBoost slams to 1.0 for high-energy strobe blinder punch!
+      const punch = audioState.kickPunch !== undefined ? audioState.kickPunch : audioState.kickLevel;
+      this.audioBoost = Math.min(1.0, punch * (computedMidi.audioSensitivity * 0.7));
     } else {
-      this.audioBoost *= 0.88; // Exponential fast decay
+      this.audioBoost *= 0.84; // Fast exponential decay for crisp transient snap
     }
 
     // 3. PAD 1: Accelerating Snare Riser Strobe

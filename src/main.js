@@ -325,5 +325,12 @@ requestAnimationFrame(loop);
 // Initial asset preview display on boot
 setTimeout(() => showAssetPreview(0), 500);
 
+// Expose on window for diagnostics, OBS docks, and telemetry
+window.audio = audio;
+window.visuals = visuals;
+window.strobe = strobe;
+window.midi = midi;
+window.hud = hud;
+
 export { midi, audio, strobe, visuals, hud, currentAssetIndex };
 console.log('[Engine] Phase 4 Full Audiovisual Engine Online & Ready for OBS.');

@@ -47,6 +47,10 @@ export class DiagnosticHud {
     this.audioSourceEl = document.getElementById('hud-audio-source');
     this.barKick = document.getElementById('hud-bar-kick');
     this.valKick = document.getElementById('hud-val-kick');
+    this.barPunch = document.getElementById('hud-bar-punch');
+    this.valPunch = document.getElementById('hud-val-punch');
+    this.barDrop = document.getElementById('hud-bar-drop');
+    this.valDrop = document.getElementById('hud-val-drop');
     this.barHigh = document.getElementById('hud-bar-high');
     this.valHigh = document.getElementById('hud-val-high');
 
@@ -129,6 +133,14 @@ export class DiagnosticHud {
       }
       if (this.barKick) this.barKick.style.width = `${Math.round(Math.min(1.0, audioState.kickLevel) * 100)}%`;
       if (this.valKick) this.valKick.textContent = audioState.kickLevel.toFixed(2);
+
+      const punch = audioState.kickPunch !== undefined ? audioState.kickPunch : audioState.kickLevel;
+      if (this.barPunch) this.barPunch.style.width = `${Math.round(Math.min(1.0, punch / 1.5) * 100)}%`;
+      if (this.valPunch) this.valPunch.textContent = punch.toFixed(2);
+
+      const dropPct = Math.round((audioState.dropIntensity || 0) * 100);
+      if (this.barDrop) this.barDrop.style.width = `${dropPct}%`;
+      if (this.valDrop) this.valDrop.textContent = `${dropPct}%`;
 
       if (this.barHigh) this.barHigh.style.width = `${Math.round(Math.min(1.0, audioState.highLevel) * 100)}%`;
       if (this.valHigh) this.valHigh.textContent = audioState.highLevel.toFixed(2);

@@ -20,6 +20,7 @@ export class VisualPipeline {
     // Timing and smooth rotation state
     this.lastTime = performance.now();
     this.rotationAngle = 0.0;
+    this.surgeVelocity = 0.0; // Kinetic angular surge from kick hits
 
     // Shared references to state updated every frame
     this.midiValues = {
@@ -31,10 +32,12 @@ export class VisualPipeline {
 
     this.audioValues = {
       kickLevel: 0.0,
+      kickPunch: 0.0,
       highLevel: 0.0,
       kickTrigger: false,
       bpm: 128.0,
       beatPhase: 0.0,
+      dropIntensity: 0.0,
     };
 
     this.preloadAssets();
@@ -119,14 +122,14 @@ export class VisualPipeline {
 
     // Dynamic Scale for Geometric Mandala modes:
     const getMandalaScale = () => {
-      const breathe = Math.sin(this.audioValues.beatPhase * Math.PI * 2) * 0.06;
-      const kickPunch = this.audioValues.kickLevel * 0.20 * (this.midiValues.audioSensitivity * 0.6);
-      return 1.0 + breathe + kickPunch;
+      const breathe = Math.sin(this.audioValues.beatPhase * Math.PI * 2) * 0.04;
+      const punch = (this.audioValues.kickPunch || this.audioValues.kickLevel) * 0.32;
+      return 1.0 + breathe + punch;
     };
 
     // STYLE 1: "Hypnotic Vortex" (8-petal sacred mandala symmetry with liquid ripples)
     if (style.mode === 'vortex') {
-      const getRipple = () => this.audioValues.kickLevel * 0.12 * (this.midiValues.audioSensitivity * 0.6);
+      const getRipple = () => (this.audioValues.kickPunch || this.audioValues.kickLevel) * 0.22;
 
       src(s0)
         .scale(getMandalaScale)
@@ -145,7 +148,7 @@ export class VisualPipeline {
 
     // STYLE 2: "Flower of Life" (6-petal hexagonal sacred geometry)
     if (style.mode === 'flower') {
-      const getRipple = () => this.audioValues.kickLevel * 0.10 * (this.midiValues.audioSensitivity * 0.6);
+      const getRipple = () => (this.audioValues.kickPunch || this.audioValues.kickLevel) * 0.18;
 
       src(s0)
         .scale(getMandalaScale)
@@ -164,7 +167,7 @@ export class VisualPipeline {
 
     // STYLE 3: "Psychedelic Warp" (Liquid feedback warp tunnel)
     if (style.mode === 'warp') {
-      const getWarp = () => this.audioValues.kickLevel * 0.28 * (this.midiValues.audioSensitivity * 0.7);
+      const getWarp = () => (this.audioValues.kickPunch || this.audioValues.kickLevel) * 0.38;
 
       src(s0)
         .scale(getMandalaScale)
@@ -227,18 +230,31 @@ export class VisualPipeline {
 
     if (audioState) {
       this.audioValues.kickLevel = audioState.kickLevel;
+      this.audioValues.kickPunch = audioState.kickPunch !== undefined ? audioState.kickPunch : audioState.kickLevel;
       this.audioValues.highLevel = audioState.highLevel;
       this.audioValues.kickTrigger = audioState.kickTrigger;
       this.audioValues.bpm = audioState.bpm || 128.0;
       this.audioValues.beatPhase = audioState.beatPhase || 0.0;
+      this.audioValues.dropIntensity = audioState.dropIntensity || 0.0;
 
-      // Advance rotation angle smoothly locked to BPM
-      // 1 full revolution every 8 beats:
+      // Base angular speed: 1 full revolution every 8 beats
       const beatsPerSec = this.audioValues.bpm / 60;
-      const rotSpeed = (beatsPerSec / 8) * (2 * Math.PI); // rad/sec
-      // Slight groove spin impulse on kick hits
-      const kickSpin = this.audioValues.kickTrigger ? 0.025 : 0.0;
-      this.rotationAngle = (this.rotationAngle + rotSpeed * dt + kickSpin) % (2 * Math.PI);
+      const baseRotSpeed = (beatsPerSec / 8) * (2 * Math.PI); // rad/sec
+
+      // KINETIC ROTATIONAL SURGE (Angular Flywheel Impulse):
+      // On kick hits, inject angular velocity directly scaled by kickPunch!
+      // In quiet sections (kickPunch ~ 0.04): subtle gentle sway
+      // In drops / high-energy sections (kickPunch ~ 1.2): massive, dramatic spin surge!
+      if (this.audioValues.kickTrigger) {
+        this.surgeVelocity += this.audioValues.kickPunch * 0.32;
+      }
+
+      // Advance rotation angle with combined base velocity + decaying surge velocity
+      this.rotationAngle = (this.rotationAngle + (baseRotSpeed + this.surgeVelocity) * dt) % (2 * Math.PI);
+
+      // Smooth exponential easing of surge velocity (flywheel friction)
+      const decayRate = 6.0;
+      this.surgeVelocity *= Math.exp(-decayRate * dt);
     }
   }
 }

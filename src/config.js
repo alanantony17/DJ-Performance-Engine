@@ -109,19 +109,20 @@ export const CONFIG = {
     { id: 4, name: 'Psychedelic Warp', desc: 'Deep liquid feedback warping & infinite tunnel', mode: 'warp' },
   ],
 
-  // Web Audio Transient Detection
+  // Web Audio Transient Detection & Dynamics
   audio: {
     fftSize: 512,
     smoothingTimeConstant: 0.70,
     minDecibels: -90,
     maxDecibels: -25,
 
-    // Band 0: Sub-bass & Kick (approx 40 - 350 Hz, bins 1 to 5)
+    // Band 0: Sub-bass & Kick (approx 35 - 300 Hz, bins 0 to 4)
     kick: {
-      minBin: 1,
-      maxBin: 5,
-      threshold: 0.18,
-      decay: 0.90, // Exponential falloff per frame
+      minBin: 0,
+      maxBin: 4,
+      threshold: 0.16,
+      decay: 0.88, // Exponential falloff per frame
+      cooldownMs: 220, // Transient onset cooldown to ensure crisp single-hit impulses
     },
 
     // Band 1: Mid-High Claps & Hats (approx 1700 - 6000 Hz, bins 18 to 65)
@@ -130,6 +131,13 @@ export const CONFIG = {
       maxBin: 65,
       threshold: 0.15,
       decay: 0.88,
+    },
+
+    // Dynamic Contrast & High-Energy Section / Drop Tuning
+    dynamics: {
+      powerGamma: 2.4,          // Non-linear power expansion: squashes soft verse bass, boosts drop peaks
+      dropBoostMultiplier: 1.6, // Drop section amplifier
+      longWindowFrames: 180,    // ~3-second rolling window for background energy baseline
     },
   },
 
