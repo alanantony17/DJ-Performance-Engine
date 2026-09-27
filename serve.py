@@ -47,10 +47,10 @@ class EngineHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
 def main():
     os.chdir(DIRECTORY)
-    # Allow port reuse immediately
-    socketserver.TCPServer.allow_reuse_address = True
+    # Enable threaded request handling for smooth concurrent asset loading
+    http.server.ThreadingHTTPServer.allow_reuse_address = True
     try:
-        with socketserver.TCPServer(("", PORT), EngineHTTPRequestHandler) as httpd:
+        with http.server.ThreadingHTTPServer(("", PORT), EngineHTTPRequestHandler) as httpd:
             print("=" * 65)
             print("  DJ PERFORMANCE ENGINE - OBS STUDIO BROWSERSOURCE SERVER")
             print("=" * 65)

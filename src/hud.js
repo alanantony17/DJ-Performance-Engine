@@ -33,7 +33,8 @@ export class DiagnosticHud {
     this.pad3 = document.getElementById('hud-pad-3');
     this.pad4 = document.getElementById('hud-pad-4');
 
-    // Audio Meters
+    // Audio Meters & Source
+    this.audioSourceEl = document.getElementById('hud-audio-source');
     this.barKick = document.getElementById('hud-bar-kick');
     this.valKick = document.getElementById('hud-val-kick');
     this.barHigh = document.getElementById('hud-bar-high');
@@ -107,8 +108,11 @@ export class DiagnosticHud {
     if (this.pad3) this.pad3.classList.toggle('active', midiState.pads.pad3);
     if (this.pad4) this.pad4.classList.toggle('active', midiState.pads.pad4);
 
-    // 5. Audio Transient Followers
+    // 5. Audio Transient Followers & Source
     if (audioState) {
+      if (this.audioSourceEl && audioState.sourceName) {
+        this.audioSourceEl.textContent = audioState.sourceName;
+      }
       if (this.barKick) this.barKick.style.width = `${Math.round(Math.min(1.0, audioState.kickLevel) * 100)}%`;
       if (this.valKick) this.valKick.textContent = audioState.kickLevel.toFixed(2);
 

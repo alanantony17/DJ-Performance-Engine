@@ -22,6 +22,17 @@ const assetPreviewThumb = document.getElementById('asset-preview-thumb');
 const assetPreviewTag = document.getElementById('asset-preview-tag');
 const assetPreviewName = document.getElementById('asset-preview-name');
 
+// Audio Modal DOM References
+const audioSourcePill = document.getElementById('audio-source-pill');
+const audioPillLabel = document.getElementById('audio-pill-label');
+const audioModal = document.getElementById('audio-modal');
+const audioModalClose = document.getElementById('audio-modal-close');
+const btnCaptureTab = document.getElementById('btn-capture-tab');
+const btnDemoBeat = document.getElementById('btn-demo-beat');
+const audioFileInput = document.getElementById('audio-file-input');
+const audioDeviceSelect = document.getElementById('audio-device-select');
+const hudAudioChangeBtn = document.getElementById('hud-audio-change-btn');
+
 // Active Asset State
 let currentAssetIndex = 0;
 let previewTimeout = null;
@@ -132,6 +143,84 @@ window.addEventListener('keydown', (e) => {
     if (!isNaN(digit) && digit >= 1 && digit <= CONFIG.assets.list.length) {
       selectAsset(digit - 1);
     }
+  }
+  if (e.code === 'Escape' && audioModal && !audioModal.classList.contains('hidden')) {
+    closeAudioModal();
+  }
+});
+
+// Audio Source Modal Management
+async function openAudioModal() {
+  if (!audioModal) return;
+  audioModal.classList.remove('hidden');
+
+  // Populate devices
+  if (audioDeviceSelect) {
+    const devices = await audio.getAvailableDevices();
+    audioDeviceSelect.innerHTML = '<option value="default">Default Input Device / Microphone</option>';
+    devices.forEach(dev => {
+      const opt = document.createElement('option');
+      opt.value = dev.deviceId;
+      opt.textContent = dev.label;
+      audioDeviceSelect.appendChild(opt);
+    });
+  }
+}
+
+function closeAudioModal() {
+  if (audioModal) audioModal.classList.add('hidden');
+}
+
+if (audioSourcePill) audioSourcePill.addEventListener('click', openAudioModal);
+if (hudAudioChangeBtn) hudAudioChangeBtn.addEventListener('click', openAudioModal);
+if (audioModalClose) audioModalClose.addEventListener('click', closeAudioModal);
+
+if (audioModal) {
+  audioModal.addEventListener('click', (e) => {
+    if (e.target === audioModal) closeAudioModal();
+  });
+}
+
+if (btnCaptureTab) {
+  btnCaptureTab.addEventListener('click', async () => {
+    closeAudioModal();
+    await engageEngine();
+    await audio.captureTabAudio();
+  });
+}
+
+if (btnDemoBeat) {
+  btnDemoBeat.addEventListener('click', async () => {
+    closeAudioModal();
+    await engageEngine();
+    audio.playDemoBeat();
+  });
+}
+
+if (audioFileInput) {
+  audioFileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      closeAudioModal();
+      await engageEngine();
+      await audio.loadAudioFile(file);
+    }
+  });
+}
+
+if (audioDeviceSelect) {
+  audioDeviceSelect.addEventListener('change', async (e) => {
+    const deviceId = e.target.value;
+    closeAudioModal();
+    await engageEngine();
+    await audio.useDevice(deviceId);
+  });
+}
+
+// Update Audio Pill label on source change
+window.addEventListener('engine:audioSourceChanged', (e) => {
+  if (audioPillLabel) {
+    audioPillLabel.textContent = e.detail.name;
   }
 });
 
