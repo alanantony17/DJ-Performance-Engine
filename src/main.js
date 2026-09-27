@@ -7,6 +7,7 @@ import { CONFIG } from './config.js';
 import { MidiController } from './midi.js';
 import { AudioEngine } from './audio.js';
 import { DiagnosticHud } from './hud.js';
+import { StrobeEngine } from './strobe.js';
 
 console.log('[Engine] Initializing DJ Performance Engine Core...');
 
@@ -23,6 +24,7 @@ const assetPreviewName = document.getElementById('asset-preview-name');
 // Active Asset State
 let currentAssetIndex = 0;
 let previewTimeout = null;
+let strobe = null;
 
 // Resize handler to enforce 1920x1080 resolution
 function resizeCanvases() {
@@ -37,6 +39,7 @@ function resizeCanvases() {
     strobeCanvas.width = width;
     strobeCanvas.height = height;
   }
+  if (strobe) strobe.resize();
 }
 
 window.addEventListener('resize', resizeCanvases);
@@ -130,10 +133,16 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+// 4. Initialize Strobe Lighting Engine
+strobe = new StrobeEngine(strobeCanvas);
+
 // Main Animation & Update Loop
 function loop() {
   const computedMidi = midi.getComputedValues();
   const audioState = audio.update(computedMidi.audioSensitivity);
+
+  // Render 2D Strobe & Lighting Overlay
+  strobe.render(midi.state, computedMidi, audioState);
 
   // Update diagnostic HUD
   hud.update(midi.state, computedMidi, audioState);
