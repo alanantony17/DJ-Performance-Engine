@@ -8,6 +8,7 @@ import { MidiController } from './midi.js';
 import { AudioEngine } from './audio.js';
 import { DiagnosticHud } from './hud.js';
 import { StrobeEngine } from './strobe.js';
+import { VisualPipeline } from './visuals.js';
 
 console.log('[Engine] Initializing DJ Performance Engine Core...');
 
@@ -25,6 +26,7 @@ const assetPreviewName = document.getElementById('asset-preview-name');
 let currentAssetIndex = 0;
 let previewTimeout = null;
 let strobe = null;
+let visuals = null;
 
 // Resize handler to enforce 1920x1080 resolution
 function resizeCanvases() {
@@ -136,13 +138,30 @@ window.addEventListener('keydown', (e) => {
 // 4. Initialize Strobe Lighting Engine
 strobe = new StrobeEngine(strobeCanvas);
 
+// 5. Initialize Hydra Visual Pipeline
+visuals = new VisualPipeline(hydraCanvas);
+
+// Listen for asset change events
+window.addEventListener('engine:assetChange', (e) => {
+  if (visuals) {
+    visuals.setAsset(e.detail.index);
+  }
+});
+
 // Main Animation & Update Loop
 function loop() {
   const computedMidi = midi.getComputedValues();
   const audioState = audio.update(computedMidi.audioSensitivity);
 
+  // Update Hydra GLSL dynamic uniform parameters
+  if (visuals) {
+    visuals.update(computedMidi, audioState);
+  }
+
   // Render 2D Strobe & Lighting Overlay
-  strobe.render(midi.state, computedMidi, audioState);
+  if (strobe) {
+    strobe.render(midi.state, computedMidi, audioState);
+  }
 
   // Update diagnostic HUD
   hud.update(midi.state, computedMidi, audioState);
@@ -156,5 +175,5 @@ requestAnimationFrame(loop);
 // Initial asset preview display on boot
 setTimeout(() => showAssetPreview(0), 500);
 
-export { midi, audio, hud, currentAssetIndex };
-console.log('[Engine] Phase 2 Hardware & Communications Layer Online.');
+export { midi, audio, strobe, visuals, hud, currentAssetIndex };
+console.log('[Engine] Phase 4 Full Audiovisual Engine Online & Ready for OBS.');
