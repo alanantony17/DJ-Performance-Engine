@@ -19,7 +19,7 @@ export class AudioEngine {
     this.currentSourceName = 'Default Microphone';
     this.currentSourceType = 'device'; // 'device' | 'tab' | 'demo' | 'file'
 
-    // Transient & Follower State
+    // Transient, Follower & BPM State
     this.state = {
       active: false,
       sourceName: this.currentSourceName,
@@ -28,14 +28,19 @@ export class AudioEngine {
       kickTrigger: false,   // Discrete beat strike impulse
       highLevel: 0.0,      // Continuous high frequency envelope
       highTrigger: false,
+      bpm: 128.0,          // Dynamic detected BPM
+      beatPhase: 0.0,      // 0.0 to 1.0 phase within beat
       fft: new Float32Array(CONFIG.audio.fftSize / 2), // Normalized [0, 1] FFT bins
       rawFft: new Uint8Array(CONFIG.audio.fftSize / 2), // Raw 0-255 bytes
     };
 
-    // Rolling thresholds for transient detection
+    // Rolling thresholds for transient detection & BPM estimation
     this.kickHistory = [];
     this.highHistory = [];
     this.historyLength = 30; // ~0.5s window at 60fps
+    this.lastKickTime = 0;
+    this.beatIntervals = [];
+    this.lastUpdateTime = performance.now();
   }
 
   async ensureContext() {
@@ -423,6 +428,32 @@ export class AudioEngine {
     } else {
       this.state.highTrigger = false;
     }
+
+    // 3. Dynamic BPM Tracker & Phase Accumulator
+    const now = performance.now();
+    const dt = Math.min(0.1, (now - this.lastUpdateTime) / 1000);
+    this.lastUpdateTime = now;
+
+    if (this.state.kickTrigger) {
+      if (this.lastKickTime > 0) {
+        const intervalMs = now - this.lastKickTime;
+        // Accept musical intervals between ~320ms and ~750ms (80 - 185 BPM)
+        if (intervalMs >= 320 && intervalMs <= 750) {
+          this.beatIntervals.push(intervalMs);
+          if (this.beatIntervals.length > 6) this.beatIntervals.shift();
+
+          const sorted = [...this.beatIntervals].sort((a, b) => a - b);
+          const medianInterval = sorted[Math.floor(sorted.length / 2)];
+          const detectedBpm = 60000 / medianInterval;
+          this.state.bpm = this.state.bpm * 0.8 + detectedBpm * 0.2;
+        }
+      }
+      this.lastKickTime = now;
+    }
+
+    // Advance continuous beat phase (0.0 to 1.0 ramp per beat)
+    const bps = this.state.bpm / 60;
+    this.state.beatPhase = (this.state.beatPhase + bps * dt) % 1.0;
 
     return this.state;
   }

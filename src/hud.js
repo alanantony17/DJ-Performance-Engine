@@ -9,6 +9,7 @@ export class DiagnosticHud {
   constructor() {
     this.overlay = document.getElementById('hud-overlay');
     this.fpsEl = document.getElementById('hud-fps');
+    this.bpmEl = document.getElementById('hud-bpm');
     this.midiDeviceEl = document.getElementById('hud-midi-device');
     this.midiRawEl = document.getElementById('hud-midi-raw');
 
@@ -63,7 +64,7 @@ export class DiagnosticHud {
   update(midiState, computedMidi, audioState) {
     if (!this.overlay || this.overlay.classList.contains('hidden')) return;
 
-    // 1. Calculate FPS
+    // 1. Calculate FPS & Update BPM
     this.frameCount++;
     const now = performance.now();
     const elapsed = now - this.lastFpsTime;
@@ -72,6 +73,9 @@ export class DiagnosticHud {
       this.frameCount = 0;
       this.lastFpsTime = now;
       if (this.fpsEl) this.fpsEl.textContent = `${this.currentFps} FPS`;
+    }
+    if (this.bpmEl && audioState && audioState.bpm) {
+      this.bpmEl.textContent = `${Math.round(audioState.bpm)} BPM`;
     }
 
     // 2. MIDI Device Status
