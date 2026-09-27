@@ -146,10 +146,15 @@ const audio = new AudioEngine();
 
 // Auto-engage engine function
 async function engageEngine() {
-  if (startOverlay && !startOverlay.classList.contains('hidden')) {
+  if (startOverlay) {
     startOverlay.classList.add('hidden');
+    startOverlay.style.display = 'none';
   }
-  await audio.resume();
+  try {
+    await audio.resume();
+  } catch (err) {
+    console.warn('[Engine] AudioContext resume error handled:', err);
+  }
 }
 
 if (startBtn) {
@@ -320,5 +325,5 @@ requestAnimationFrame(loop);
 // Initial asset preview display on boot
 setTimeout(() => showAssetPreview(0), 500);
 
-export { midi, audio, strobe, visuals, hud, currentAssetIndex, cycleStyle, showStylePreview };
+export { midi, audio, strobe, visuals, hud, currentAssetIndex };
 console.log('[Engine] Phase 4 Full Audiovisual Engine Online & Ready for OBS.');

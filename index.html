@@ -4,6 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>DJ Performance Engine - Audiovisual Rig for OBS Studio</title>
+  <script>
+    window.__errors = [];
+    window.addEventListener('error', function(e) {
+      var msg = 'JS_ERROR: ' + e.message + ' at ' + (e.filename || 'unknown') + ':' + e.lineno;
+      window.__errors.push(msg);
+      console.error(msg);
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      var msg = 'REJECTION: ' + (e.reason ? (e.reason.stack || e.reason.message || e.reason) : 'unknown');
+      window.__errors.push(msg);
+      console.error(msg);
+    });
+  </script>
   <link rel="stylesheet" href="css/style.css">
   <!-- Hydra Synth CDN -->
   <script src="https://unpkg.com/hydra-synth"></script>
