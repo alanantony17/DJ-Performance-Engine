@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>DJ Performance Engine - Audiovisual Rig for OBS Studio</title>
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Hydra Synth CDN -->
+  <script src="https://unpkg.com/hydra-synth"></script>
+</head>
+<body>
+  <!-- Dual-Canvas Composition Shell -->
+  <div id="canvas-container">
+    <!-- Layer 1: Hydra Synth WebGL Output -->
+    <canvas id="hydra-canvas" width="1920" height="1080"></canvas>
+
+    <!-- Layer 2: 2D Spatial Lighting & Strobe Engine (Screen Blended) -->
+    <canvas id="strobe-canvas" width="1920" height="1080"></canvas>
+  </div>
+
+  <!-- Layer 3: Interactive Start Overlay (Auto-resumes AudioContext & triggers Engine) -->
+  <div id="start-overlay">
+    <div class="start-badge">OBS Browser Source / Live Rig</div>
+    <h1 class="start-title">DJ Performance Engine</h1>
+    <p class="start-desc">
+      Hardware-accelerated audiovisual engine for AKAI MPK Mini 3 and OBS Studio.<br>
+      Tap any <strong>MIDI Pad</strong> or click below to engage the audio & lighting engine.
+    </p>
+    <button id="start-btn" class="start-button">ENGAGE ENGINE</button>
+  </div>
+
+  <!-- Layer 4: On-Screen Asset Preview Card (Toggled via Pad 3 or Asset Switch) -->
+  <div id="asset-preview-card" class="hidden">
+    <img id="asset-preview-thumb" src="assets/art1.png" alt="Artwork Preview">
+    <div class="asset-preview-meta">
+      <span class="asset-preview-tag" id="asset-preview-tag">Asset [1/4]</span>
+      <span class="asset-preview-name" id="asset-preview-name">Mandala Solar</span>
+      <span class="asset-preview-hint">Toggled via Pad 3 / Direct Select</span>
+    </div>
+  </div>
+
+  <!-- Layer 5: Live Diagnostic & Hardware Telemetry HUD (Press 'D' to toggle) -->
+  <div id="hud-overlay">
+    <div class="hud-header">
+      <span class="hud-title">SYSTEM TELEMETRY</span>
+      <span class="hud-fps" id="hud-fps">60 FPS</span>
+    </div>
+
+    <!-- MIDI Hardware Status -->
+    <div class="hud-section">
+      <div class="hud-section-title">MIDI Controller (AKAI MPK Mini 3)</div>
+      <div class="hud-row">
+        <span>Device:</span>
+        <span id="hud-midi-device" style="color: #f59e0b;">Waiting...</span>
+      </div>
+      <div class="hud-row">
+        <span>Raw Message:</span>
+        <span id="hud-midi-raw" style="color: #94a3b8;">None</span>
+      </div>
+    </div>
+
+    <!-- Joystick & Knobs Telemetry -->
+    <div class="hud-section">
+      <div class="hud-section-title">Controls (Joystick & Knobs)</div>
+      <div class="hud-row">
+        <span>Joy Pan (X):</span>
+        <div class="hud-meter"><div class="hud-meter-bar" id="hud-bar-pan" style="width: 50%;"></div></div>
+        <span id="hud-val-pan">0.50</span>
+      </div>
+      <div class="hud-row">
+        <span>Joy Iris (Y):</span>
+        <div class="hud-meter"><div class="hud-meter-bar" id="hud-bar-iris" style="width: 35%;"></div></div>
+        <span id="hud-val-iris">0.35</span>
+      </div>
+      <div class="hud-row">
+        <span>Knob 1 (LFO):</span>
+        <div class="hud-meter"><div class="hud-meter-bar lfo" id="hud-bar-k1" style="width: 20%;"></div></div>
+        <span id="hud-val-k1">8.0 Hz</span>
+      </div>
+      <div class="hud-row">
+        <span>Knob 2 (Hue):</span>
+        <div class="hud-meter"><div class="hud-meter-bar" id="hud-bar-k2" style="width: 0%;"></div></div>
+        <span id="hud-val-k2">0.00</span>
+      </div>
+      <div class="hud-row">
+        <span>Knob 3 (Trails):</span>
+        <div class="hud-meter"><div class="hud-meter-bar" id="hud-bar-k3" style="width: 50%;"></div></div>
+        <span id="hud-val-k3">0.50</span>
+      </div>
+      <div class="hud-row">
+        <span>Knob 4 (Gain):</span>
+        <div class="hud-meter"><div class="hud-meter-bar" id="hud-bar-k4" style="width: 45%;"></div></div>
+        <span id="hud-val-k4">1.5x</span>
+      </div>
+    </div>
+
+    <!-- Performance Pads Matrix -->
+    <div class="hud-section">
+      <div class="hud-section-title">Pads (1: Riser | 2: Shutter | 3: Asset | 4: SLAM)</div>
+      <div class="hud-pads-grid">
+        <div class="hud-pad" id="hud-pad-1">PAD 1<br>RISER</div>
+        <div class="hud-pad" id="hud-pad-2">PAD 2<br>BLINDS</div>
+        <div class="hud-pad" id="hud-pad-3">PAD 3<br>ASSET</div>
+        <div class="hud-pad slam" id="hud-pad-4">PAD 4<br>SLAM</div>
+      </div>
+    </div>
+
+    <!-- Audio FFT Telemetry -->
+    <div class="hud-section">
+      <div class="hud-section-title">Audio Transient Follower</div>
+      <div class="hud-row">
+        <span>Kick / Bass:</span>
+        <div class="hud-meter"><div class="hud-meter-bar kick" id="hud-bar-kick" style="width: 0%;"></div></div>
+        <span id="hud-val-kick">0.00</span>
+      </div>
+      <div class="hud-row">
+        <span>Clap / High:</span>
+        <div class="hud-meter"><div class="hud-meter-bar" id="hud-bar-high" style="width: 0%;"></div></div>
+        <span id="hud-val-high">0.00</span>
+      </div>
+    </div>
+    <div style="font-size: 9px; color: #64748b; text-align: center; margin-top: 8px;">
+      Press [D] to Toggle HUD | Keys 1-4 for Pads Fallback
+    </div>
+  </div>
+
+  <!-- Engine Module Orchestrator -->
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

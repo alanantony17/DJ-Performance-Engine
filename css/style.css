@@ -1,0 +1,310 @@
+/* Global Reset & Viewport Constraints */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+html, body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #000;
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #fff;
+}
+
+/* Dual-Canvas Stacking Shell */
+#canvas-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #000;
+}
+
+/* Layer 1: Hydra Synth WebGL Canvas (Bottom) */
+#hydra-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  display: block;
+}
+
+/* Layer 2: 2D Spatial Strobe Engine (Top) */
+#strobe-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 2;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* Layer 3: Interactive Start Overlay (AudioContext & Fullscreen Trigger) */
+#start-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 200;
+  background: radial-gradient(circle at center, rgba(16, 20, 32, 0.95) 0%, rgba(5, 5, 8, 0.98) 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  cursor: pointer;
+  transition: opacity 0.4s ease-out, visibility 0.4s;
+}
+
+#start-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.start-badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: rgba(0, 240, 255, 0.15);
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  color: #00f0ff;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.start-title {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-align: center;
+  background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.start-desc {
+  font-size: 14px;
+  color: #94a3b8;
+  max-width: 480px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.start-button {
+  margin-top: 10px;
+  padding: 12px 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #00f0ff 0%, #7000ff 100%);
+  color: #000;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 1px;
+  border: none;
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.4);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.start-button:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 35px rgba(0, 240, 255, 0.6);
+}
+
+/* Layer 4: Asset Preview Card (On-Screen Preview on MIDI Pad 3 / Toggle) */
+#asset-preview-card {
+  position: absolute;
+  bottom: 30px;
+  right: 30px;
+  z-index: 150;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 18px;
+  background: rgba(10, 14, 24, 0.85);
+  border: 1px solid rgba(0, 240, 255, 0.6);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 240, 255, 0.25);
+  backdrop-filter: blur(12px);
+  transform: translateY(0);
+  opacity: 0;
+  transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+}
+
+#asset-preview-card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#asset-preview-card.hidden {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+#asset-preview-thumb {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  object-fit: cover;
+  background: #000;
+}
+
+.asset-preview-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.asset-preview-tag {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: #00f0ff;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.asset-preview-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.asset-preview-hint {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Layer 5: Live Diagnostic HUD Overlay (Press 'D' to toggle) */
+#hud-overlay {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 100;
+  pointer-events: none;
+  background: rgba(8, 11, 20, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 16px;
+  width: 320px;
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-size: 11px;
+  color: #cbd5e1;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  transition: opacity 0.2s ease-in-out;
+}
+
+#hud-overlay.hidden {
+  display: none;
+}
+
+.hud-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.hud-title {
+  font-weight: 700;
+  color: #00f0ff;
+  letter-spacing: 1px;
+  font-size: 12px;
+}
+
+.hud-fps {
+  color: #22c55e;
+  font-weight: 700;
+}
+
+.hud-section {
+  margin-bottom: 12px;
+}
+
+.hud-section-title {
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 9px;
+  margin-bottom: 6px;
+}
+
+.hud-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.hud-meter {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  margin: 0 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.hud-meter-bar {
+  height: 100%;
+  width: 0%;
+  background: #00f0ff;
+  border-radius: 3px;
+  transition: width 0.05s linear;
+}
+
+.hud-meter-bar.kick {
+  background: #ef4444;
+}
+
+.hud-meter-bar.lfo {
+  background: #eab308;
+}
+
+.hud-pads-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.hud-pad {
+  padding: 8px 4px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  text-align: center;
+  font-size: 9px;
+  font-weight: 600;
+  color: #64748b;
+  transition: all 0.08s ease;
+}
+
+.hud-pad.active {
+  background: #00f0ff;
+  border-color: #00f0ff;
+  color: #000;
+  box-shadow: 0 0 12px #00f0ff;
+}
+
+.hud-pad.active.slam {
+  background: #ef4444;
+  border-color: #ef4444;
+  box-shadow: 0 0 12px #ef4444;
+}

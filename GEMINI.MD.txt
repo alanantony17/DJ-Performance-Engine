@@ -1,0 +1,25 @@
+# Project Constitution: Asset-Driven Audiovisual Engine
+
+## Architecture & Core Directives
+- Output: Fullscreen 1920x1080 single-page app loaded into OBS Studio as a Browser Source.
+- Dual-Canvas Layout:
+  - Bottom Canvas (`#hydra-canvas`): WebGL visual pipeline running Hydra Synth (`https://unpkg.com/hydra-synth`).
+  - Top Canvas (`#strobe-canvas`): 2D spatial lighting/strobe engine styled with `position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; mix-blend-mode: screen; pointer-events: none;`.
+- Hardware & Communication:
+  - Native Web MIDI API (`navigator.requestMIDIAccess`) only. NEVER simulate keyboard events or use virtual keystrokes.
+  - Native Web Audio API (`AnalyserNode`) listening to audio input / VB-Audio Virtual Cable for kick drum transient analysis (`a.fft[0]`).
+- Asset Pipeline:
+  - High-resolution artwork assets reside in `/assets/` (`art1.png` to `art4.png`).
+  - Hydra ingests assets via `s0.initImage()` and transforms them using `.kaleid()`, audio bass modulation, hue rotation, and feedback loops.
+
+## AKAI MPK Mini 3 Mapping Matrix
+- Joystick X-Axis (Pitch Bend): Strobe beam horizontal pan.
+- Joystick Y-Axis (Modulation / CC 1): Strobe aperture/iris beam width.
+- Knob 1 (CC 70): Strobe pulse rate (LFO: 2Hz to 50Hz).
+- Knob 2 (CC 71): Visual hue shift / color palette morph.
+- Knob 3 (CC 72): Visual feedback decay trails.
+- Knob 4 (CC 73): Audio kick sensitivity multiplier.
+- Pad 1: Accelerating Snare Riser Strobe.
+- Pad 2: Horizontal Shutter Blinder.
+- Pad 3: Cycle to next artwork asset in `/assets/`.
+- Pad 4: DROP SLAM (instant blackout, cuts all strobes to 0).
