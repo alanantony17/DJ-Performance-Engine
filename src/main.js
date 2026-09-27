@@ -1,15 +1,18 @@
 /**
  * DJ Performance Engine - Main Orchestrator
+ * Integrates Web MIDI, Web Audio, Strobe Engine, and Hydra Synth.
  */
 
 import { CONFIG } from './config.js';
+import { MidiController } from './midi.js';
+import { AudioEngine } from './audio.js';
+import { DiagnosticHud } from './hud.js';
 
-console.log('[Engine] Initializing DJ Performance Engine...');
+console.log('[Engine] Initializing DJ Performance Engine Core...');
 
 // DOM References
 const hydraCanvas = document.getElementById('hydra-canvas');
 const strobeCanvas = document.getElementById('strobe-canvas');
-const hudOverlay = document.getElementById('hud-overlay');
 const startOverlay = document.getElementById('start-overlay');
 const startBtn = document.getElementById('start-btn');
 const assetPreviewCard = document.getElementById('asset-preview-card');
@@ -17,7 +20,11 @@ const assetPreviewThumb = document.getElementById('asset-preview-thumb');
 const assetPreviewTag = document.getElementById('asset-preview-tag');
 const assetPreviewName = document.getElementById('asset-preview-name');
 
-// Resize handler to maintain exact 1920x1080 internal resolution
+// Active Asset State
+let currentAssetIndex = 0;
+let previewTimeout = null;
+
+// Resize handler to enforce 1920x1080 resolution
 function resizeCanvases() {
   const width = CONFIG.display.width;
   const height = CONFIG.display.height;
@@ -35,30 +42,7 @@ function resizeCanvases() {
 window.addEventListener('resize', resizeCanvases);
 resizeCanvases();
 
-// Initial Strobe Canvas Test Pattern (Phase 1 Baseline)
-const ctx = strobeCanvas.getContext('2d');
-if (ctx) {
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(0, 0, strobeCanvas.width, strobeCanvas.height);
-}
-
-// Global HUD Toggle
-window.addEventListener('keydown', (e) => {
-  if (e.code === CONFIG.midi.keyboardFallback.toggleHud) {
-    hudOverlay.classList.toggle('hidden');
-  }
-});
-
-// Start button handler
-if (startBtn && startOverlay) {
-  startBtn.addEventListener('click', () => {
-    startOverlay.classList.add('hidden');
-    console.log('[Engine] Started via user gesture.');
-  });
-}
-
-// Function to trigger Asset Preview Card
-let previewTimeout = null;
+// Show on-screen Asset Preview card (smooth fade)
 export function showAssetPreview(assetIndex) {
   const asset = CONFIG.assets.list[assetIndex % CONFIG.assets.list.length];
   if (!asset) return;
@@ -77,4 +61,91 @@ export function showAssetPreview(assetIndex) {
   }, CONFIG.assets.previewDurationMs);
 }
 
-console.log('[Engine] Phase 1 Shell Mounted Successfully.');
+// Cycle to next asset
+export function cycleAsset() {
+  currentAssetIndex = (currentAssetIndex + 1) % CONFIG.assets.list.length;
+  console.log(`[Engine] Switched to asset: ${CONFIG.assets.list[currentAssetIndex].name} (${CONFIG.assets.list[currentAssetIndex].path})`);
+  showAssetPreview(currentAssetIndex);
+  // Dispatch asset change event for visual pipeline
+  window.dispatchEvent(new CustomEvent('engine:assetChange', { detail: { index: currentAssetIndex, asset: CONFIG.assets.list[currentAssetIndex] } }));
+}
+
+// Select direct asset by index (0-based)
+export function selectAsset(index) {
+  if (index >= 0 && index < CONFIG.assets.list.length) {
+    currentAssetIndex = index;
+    showAssetPreview(currentAssetIndex);
+    window.dispatchEvent(new CustomEvent('engine:assetChange', { detail: { index: currentAssetIndex, asset: CONFIG.assets.list[currentAssetIndex] } }));
+  }
+}
+
+// 1. Initialize Diagnostic HUD
+const hud = new DiagnosticHud();
+
+// 2. Initialize Web Audio Engine
+const audio = new AudioEngine();
+
+// Auto-engage engine function
+async function engageEngine() {
+  if (startOverlay && !startOverlay.classList.contains('hidden')) {
+    startOverlay.classList.add('hidden');
+  }
+  await audio.resume();
+}
+
+if (startBtn) {
+  startBtn.addEventListener('click', engageEngine);
+}
+if (startOverlay) {
+  startOverlay.addEventListener('click', engageEngine);
+}
+
+// 3. Initialize Web MIDI Controller
+const midi = new MidiController({
+  onAnyInput: () => {
+    // Zero-click auto resume on first MIDI touch
+    engageEngine();
+  },
+  onPadTrigger: (padId, velocity) => {
+    if (padId === 'pad3') {
+      cycleAsset();
+    }
+  },
+  onStateChange: (rawState, computed) => {
+    // State is read continuously in rAF loop
+  }
+});
+
+// Key bindings for HUD and Direct Asset Switching
+window.addEventListener('keydown', (e) => {
+  if (e.code === CONFIG.midi.keyboardFallback.toggleHud) {
+    hud.toggle();
+  }
+  // Optional direct asset selection via Shift + 1..4
+  if (e.shiftKey) {
+    if (e.code === 'Digit1') selectAsset(0);
+    if (e.code === 'Digit2') selectAsset(1);
+    if (e.code === 'Digit3') selectAsset(2);
+    if (e.code === 'Digit4') selectAsset(3);
+  }
+});
+
+// Main Animation & Update Loop
+function loop() {
+  const computedMidi = midi.getComputedValues();
+  const audioState = audio.update(computedMidi.audioSensitivity);
+
+  // Update diagnostic HUD
+  hud.update(midi.state, computedMidi, audioState);
+
+  requestAnimationFrame(loop);
+}
+
+// Start loop
+requestAnimationFrame(loop);
+
+// Initial asset preview display on boot
+setTimeout(() => showAssetPreview(0), 500);
+
+export { midi, audio, hud, currentAssetIndex };
+console.log('[Engine] Phase 2 Hardware & Communications Layer Online.');
