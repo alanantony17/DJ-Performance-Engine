@@ -98,25 +98,30 @@ export class VisualPipeline {
 
     // STYLE 0: "Pure Spin & Breathe"
     // Exactly ONE copy of the asset, spinning cleanly on its central axis,
-    // with 1:1 true circular aspect ratio on 16:9 screen, masked cleanly to remove tiling/repeats.
+    // with 1:1 true aspect ratio on 16:9 screen.
+    // 100% of artwork details preserved with NO circular crop!
     if (style.mode === 'pure') {
       const getPureScale = () => {
         const breathe = Math.sin(this.audioValues.beatPhase * Math.PI * 2) * 0.04;
         const kickPunch = this.audioValues.kickLevel * 0.16 * (this.midiValues.audioSensitivity * 0.6);
-        return 0.94 * (1.0 + breathe + kickPunch);
+        return 0.90 * (1.0 + breathe + kickPunch);
       };
 
       src(s0)
         .rotate(getRotation)
         .scale(getPureScale, getAspectX, 1)
-        .mask(shape(99, 0.49, 0.005).scale(getPureScale, getAspectX, 1))
+        .mask(
+          shape(4, 0.505, 0.001)
+            .rotate(getRotation)
+            .scale(getPureScale, getAspectX, 1)
+        )
         .hue(getHueRotation)
         .color(getColorR, getColorG, getColorB)
         .blend(o0, getFeedbackDecay)
         .brightness(getBrightness)
         .out(o0);
 
-      console.log('[Visuals] Mounted Style: Pure Spin & Breathe (single centered wheel on axis).');
+      console.log('[Visuals] Mounted Style: Pure Spin & Breathe (full uncropped asset on axis).');
       return;
     }
 
