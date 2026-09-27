@@ -227,6 +227,52 @@ export class MidiController {
         this.state.joystick.pan = 0.5;
         this.notify();
       }
+      // Arrow keys for Pan & Aperture
+      else if (e.code === 'ArrowLeft') {
+        this.state.joystick.pan = Math.max(0, this.state.joystick.pan - 0.05);
+        this.notify();
+      } else if (e.code === 'ArrowRight') {
+        this.state.joystick.pan = Math.min(1, this.state.joystick.pan + 0.05);
+        this.notify();
+      } else if (e.code === 'ArrowUp') {
+        this.state.joystick.aperture = Math.min(CONFIG.midi.joystick.apertureMax, this.state.joystick.aperture + 0.05);
+        this.notify();
+      } else if (e.code === 'ArrowDown') {
+        this.state.joystick.aperture = Math.max(CONFIG.midi.joystick.apertureMin, this.state.joystick.aperture - 0.05);
+        this.notify();
+      }
+      // Knob 1 (LFO Rate): Q / A
+      else if (e.code === 'KeyQ') {
+        this.state.knobs.knob1 = Math.min(1, this.state.knobs.knob1 + 0.08);
+        this.notify();
+      } else if (e.code === 'KeyA') {
+        this.state.knobs.knob1 = Math.max(0, this.state.knobs.knob1 - 0.08);
+        this.notify();
+      }
+      // Knob 2 (Hydra Hue): W / S
+      else if (e.code === 'KeyW') {
+        this.state.knobs.knob2 = (this.state.knobs.knob2 + 0.05) % 1.0;
+        this.notify();
+      } else if (e.code === 'KeyS') {
+        this.state.knobs.knob2 = (this.state.knobs.knob2 - 0.05 + 1.0) % 1.0;
+        this.notify();
+      }
+      // Knob 3 (Feedback Trails): E / Z
+      else if (e.code === 'KeyE') {
+        this.state.knobs.knob3 = Math.min(1, this.state.knobs.knob3 + 0.05);
+        this.notify();
+      } else if (e.code === 'KeyZ') {
+        this.state.knobs.knob3 = Math.max(0, this.state.knobs.knob3 - 0.05);
+        this.notify();
+      }
+      // Knob 4 (Audio Gain): R / F
+      else if (e.code === 'KeyR') {
+        this.state.knobs.knob4 = Math.min(1, this.state.knobs.knob4 + 0.08);
+        this.notify();
+      } else if (e.code === 'KeyF') {
+        this.state.knobs.knob4 = Math.max(0, this.state.knobs.knob4 - 0.08);
+        this.notify();
+      }
     });
 
     window.addEventListener('keyup', (e) => {

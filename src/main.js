@@ -126,12 +126,12 @@ window.addEventListener('keydown', (e) => {
   if (e.code === CONFIG.midi.keyboardFallback.toggleHud) {
     hud.toggle();
   }
-  // Optional direct asset selection via Shift + 1..4
-  if (e.shiftKey) {
-    if (e.code === 'Digit1') selectAsset(0);
-    if (e.code === 'Digit2') selectAsset(1);
-    if (e.code === 'Digit3') selectAsset(2);
-    if (e.code === 'Digit4') selectAsset(3);
+  // Direct asset selection via Shift + 1..9
+  if (e.shiftKey && e.code.startsWith('Digit')) {
+    const digit = parseInt(e.code.replace('Digit', ''), 10);
+    if (!isNaN(digit) && digit >= 1 && digit <= CONFIG.assets.list.length) {
+      selectAsset(digit - 1);
+    }
   }
 });
 

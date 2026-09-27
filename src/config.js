@@ -14,10 +14,12 @@ export const CONFIG = {
   // Asset Pipeline
   assets: {
     list: [
-      { id: 0, name: 'Mandala Solar', path: 'assets/art1.png' },
-      { id: 1, name: 'Flower of Life', path: 'assets/art2.png' },
-      { id: 2, name: 'Hyper-Radial Ray', path: 'assets/art3.png' },
-      { id: 3, name: 'Sacred Lattice', path: 'assets/art4.png' },
+      { id: 0, name: 'Beauty', path: 'assets/beauty.png' },
+      { id: 1, name: 'Diya', path: 'assets/diya.png' },
+      { id: 2, name: 'Jalebi', path: 'assets/Jalebi.png' },
+      { id: 3, name: 'Taj Mahal', path: 'assets/taj%20mahal.png' },
+      { id: 4, name: 'Truck Art', path: 'assets/truck%20art.png' },
+      { id: 5, name: 'Wheel', path: 'assets/wheel.png' },
     ],
     previewDurationMs: 2500, // On-screen preview display duration when asset is switched
   },
