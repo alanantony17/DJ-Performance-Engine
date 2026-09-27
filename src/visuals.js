@@ -1,7 +1,10 @@
 /**
  * DJ Performance Engine - Hydra Synth WebGL Visual Pipeline
- * "Hypnotic Vortex": Fluid 8-petal mandala symmetry with BPM-synced continuous rotation,
- * center-outward liquid ripple breathing, and infinite feedback zoom.
+ * Multi-Mode Visual Engine with On-The-Fly Style Cycling (Pad 5 / Key 5 / V):
+ *  - Style 0: "Pure Spin & Breathe" (100% full unchopped artwork turning & pulsing to BPM)
+ *  - Style 1: "Hypnotic Vortex" (8-petal sacred mandala symmetry with liquid ripples)
+ *  - Style 2: "Flower of Life" (6-petal hexagonal sacred geometry)
+ *  - Style 3: "Psychedelic Warp" (Deep liquid feedback warping & infinite tunnel)
  */
 
 import { CONFIG } from './config.js';
@@ -12,6 +15,7 @@ export class VisualPipeline {
     this.hydra = null;
     this.preloadedImages = [];
     this.currentAssetIndex = 0;
+    this.currentStyleIndex = 0; // Starts with Pure Spin & Breathe
 
     // Timing and smooth rotation state
     this.lastTime = performance.now();
@@ -53,7 +57,6 @@ export class VisualPipeline {
     }
 
     try {
-      // Initialize Hydra on the bottom canvas without microphone auto-capture
       this.hydra = new Hydra({
         canvas: this.canvas,
         detectAudio: false,
@@ -69,7 +72,7 @@ export class VisualPipeline {
       const initialAsset = CONFIG.assets.list[0].path;
       s0.initImage(initialAsset);
 
-      // Build the Hypnotic Vortex generative GLSL patch
+      // Build the multi-style generative GLSL patch
       this.buildPatch();
     } catch (err) {
       console.error('[Visuals] Failed to initialize Hydra Synth:', err);
@@ -77,15 +80,30 @@ export class VisualPipeline {
   }
 
   buildPatch() {
+    // 0. Active Kaleidoscope Symmetry: 1 = Pure (unchopped), 8 = Vortex, 6 = Flower
+    const getKaleid = () => {
+      const style = CONFIG.visualStyles[this.currentStyleIndex] || CONFIG.visualStyles[0];
+      return style.kaleid;
+    };
+
     // 1. Organic Breathing Scale: Smooth sine wave tracking the beat + punchy kick pump
     const getScale = () => {
       const breathe = Math.sin(this.audioValues.beatPhase * Math.PI * 2) * 0.06;
-      const kickPunch = this.audioValues.kickLevel * 0.22 * (this.midiValues.audioSensitivity * 0.6);
+      const kickPunch = this.audioValues.kickLevel * 0.20 * (this.midiValues.audioSensitivity * 0.6);
       return 1.0 + breathe + kickPunch;
     };
 
-    // 2. Center-Outward Liquid Ripple: Concentric waves radiating on bass
+    // 2. Liquid Center-Outward Ripple: Tuned per active visual style
     const getRippleModulation = () => {
+      const style = CONFIG.visualStyles[this.currentStyleIndex] || CONFIG.visualStyles[0];
+      if (style.mode === 'pure') {
+        // Gentle subtle rim pulse so original artwork details/spokes remain crisp and clean
+        return this.audioValues.kickLevel * 0.025 * (this.midiValues.audioSensitivity * 0.5);
+      } else if (style.mode === 'warp') {
+        // Heavy liquid distortion
+        return this.audioValues.kickLevel * 0.28 * (this.midiValues.audioSensitivity * 0.7);
+      }
+      // Standard liquid ripple for Vortex and Flower
       return this.audioValues.kickLevel * 0.12 * (this.midiValues.audioSensitivity * 0.6);
     };
 
@@ -112,20 +130,20 @@ export class VisualPipeline {
       return 0.0;
     };
 
-    // HYPNOTIC VORTEX GLSL PIPELINE:
+    // DYNAMIC MULTI-MODE GLSL PIPELINE:
     // 1. src(s0) -> Centered circular artwork
     // 2. .scale(getScale) -> Smooth organic breathing & bass pump
-    // 3. .rotate(getRotation) -> Fluid BPM-synced continuous rotation
-    // 4. .kaleid(8) -> Sacred 8-petal mandala symmetry (No 4-quadrant split!)
-    // 5. .modulateScale(osc(...).kaleid(8), ...) -> Liquid concentric ripples expanding from center
+    // 3. .rotate(getRotation) -> Fluid BPM-synced continuous spin
+    // 4. .kaleid(getKaleid) -> 1 (Pure unchopped) | 8 (Vortex) | 6 (Flower) | 1 (Warp)
+    // 5. .modulateScale(...) -> Concentric ripples adapted to style
     // 6. .hue() & .color() -> Knob 2 color palette morph
     // 7. .blend(o0, getFeedbackDecay) -> Knob 3 infinite zoom tunnel
     // 8. .brightness(getBrightness) -> Pad 4 sample-accurate DROP SLAM
     src(s0)
       .scale(getScale)
       .rotate(getRotation)
-      .kaleid(8)
-      .modulateScale(osc(6, 0.08, 0).kaleid(8), getRippleModulation)
+      .kaleid(getKaleid)
+      .modulateScale(osc(6, 0.08, 0).kaleid(getKaleid), getRippleModulation)
       .hue(getHueRotation)
       .color(
         () => 0.85 + 0.25 * Math.sin(this.midiValues.hydraHue * Math.PI * 2),
@@ -136,7 +154,7 @@ export class VisualPipeline {
       .brightness(getBrightness)
       .out(o0);
 
-    console.log('[Visuals] Hypnotic Vortex 8-petal generative patch mounted.');
+    console.log('[Visuals] Multi-mode dynamic generative patch mounted.');
   }
 
   setAsset(index) {
@@ -150,12 +168,31 @@ export class VisualPipeline {
     }
   }
 
+  cycleStyle() {
+    this.currentStyleIndex = (this.currentStyleIndex + 1) % CONFIG.visualStyles.length;
+    const activeStyle = CONFIG.visualStyles[this.currentStyleIndex];
+    console.log(`[Visuals] Switched visual style to: ${activeStyle.name} (${activeStyle.desc})`);
+    window.dispatchEvent(new CustomEvent('engine:styleChanged', {
+      detail: { index: this.currentStyleIndex, style: activeStyle }
+    }));
+    return activeStyle;
+  }
+
+  setStyle(index) {
+    if (index >= 0 && index < CONFIG.visualStyles.length) {
+      this.currentStyleIndex = index;
+      const activeStyle = CONFIG.visualStyles[this.currentStyleIndex];
+      window.dispatchEvent(new CustomEvent('engine:styleChanged', {
+        detail: { index: this.currentStyleIndex, style: activeStyle }
+      }));
+    }
+  }
+
   update(midiComputed, audioState) {
     const now = performance.now();
     const dt = Math.min(0.1, (now - this.lastTime) / 1000);
     this.lastTime = now;
 
-    // Keep dynamic values updated for Hydra parameter closures
     this.midiValues.hydraHue = midiComputed.hydraHue;
     this.midiValues.hydraFeedback = midiComputed.hydraFeedback;
     this.midiValues.audioSensitivity = midiComputed.audioSensitivity;

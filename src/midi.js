@@ -31,12 +31,14 @@ export class MidiController {
         pad2: false, // Shutter Blinders
         pad3: false, // Asset Cycle
         pad4: false, // DROP SLAM
+        pad5: false, // Visual Style Cycle
       },
       padVelocities: {
         pad1: 0,
         pad2: 0,
         pad3: 0,
         pad4: 0,
+        pad5: 0,
       }
     };
 
@@ -183,6 +185,8 @@ export class MidiController {
       this.triggerPad('pad3', true, normalized);
     } else if (cc === CONFIG.midi.pads.pad4.cc) {
       this.triggerPad('pad4', value > 0, normalized);
+    } else if (cc === CONFIG.midi.pads.pad5.cc && value > 0) {
+      this.triggerPad('pad5', true, normalized);
     }
   }
 
@@ -199,6 +203,9 @@ export class MidiController {
       else this.triggerPad('pad3', false, 0);
     } else if (pads.pad4.notes.includes(note)) {
       this.triggerPad('pad4', isDown, normVel);
+    } else if (pads.pad5.notes.includes(note)) {
+      if (isDown) this.triggerPad('pad5', true, normVel);
+      else this.triggerPad('pad5', false, 0);
     }
   }
 
@@ -223,6 +230,7 @@ export class MidiController {
       else if (e.code === kb.pad2) this.triggerPad('pad2', true, 1.0);
       else if (e.code === kb.pad3) this.triggerPad('pad3', true, 1.0);
       else if (e.code === kb.pad4) this.triggerPad('pad4', true, 1.0);
+      else if (e.code === kb.pad5 || e.code === kb.cycleStyleKey) this.triggerPad('pad5', true, 1.0);
       else if (e.code === kb.resetPan) {
         this.state.joystick.pan = 0.5;
         this.notify();
@@ -281,6 +289,7 @@ export class MidiController {
       else if (e.code === kb.pad2) this.triggerPad('pad2', false, 0);
       else if (e.code === kb.pad3) this.triggerPad('pad3', false, 0);
       else if (e.code === kb.pad4) this.triggerPad('pad4', false, 0);
+      else if (e.code === kb.pad5 || e.code === kb.cycleStyleKey) this.triggerPad('pad5', false, 0);
     });
 
     // Optional mouse drag for Joystick testing
@@ -307,6 +316,7 @@ export class MidiController {
       padShutter: this.state.pads.pad2,
       padAsset: this.state.pads.pad3,
       padSlam: this.state.pads.pad4,
+      padStyle: this.state.pads.pad5,
     };
   }
 

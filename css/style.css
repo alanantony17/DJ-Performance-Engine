@@ -187,6 +187,87 @@ html, body {
   color: #64748b;
 }
 
+/* Layer 4b: Visual Style Preview Card (On-Screen Preview on Pad 5 / Key 5 / V) */
+#style-preview-card {
+  position: absolute;
+  bottom: 30px;
+  left: 30px;
+  z-index: 150;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  background: rgba(12, 10, 26, 0.90);
+  border: 1px solid rgba(168, 85, 247, 0.6);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 22px rgba(168, 85, 247, 0.25);
+  backdrop-filter: blur(12px);
+  transform: translateY(0);
+  opacity: 0;
+  transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+}
+
+#style-preview-card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#style-preview-card.hidden {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.style-preview-icon {
+  font-size: 26px;
+  line-height: 1;
+  padding: 8px 10px;
+  background: rgba(168, 85, 247, 0.15);
+  border-radius: 8px;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.style-preview-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.style-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.style-preview-tag {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: #c084fc;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.style-preview-mode {
+  font-size: 9px;
+  padding: 1px 6px;
+  background: rgba(192, 132, 252, 0.18);
+  border: 1px solid rgba(192, 132, 252, 0.35);
+  border-radius: 4px;
+  color: #e9d5ff;
+  font-family: monospace;
+}
+
+.style-preview-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.style-preview-desc {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
 /* Layer 5: Live Diagnostic HUD Overlay (Press 'D' to toggle) */
 #hud-overlay {
   position: absolute;
@@ -279,18 +360,18 @@ html, body {
 
 .hud-pads-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
   margin-top: 6px;
 }
 
 .hud-pad {
-  padding: 8px 4px;
+  padding: 8px 3px;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.15);
   text-align: center;
-  font-size: 9px;
+  font-size: 8.5px;
   font-weight: 600;
   color: #64748b;
   transition: all 0.08s ease;
@@ -306,7 +387,15 @@ html, body {
 .hud-pad.active.slam {
   background: #ef4444;
   border-color: #ef4444;
+  color: #fff;
   box-shadow: 0 0 12px #ef4444;
+}
+
+.hud-pad.active.style {
+  background: #a855f7;
+  border-color: #a855f7;
+  color: #fff;
+  box-shadow: 0 0 12px #a855f7;
 }
 
 /* Audio Source Pill (Top Right Floating Badge) */

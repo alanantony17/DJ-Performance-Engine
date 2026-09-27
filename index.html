@@ -39,6 +39,19 @@
     </div>
   </div>
 
+  <!-- Layer 4b: On-Screen Visual Style Preview Card (Toggled via Pad 5 / Key 5 / V) -->
+  <div id="style-preview-card" class="hidden">
+    <div class="style-preview-icon">✨</div>
+    <div class="style-preview-meta">
+      <div class="style-preview-header">
+        <span class="style-preview-tag" id="style-preview-tag">Style [1/4]</span>
+        <span class="style-preview-mode" id="style-preview-mode">KALEID: 1</span>
+      </div>
+      <span class="style-preview-name" id="style-preview-name">Pure Spin &amp; Breathe</span>
+      <span class="style-preview-desc" id="style-preview-desc">Original artwork turning &amp; pulsing smoothly to BPM</span>
+    </div>
+  </div>
+
   <!-- Layer 5: Live Diagnostic & Hardware Telemetry HUD (Press 'D' to toggle) -->
   <div id="hud-overlay">
     <div class="hud-header">
@@ -99,12 +112,17 @@
 
     <!-- Performance Pads Matrix -->
     <div class="hud-section">
-      <div class="hud-section-title">Pads (1: Riser | 2: Shutter | 3: Asset | 4: SLAM)</div>
+      <div class="hud-section-title">Pads (1: Riser | 2: Shutter | 3: Asset | 4: SLAM | 5: Style)</div>
       <div class="hud-pads-grid">
         <div class="hud-pad" id="hud-pad-1">PAD 1<br>RISER</div>
         <div class="hud-pad" id="hud-pad-2">PAD 2<br>BLINDS</div>
         <div class="hud-pad" id="hud-pad-3">PAD 3<br>ASSET</div>
         <div class="hud-pad slam" id="hud-pad-4">PAD 4<br>SLAM</div>
+        <div class="hud-pad style" id="hud-pad-5">PAD 5<br>STYLE</div>
+      </div>
+      <div class="hud-row" style="margin-top: 8px;">
+        <span>Visual Style:</span>
+        <span id="hud-visual-style" style="color: #c084fc; font-weight: 700;">Pure Spin &amp; Breathe</span>
       </div>
     </div>
 
@@ -130,7 +148,7 @@
       </div>
     </div>
     <div style="font-size: 9px; color: #64748b; text-align: center; margin-top: 8px;">
-      Press [D] to Toggle HUD | Keys 1-4 for Pads Fallback
+      Press [D] to Toggle HUD | Keys 1-5 for Pads | 'V' for Style
     </div>
   </div>
 

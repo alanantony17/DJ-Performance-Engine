@@ -33,6 +33,15 @@ export class DiagnosticHud {
     this.pad2 = document.getElementById('hud-pad-2');
     this.pad3 = document.getElementById('hud-pad-3');
     this.pad4 = document.getElementById('hud-pad-4');
+    this.pad5 = document.getElementById('hud-pad-5');
+    this.visualStyleEl = document.getElementById('hud-visual-style');
+
+    // Listen for dynamic style change events
+    window.addEventListener('engine:styleChanged', (e) => {
+      if (this.visualStyleEl && e.detail && e.detail.style) {
+        this.visualStyleEl.textContent = e.detail.style.name;
+      }
+    });
 
     // Audio Meters & Source
     this.audioSourceEl = document.getElementById('hud-audio-source');
@@ -111,6 +120,7 @@ export class DiagnosticHud {
     if (this.pad2) this.pad2.classList.toggle('active', midiState.pads.pad2);
     if (this.pad3) this.pad3.classList.toggle('active', midiState.pads.pad3);
     if (this.pad4) this.pad4.classList.toggle('active', midiState.pads.pad4);
+    if (this.pad5) this.pad5.classList.toggle('active', midiState.pads.pad5);
 
     // 5. Audio Transient Followers & Source
     if (audioState) {

@@ -22,6 +22,13 @@ const assetPreviewThumb = document.getElementById('asset-preview-thumb');
 const assetPreviewTag = document.getElementById('asset-preview-tag');
 const assetPreviewName = document.getElementById('asset-preview-name');
 
+// Visual Style Preview Card DOM References
+const stylePreviewCard = document.getElementById('style-preview-card');
+const stylePreviewTag = document.getElementById('style-preview-tag');
+const stylePreviewMode = document.getElementById('style-preview-mode');
+const stylePreviewName = document.getElementById('style-preview-name');
+const stylePreviewDesc = document.getElementById('style-preview-desc');
+
 // Audio Modal DOM References
 const audioSourcePill = document.getElementById('audio-source-pill');
 const audioPillLabel = document.getElementById('audio-pill-label');
@@ -33,9 +40,10 @@ const audioFileInput = document.getElementById('audio-file-input');
 const audioDeviceSelect = document.getElementById('audio-device-select');
 const hudAudioChangeBtn = document.getElementById('hud-audio-change-btn');
 
-// Active Asset State
+// Active Asset & Style State
 let currentAssetIndex = 0;
 let previewTimeout = null;
+let stylePreviewTimeout = null;
 let strobe = null;
 let visuals = null;
 
@@ -77,6 +85,33 @@ export function showAssetPreview(assetIndex) {
   }, CONFIG.assets.previewDurationMs);
 }
 
+// Show on-screen Visual Style Preview card (smooth fade)
+export function showStylePreview(style) {
+  if (!stylePreviewCard || !style) return;
+
+  if (stylePreviewTag) {
+    stylePreviewTag.textContent = `Style [${style.id + 1}/${CONFIG.visualStyles.length}]`;
+  }
+  if (stylePreviewMode) {
+    stylePreviewMode.textContent = `KALEID: ${style.kaleid}`;
+  }
+  if (stylePreviewName) {
+    stylePreviewName.textContent = style.name;
+  }
+  if (stylePreviewDesc) {
+    stylePreviewDesc.textContent = style.desc;
+  }
+
+  stylePreviewCard.classList.remove('hidden');
+  stylePreviewCard.classList.add('visible');
+
+  if (stylePreviewTimeout) clearTimeout(stylePreviewTimeout);
+  stylePreviewTimeout = setTimeout(() => {
+    stylePreviewCard.classList.remove('visible');
+    stylePreviewCard.classList.add('hidden');
+  }, 2200);
+}
+
 // Cycle to next asset
 export function cycleAsset() {
   currentAssetIndex = (currentAssetIndex + 1) % CONFIG.assets.list.length;
@@ -84,6 +119,14 @@ export function cycleAsset() {
   showAssetPreview(currentAssetIndex);
   // Dispatch asset change event for visual pipeline
   window.dispatchEvent(new CustomEvent('engine:assetChange', { detail: { index: currentAssetIndex, asset: CONFIG.assets.list[currentAssetIndex] } }));
+}
+
+// Cycle to next visual style (Pad 5 / Key 5 / V)
+export function cycleStyle() {
+  if (visuals) {
+    const activeStyle = visuals.cycleStyle();
+    showStylePreview(activeStyle);
+  }
 }
 
 // Select direct asset by index (0-based)
@@ -125,6 +168,8 @@ const midi = new MidiController({
   onPadTrigger: (padId, velocity) => {
     if (padId === 'pad3') {
       cycleAsset();
+    } else if (padId === 'pad5') {
+      cycleStyle();
     }
   },
   onStateChange: (rawState, computed) => {
@@ -275,5 +320,5 @@ requestAnimationFrame(loop);
 // Initial asset preview display on boot
 setTimeout(() => showAssetPreview(0), 500);
 
-export { midi, audio, strobe, visuals, hud, currentAssetIndex };
+export { midi, audio, strobe, visuals, hud, currentAssetIndex, cycleStyle, showStylePreview };
 console.log('[Engine] Phase 4 Full Audiovisual Engine Online & Ready for OBS.');

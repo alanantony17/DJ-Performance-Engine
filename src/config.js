@@ -78,6 +78,13 @@ export const CONFIG = {
         name: 'DROP SLAM Blackout',
         type: 'drop_slam',
       },
+      // Pad 5: Cycle Visual Style
+      pad5: {
+        notes: [40, 52], // E1 or E2
+        cc: 24,
+        name: 'Cycle Visual Style',
+        type: 'style_cycle',
+      },
     },
 
     // Fallback Keyboard Shortcuts for Headless / Offline Testing
@@ -86,10 +93,20 @@ export const CONFIG = {
       pad2: 'Digit2',
       pad3: 'Digit3',
       pad4: 'Digit4',
+      pad5: 'Digit5',
+      cycleStyleKey: 'KeyV',
       toggleHud: 'KeyD',
       resetPan: 'KeyC',
     },
   },
+
+  // Visual Styles Matrix (Toggled via Pad 5 / Key 5 / V)
+  visualStyles: [
+    { id: 0, name: 'Pure Spin & Breathe', desc: 'Original artwork turning & pulsing smoothly to BPM', kaleid: 1, mode: 'pure' },
+    { id: 1, name: 'Hypnotic Vortex', desc: '8-petal sacred mandala symmetry with liquid ripples', kaleid: 8, mode: 'vortex' },
+    { id: 2, name: 'Flower of Life', desc: '6-petal hexagonal sacred geometry', kaleid: 6, mode: 'flower' },
+    { id: 3, name: 'Psychedelic Warp', desc: 'Deep liquid feedback warping & infinite tunnel', kaleid: 1, mode: 'warp' },
+  ],
 
   // Web Audio Transient Detection
   audio: {
