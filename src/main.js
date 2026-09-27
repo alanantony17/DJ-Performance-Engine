@@ -184,7 +184,9 @@ if (audioModal) {
 if (btnCaptureTab) {
   btnCaptureTab.addEventListener('click', async () => {
     closeAudioModal();
-    await engageEngine();
+    if (startOverlay && !startOverlay.classList.contains('hidden')) {
+      startOverlay.classList.add('hidden');
+    }
     const res = await audio.captureTabAudio();
     if (res && !res.success && res.error) {
       alert(res.error);
@@ -195,7 +197,9 @@ if (btnCaptureTab) {
 if (btnDemoBeat) {
   btnDemoBeat.addEventListener('click', async () => {
     closeAudioModal();
-    await engageEngine();
+    if (startOverlay && !startOverlay.classList.contains('hidden')) {
+      startOverlay.classList.add('hidden');
+    }
     await audio.playDemoBeat();
   });
 }
@@ -205,7 +209,9 @@ if (audioFileInput) {
     const file = e.target.files[0];
     if (file) {
       closeAudioModal();
-      await engageEngine();
+      if (startOverlay && !startOverlay.classList.contains('hidden')) {
+        startOverlay.classList.add('hidden');
+      }
       await audio.loadAudioFile(file);
     }
   });
@@ -215,7 +221,9 @@ if (audioDeviceSelect) {
   audioDeviceSelect.addEventListener('change', async (e) => {
     const deviceId = e.target.value;
     closeAudioModal();
-    await engageEngine();
+    if (startOverlay && !startOverlay.classList.contains('hidden')) {
+      startOverlay.classList.add('hidden');
+    }
     await audio.useDevice(deviceId);
   });
 }

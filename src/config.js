@@ -94,24 +94,24 @@ export const CONFIG = {
   // Web Audio Transient Detection
   audio: {
     fftSize: 512,
-    smoothingTimeConstant: 0.75,
-    minDecibels: -85,
-    maxDecibels: -10,
+    smoothingTimeConstant: 0.70,
+    minDecibels: -90,
+    maxDecibels: -25,
 
-    // Band 0: Sub-bass & Kick (approx 20 - 120 Hz)
+    // Band 0: Sub-bass & Kick (approx 40 - 350 Hz, bins 1 to 5)
     kick: {
-      minBin: 0,
-      maxBin: 3,
-      threshold: 0.45,
-      decay: 0.88, // Exponential falloff per frame
+      minBin: 1,
+      maxBin: 5,
+      threshold: 0.18,
+      decay: 0.90, // Exponential falloff per frame
     },
 
-    // Band 1: Mid-High Claps & Hats (approx 2000 - 6000 Hz)
+    // Band 1: Mid-High Claps & Hats (approx 1700 - 6000 Hz, bins 18 to 65)
     clap: {
-      minBin: 23,
-      maxBin: 70,
-      threshold: 0.35,
-      decay: 0.85,
+      minBin: 18,
+      maxBin: 65,
+      threshold: 0.15,
+      decay: 0.88,
     },
   },
 

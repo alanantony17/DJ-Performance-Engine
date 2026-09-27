@@ -151,11 +151,12 @@ export class AudioEngine {
       this.source = this.audioCtx.createMediaStreamSource(this.stream);
       this.source.connect(this.analyser);
 
-      // Unmute monitor gain so:
-      // 1. User can hear the YouTube/music track through speakers/headphones!
-      // 2. Chromium's pull engine continuously requests audio frames for the AnalyserNode!
+      // Keep monitorGain at 0.0 (SILENT):
+      // The user already hears the YouTube Music tab directly in Chrome.
+      // Keeping it connected to destination with gain = 0.0 satisfies Chromium's
+      // render quantum pull clock without outputting duplicate sound or causing an echo!
       if (this.monitorGain) {
-        this.monitorGain.gain.value = 1.0;
+        this.monitorGain.gain.value = 0.0;
       }
 
       // Revert if user clicks "Stop sharing" on Chrome banner
@@ -378,17 +379,23 @@ export class AudioEngine {
       this.kickHistory.shift();
     }
     const kickAvg = this.kickHistory.reduce((a, b) => a + b, 0) / this.kickHistory.length;
-    const kickThreshold = Math.max(kickCfg.threshold, kickAvg * 1.35);
+    const dynamicKickThreshold = Math.max(kickCfg.threshold, kickAvg * 1.25);
 
-    if (kickEnergy > kickThreshold && kickEnergy > this.state.kickLevel) {
-      this.state.kickTrigger = true;
-      this.state.kickLevel = Math.min(1.0, kickEnergy * 1.3);
+    // Continuous envelope follower: tracks instantaneous kickEnergy smoothly
+    if (kickEnergy > this.state.kickLevel) {
+      this.state.kickLevel = Math.min(1.0, kickEnergy);
     } else {
-      this.state.kickTrigger = false;
       this.state.kickLevel *= kickCfg.decay;
     }
 
-    // 2. High Band Analysis (Claps & Hats, bins 23 to 70)
+    // Discrete transient trigger impulse
+    if (kickEnergy > dynamicKickThreshold && kickEnergy > 0.10) {
+      this.state.kickTrigger = true;
+    } else {
+      this.state.kickTrigger = false;
+    }
+
+    // 2. High Band Analysis (Claps & Hats, bins 18 to 65)
     const clapCfg = CONFIG.audio.clap;
     let highEnergy = 0;
     const highBinCount = (clapCfg.maxBin - clapCfg.minBin + 1);
@@ -402,14 +409,19 @@ export class AudioEngine {
       this.highHistory.shift();
     }
     const highAvg = this.highHistory.reduce((a, b) => a + b, 0) / this.highHistory.length;
-    const highThreshold = Math.max(clapCfg.threshold, highAvg * 1.4);
+    const dynamicHighThreshold = Math.max(clapCfg.threshold, highAvg * 1.3);
 
-    if (highEnergy > highThreshold && highEnergy > this.state.highLevel) {
+    // Continuous high envelope follower
+    if (highEnergy > this.state.highLevel) {
+      this.state.highLevel = Math.min(1.0, highEnergy);
+    } else {
+      this.state.highLevel *= clapCfg.decay;
+    }
+
+    if (highEnergy > dynamicHighThreshold && highEnergy > 0.08) {
       this.state.highTrigger = true;
-      this.state.highLevel = Math.min(1.0, highEnergy * 1.4);
     } else {
       this.state.highTrigger = false;
-      this.state.highLevel *= clapCfg.decay;
     }
 
     return this.state;
