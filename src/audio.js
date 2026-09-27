@@ -13,6 +13,7 @@ export class AudioEngine {
     this.stream = null;
     this.fileSource = null;
     this.demoInterval = null;
+    this.monitorGain = null;
     this.isInitialized = false;
 
     this.currentSourceName = 'Default Microphone';
@@ -37,7 +38,7 @@ export class AudioEngine {
     this.historyLength = 30; // ~0.5s window at 60fps
   }
 
-  ensureContext() {
+  async ensureContext() {
     if (!this.audioCtx) {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       this.audioCtx = new AudioContextClass();
@@ -50,10 +51,21 @@ export class AudioEngine {
 
       this.state.fft = new Float32Array(this.analyser.frequencyBinCount);
       this.state.rawFft = new Uint8Array(this.analyser.frequencyBinCount);
+
+      // Create permanent monitor gain node connected to destination
+      // CRITICAL FOR CHROMIUM: A path to audioCtx.destination MUST exist for
+      // Web Audio's render quantum pull clock to pump audio from MediaStream sources!
+      this.monitorGain = this.audioCtx.createGain();
+      this.monitorGain.gain.value = 0.0; // Default muted to prevent mic howling
+      this.analyser.connect(this.monitorGain);
+      this.monitorGain.connect(this.audioCtx.destination);
+
       this.isInitialized = true;
     }
+
     if (this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume();
+      await this.audioCtx.resume();
+      console.log('[Audio] AudioContext state resumed to:', this.audioCtx.state);
     }
   }
 
@@ -63,7 +75,11 @@ export class AudioEngine {
       this.source = null;
     }
     if (this.stream) {
-      try { this.stream.getTracks().forEach(t => t.stop()); } catch (e) {}
+      try {
+        this.stream.getTracks().forEach(t => {
+          t.stop();
+        });
+      } catch (e) {}
       this.stream = null;
     }
     if (this.demoInterval) {
@@ -80,14 +96,14 @@ export class AudioEngine {
   }
 
   async start() {
-    this.ensureContext();
+    await this.ensureContext();
     if (!this.source && this.currentSourceType === 'device') {
       await this.useDevice('default');
     }
   }
 
   async resume() {
-    this.ensureContext();
+    await this.ensureContext();
     if (!this.state.active) {
       await this.start();
     }
@@ -97,34 +113,52 @@ export class AudioEngine {
    * Capture Audio from a Browser Tab (YouTube, Spotify, etc.) via Screen/Tab Sharing
    */
   async captureTabAudio() {
-    this.ensureContext();
+    await this.ensureContext();
     this.disconnectCurrentSource();
 
     try {
       const displayStream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
         audio: {
+          autoGainControl: false,
           echoCancellation: false,
           noiseSuppression: false,
-          autoGainControl: false,
+          systemAudio: 'include',
         },
+        systemAudio: 'include',
       });
 
-      const audioTrack = displayStream.getAudioTracks()[0];
-      if (!audioTrack) {
-        // Stop any video tracks that were captured
-        displayStream.getVideoTracks().forEach(track => track.stop());
-        throw new Error('No audio track detected. Make sure to check "Share tab audio" in the browser prompt!');
+      const audioTracks = displayStream.getAudioTracks();
+      if (!audioTracks || audioTracks.length === 0) {
+        // User didn't check "Share tab audio"
+        displayStream.getTracks().forEach(t => t.stop());
+        throw new Error('No audio track detected! When the sharing dialog appears, select "Chrome Tab" and check the "Share tab audio" box at the bottom-left.');
       }
 
-      // Stop video tracks immediately so they don't consume GPU/bandwidth
-      displayStream.getVideoTracks().forEach(track => track.stop());
+      const audioTrack = audioTracks[0];
+      audioTrack.enabled = true;
 
-      this.stream = new MediaStream([audioTrack]);
+      // DO NOT call track.stop() on video tracks!
+      // In Chromium, stopping the video track can tear down or mute the capture session.
+      // Instead, just disable it so it consumes zero rendering/decoding overhead.
+      displayStream.getVideoTracks().forEach(t => {
+        t.enabled = false;
+      });
+
+      this.stream = displayStream;
+
+      // Pass the displayStream directly to createMediaStreamSource
       this.source = this.audioCtx.createMediaStreamSource(this.stream);
       this.source.connect(this.analyser);
 
-      // When tab sharing ends, revert gracefully
+      // Unmute monitor gain so:
+      // 1. User can hear the YouTube/music track through speakers/headphones!
+      // 2. Chromium's pull engine continuously requests audio frames for the AnalyserNode!
+      if (this.monitorGain) {
+        this.monitorGain.gain.value = 1.0;
+      }
+
+      // Revert if user clicks "Stop sharing" on Chrome banner
       audioTrack.onended = () => {
         console.log('[Audio] Tab audio sharing ended by user. Reverting to default input.');
         this.useDevice('default');
@@ -136,7 +170,7 @@ export class AudioEngine {
       this.state.sourceType = this.currentSourceType;
       this.state.active = true;
 
-      console.log('[Audio] Successfully connected Tab Audio stream.');
+      console.log('[Audio] Successfully connected Tab Audio stream to Web Audio graph with speaker monitoring.');
       window.dispatchEvent(new CustomEvent('engine:audioSourceChanged', { detail: { name: this.currentSourceName, type: 'tab' } }));
       return { success: true, name: this.currentSourceName };
     } catch (err) {
@@ -150,7 +184,7 @@ export class AudioEngine {
    * Connect to a specific hardware or virtual audio input (e.g. Mic, VB-Cable, Stereo Mix)
    */
   async useDevice(deviceId = 'default') {
-    this.ensureContext();
+    await this.ensureContext();
     this.disconnectCurrentSource();
 
     try {
@@ -167,6 +201,12 @@ export class AudioEngine {
       this.stream = await navigator.mediaDevices.getUserMedia(constraints);
       this.source = this.audioCtx.createMediaStreamSource(this.stream);
       this.source.connect(this.analyser);
+
+      // Mute monitor gain for microphone to prevent room howling / acoustic feedback
+      // (The graph is still connected to destination via monitorGain, so the pull clock runs!)
+      if (this.monitorGain) {
+        this.monitorGain.gain.value = 0.0;
+      }
 
       // Identify human-readable device name
       let label = 'Default Microphone / Virtual Cable';
@@ -195,8 +235,8 @@ export class AudioEngine {
   /**
    * Play an internal 128 BPM electronic kick drum beat for instant visual testing
    */
-  playDemoBeat() {
-    this.ensureContext();
+  async playDemoBeat() {
+    await this.ensureContext();
     this.disconnectCurrentSource();
 
     this.currentSourceName = 'Demo Beat (128 BPM Techno Kick)';
@@ -204,6 +244,10 @@ export class AudioEngine {
     this.state.sourceName = this.currentSourceName;
     this.state.sourceType = this.currentSourceType;
     this.state.active = true;
+
+    if (this.monitorGain) {
+      this.monitorGain.gain.value = 1.0;
+    }
 
     const intervalMs = (60 / 128) * 1000; // ~468ms
     const playKick = () => {
@@ -222,7 +266,6 @@ export class AudioEngine {
 
       osc.connect(gain);
       gain.connect(this.analyser);
-      gain.connect(this.audioCtx.destination); // Play to speakers so user hears the rhythm
 
       osc.start(now);
       osc.stop(now + 0.3);
@@ -240,7 +283,7 @@ export class AudioEngine {
    * Load and loop an MP3 / WAV audio file from the user's computer
    */
   async loadAudioFile(file) {
-    this.ensureContext();
+    await this.ensureContext();
     this.disconnectCurrentSource();
 
     try {
@@ -256,7 +299,10 @@ export class AudioEngine {
 
       bufferSource.connect(gain);
       gain.connect(this.analyser);
-      gain.connect(this.audioCtx.destination); // Output to speakers
+
+      if (this.monitorGain) {
+        this.monitorGain.gain.value = 1.0;
+      }
 
       bufferSource.start(0);
       this.fileSource = bufferSource;
@@ -273,6 +319,12 @@ export class AudioEngine {
     } catch (err) {
       console.error('[Audio] Failed to load audio file:', err);
       return { success: false, error: err.message };
+    }
+  }
+
+  setMonitorVolume(val) {
+    if (this.monitorGain) {
+      this.monitorGain.gain.value = Math.max(0, Math.min(1, val));
     }
   }
 

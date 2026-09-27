@@ -185,7 +185,10 @@ if (btnCaptureTab) {
   btnCaptureTab.addEventListener('click', async () => {
     closeAudioModal();
     await engageEngine();
-    await audio.captureTabAudio();
+    const res = await audio.captureTabAudio();
+    if (res && !res.success && res.error) {
+      alert(res.error);
+    }
   });
 }
 
@@ -193,7 +196,7 @@ if (btnDemoBeat) {
   btnDemoBeat.addEventListener('click', async () => {
     closeAudioModal();
     await engageEngine();
-    audio.playDemoBeat();
+    await audio.playDemoBeat();
   });
 }
 
