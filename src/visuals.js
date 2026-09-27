@@ -1,7 +1,7 @@
 /**
  * DJ Performance Engine - Hydra Synth WebGL Visual Pipeline
  * Multi-Mode Visual Engine with On-The-Fly Style Cycling (Pad 5 / Key 5 / V):
- *  - Style 0: "Pure Spin & Breathe" (100% full unchopped artwork turning & pulsing to BPM)
+ *  - Style 0: "Pure Spin & Breathe" (Single centered asset turning on its axis & pulsing to BPM)
  *  - Style 1: "Hypnotic Vortex" (8-petal sacred mandala symmetry with liquid ripples)
  *  - Style 2: "Flower of Life" (6-petal hexagonal sacred geometry)
  *  - Style 3: "Psychedelic Warp" (Deep liquid feedback warping & infinite tunnel)
@@ -69,7 +69,7 @@ export class VisualPipeline {
       console.log('[Visuals] Hydra Synth initialized successfully.');
 
       // Load initial asset into source s0
-      const initialAsset = CONFIG.assets.list[0].path;
+      const initialAsset = CONFIG.assets.list[this.currentAssetIndex].path;
       s0.initImage(initialAsset);
 
       // Build the multi-style generative GLSL patch
@@ -80,81 +80,109 @@ export class VisualPipeline {
   }
 
   buildPatch() {
-    // 0. Active Kaleidoscope Symmetry: 1 = Pure (unchopped), 8 = Vortex, 6 = Flower
-    const getKaleid = () => {
-      const style = CONFIG.visualStyles[this.currentStyleIndex] || CONFIG.visualStyles[0];
-      return style.kaleid;
-    };
+    if (typeof src === 'undefined' || typeof s0 === 'undefined') return;
 
-    // 1. Organic Breathing Scale: Smooth sine wave tracking the beat + punchy kick pump
-    const getScale = () => {
+    const style = CONFIG.visualStyles[this.currentStyleIndex] || CONFIG.visualStyles[0];
+
+    // Common dynamic uniform closures:
+    const getRotation = () => this.rotationAngle;
+    const getHueRotation = () => this.midiValues.hydraHue;
+    const getFeedbackDecay = () => Math.min(0.96, Math.max(0.0, this.midiValues.hydraFeedback));
+    const getBrightness = () => (this.midiValues.padSlam ? -1.0 : 0.0);
+    const getColorR = () => 0.85 + 0.25 * Math.sin(this.midiValues.hydraHue * Math.PI * 2);
+    const getColorG = () => 0.85 + 0.25 * Math.cos(this.midiValues.hydraHue * Math.PI * 2);
+    const getColorB = () => 0.95;
+
+    // Aspect ratio multiplier for 16:9 canvas (1080 / 1920 = 0.5625)
+    const getAspectX = () => (window.innerHeight && window.innerWidth ? window.innerHeight / window.innerWidth : 9 / 16);
+
+    // STYLE 0: "Pure Spin & Breathe"
+    // Exactly ONE copy of the asset, spinning cleanly on its central axis,
+    // with 1:1 true circular aspect ratio on 16:9 screen, masked cleanly to remove tiling/repeats.
+    if (style.mode === 'pure') {
+      const getPureScale = () => {
+        const breathe = Math.sin(this.audioValues.beatPhase * Math.PI * 2) * 0.04;
+        const kickPunch = this.audioValues.kickLevel * 0.16 * (this.midiValues.audioSensitivity * 0.6);
+        return 0.94 * (1.0 + breathe + kickPunch);
+      };
+
+      src(s0)
+        .rotate(getRotation)
+        .scale(getPureScale, getAspectX, 1)
+        .mask(shape(99, 0.49, 0.005).scale(getPureScale, getAspectX, 1))
+        .hue(getHueRotation)
+        .color(getColorR, getColorG, getColorB)
+        .blend(o0, getFeedbackDecay)
+        .brightness(getBrightness)
+        .out(o0);
+
+      console.log('[Visuals] Mounted Style: Pure Spin & Breathe (single centered wheel on axis).');
+      return;
+    }
+
+    // Dynamic Scale for Geometric Mandala modes:
+    const getMandalaScale = () => {
       const breathe = Math.sin(this.audioValues.beatPhase * Math.PI * 2) * 0.06;
       const kickPunch = this.audioValues.kickLevel * 0.20 * (this.midiValues.audioSensitivity * 0.6);
       return 1.0 + breathe + kickPunch;
     };
 
-    // 2. Liquid Center-Outward Ripple: Tuned per active visual style
-    const getRippleModulation = () => {
-      const style = CONFIG.visualStyles[this.currentStyleIndex] || CONFIG.visualStyles[0];
-      if (style.mode === 'pure') {
-        // Gentle subtle rim pulse so original artwork details/spokes remain crisp and clean
-        return this.audioValues.kickLevel * 0.025 * (this.midiValues.audioSensitivity * 0.5);
-      } else if (style.mode === 'warp') {
-        // Heavy liquid distortion
-        return this.audioValues.kickLevel * 0.28 * (this.midiValues.audioSensitivity * 0.7);
-      }
-      // Standard liquid ripple for Vortex and Flower
-      return this.audioValues.kickLevel * 0.12 * (this.midiValues.audioSensitivity * 0.6);
-    };
+    // STYLE 1: "Hypnotic Vortex" (8-petal sacred mandala symmetry with liquid ripples)
+    if (style.mode === 'vortex') {
+      const getRipple = () => this.audioValues.kickLevel * 0.12 * (this.midiValues.audioSensitivity * 0.6);
 
-    // 3. Smooth Continuous BPM-Synced Rotation Angle
-    const getRotation = () => {
-      return this.rotationAngle;
-    };
+      src(s0)
+        .scale(getMandalaScale)
+        .rotate(getRotation)
+        .kaleid(8)
+        .modulateScale(osc(6, 0.08, 0).kaleid(8), getRipple)
+        .hue(getHueRotation)
+        .color(getColorR, getColorG, getColorB)
+        .blend(o0, getFeedbackDecay)
+        .brightness(getBrightness)
+        .out(o0);
 
-    // 4. Color & Hue Morph
-    const getHueRotation = () => {
-      return this.midiValues.hydraHue;
-    };
+      console.log('[Visuals] Mounted Style: Hypnotic Vortex (8-petal mandala).');
+      return;
+    }
 
-    // 5. Infinite Feedback Zoom & Tunnel Trails
-    const getFeedbackDecay = () => {
-      return Math.min(0.96, Math.max(0.0, this.midiValues.hydraFeedback));
-    };
+    // STYLE 2: "Flower of Life" (6-petal hexagonal sacred geometry)
+    if (style.mode === 'flower') {
+      const getRipple = () => this.audioValues.kickLevel * 0.10 * (this.midiValues.audioSensitivity * 0.6);
 
-    // 6. Blackout clamp for Pad 4 DROP SLAM
-    const getBrightness = () => {
-      if (this.midiValues.padSlam) {
-        return -1.0; // Clamps WebGL output to complete pitch black
-      }
-      return 0.0;
-    };
+      src(s0)
+        .scale(getMandalaScale)
+        .rotate(getRotation)
+        .kaleid(6)
+        .modulateScale(osc(6, 0.08, 0).kaleid(6), getRipple)
+        .hue(getHueRotation)
+        .color(getColorR, getColorG, getColorB)
+        .blend(o0, getFeedbackDecay)
+        .brightness(getBrightness)
+        .out(o0);
 
-    // DYNAMIC MULTI-MODE GLSL PIPELINE:
-    // 1. src(s0) -> Centered circular artwork
-    // 2. .scale(getScale) -> Smooth organic breathing & bass pump
-    // 3. .rotate(getRotation) -> Fluid BPM-synced continuous spin
-    // 4. .kaleid(getKaleid) -> 1 (Pure unchopped) | 8 (Vortex) | 6 (Flower) | 1 (Warp)
-    // 5. .modulateScale(...) -> Concentric ripples adapted to style
-    // 6. .hue() & .color() -> Knob 2 color palette morph
-    // 7. .blend(o0, getFeedbackDecay) -> Knob 3 infinite zoom tunnel
-    // 8. .brightness(getBrightness) -> Pad 4 sample-accurate DROP SLAM
-    src(s0)
-      .scale(getScale)
-      .rotate(getRotation)
-      .kaleid(getKaleid)
-      .modulateScale(osc(6, 0.08, 0).kaleid(getKaleid), getRippleModulation)
-      .hue(getHueRotation)
-      .color(
-        () => 0.85 + 0.25 * Math.sin(this.midiValues.hydraHue * Math.PI * 2),
-        () => 0.85 + 0.25 * Math.cos(this.midiValues.hydraHue * Math.PI * 2),
-        () => 0.95
-      )
-      .blend(o0, getFeedbackDecay)
-      .brightness(getBrightness)
-      .out(o0);
+      console.log('[Visuals] Mounted Style: Flower of Life (6-petal geometry).');
+      return;
+    }
 
-    console.log('[Visuals] Multi-mode dynamic generative patch mounted.');
+    // STYLE 3: "Psychedelic Warp" (Liquid feedback warp tunnel)
+    if (style.mode === 'warp') {
+      const getWarp = () => this.audioValues.kickLevel * 0.28 * (this.midiValues.audioSensitivity * 0.7);
+
+      src(s0)
+        .scale(getMandalaScale)
+        .rotate(getRotation)
+        .modulateScale(osc(4, 0.08, 1).rotate(getRotation), getWarp)
+        .kaleid(4)
+        .hue(getHueRotation)
+        .color(getColorR, getColorG, getColorB)
+        .blend(o0, getFeedbackDecay)
+        .brightness(getBrightness)
+        .out(o0);
+
+      console.log('[Visuals] Mounted Style: Psychedelic Warp.');
+      return;
+    }
   }
 
   setAsset(index) {
@@ -170,6 +198,7 @@ export class VisualPipeline {
 
   cycleStyle() {
     this.currentStyleIndex = (this.currentStyleIndex + 1) % CONFIG.visualStyles.length;
+    this.buildPatch();
     const activeStyle = CONFIG.visualStyles[this.currentStyleIndex];
     console.log(`[Visuals] Switched visual style to: ${activeStyle.name} (${activeStyle.desc})`);
     window.dispatchEvent(new CustomEvent('engine:styleChanged', {
@@ -181,6 +210,7 @@ export class VisualPipeline {
   setStyle(index) {
     if (index >= 0 && index < CONFIG.visualStyles.length) {
       this.currentStyleIndex = index;
+      this.buildPatch();
       const activeStyle = CONFIG.visualStyles[this.currentStyleIndex];
       window.dispatchEvent(new CustomEvent('engine:styleChanged', {
         detail: { index: this.currentStyleIndex, style: activeStyle }
