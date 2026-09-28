@@ -20,6 +20,7 @@ export const CONFIG = {
       { id: 3, name: 'Jalebi', path: 'assets/Jalebi.png' },
       { id: 4, name: 'Taj Mahal', path: 'assets/taj%20mahal.png' },
       { id: 5, name: 'Truck Art', path: 'assets/truck%20art.png' },
+      { id: 6, name: 'Tiger Mandala', path: 'assets/mandala.jpg' },
     ],
     previewDurationMs: 2500, // On-screen preview display duration when asset is switched
   },
@@ -42,10 +43,10 @@ export const CONFIG = {
 
     // Rotary Knobs (CC 70 - 73 on MPK Mini 3 Prog 1)
     knobs: {
-      knob1: { cc: 70, name: 'Strobe LFO Rate', min: 2.0, max: 50.0, default: 8.0 },   // 2Hz - 50Hz
-      knob2: { cc: 71, name: 'Hydra Color/Hue', min: 0.0, max: 1.0, default: 0.0 },     // 0.0 - 1.0
-      knob3: { cc: 72, name: 'Feedback Decay', min: 0.0, max: 0.98, default: 0.5 },     // 0.0 - 0.98
-      knob4: { cc: 73, name: 'Audio Sensitivity', min: 0.2, max: 3.5, default: 1.5 },   // Multiplier
+      knob1: { cc: 70, name: 'Rotation Speed', min: 2.0, max: 50.0, default: 8.0 },   // 2Hz - 50Hz
+      knob2: { cc: 71, name: 'Palette Hue', min: 0.0, max: 1.0, default: 0.0 },        // 0.0 - 1.0
+      knob3: { cc: 72, name: 'Wave Spread', min: 1.8, max: 3.6, default: 2.5 },        // 1.8 - 3.6 smooth wavelength
+      knob4: { cc: 73, name: 'Wave Depth', min: 0.2, max: 3.5, default: 1.5 },         // Multiplier
     },
 
     // Performance Pads (Prog 1 Note On / Off or CC mode fallback)
@@ -57,12 +58,12 @@ export const CONFIG = {
         name: 'Snare Riser Strobe',
         type: 'riser',
       },
-      // Pad 2: Horizontal Shutter Blinder
+      // Pad 2: Toggle Seamless Hue Flow
       pad2: {
         notes: [37, 49], // C#1 or C#2
         cc: 21,
-        name: 'Horizontal Shutter Blinder',
-        type: 'shutter',
+        name: 'Toggle Hue Flow',
+        type: 'hue_flow_toggle',
       },
       // Pad 3: Cycle Artwork Asset
       pad3: {
@@ -78,11 +79,11 @@ export const CONFIG = {
         name: 'DROP SLAM Blackout',
         type: 'drop_slam',
       },
-      // Pad 5: Cycle Visual Style
+      // Pad 5: Cycle 3D Motion Preset
       pad5: {
         notes: [40, 52], // E1 or E2
         cc: 24,
-        name: 'Cycle Visual Style',
+        name: 'Cycle 3D Motion Preset',
         type: 'style_cycle',
       },
     },
@@ -95,18 +96,19 @@ export const CONFIG = {
       pad4: 'Digit4',
       pad5: 'Digit5',
       cycleStyleKey: 'KeyV',
+      toggleHueKey: 'KeyH',
       toggleHud: 'KeyD',
       resetPan: 'KeyC',
     },
   },
 
-  // Visual Styles Matrix (Toggled via Pad 5 / Key 5 / V)
+  // 3D Motion Presets Matrix (Toggled via Pad 5 / Key 5 / V)
   visualStyles: [
-    { id: 0, name: 'Raw Asset (As-Is)', desc: '100% untouched raw artwork, zero transformations', mode: 'raw' },
-    { id: 1, name: 'Pure Axis Spin', desc: 'Full artwork turning cleanly on its central axis to BPM', mode: 'pure' },
-    { id: 2, name: 'Hypnotic Vortex', desc: '8-petal sacred mandala symmetry with liquid ripples', mode: 'vortex' },
-    { id: 3, name: 'Flower of Life', desc: '6-petal hexagonal sacred geometry', mode: 'flower' },
-    { id: 4, name: 'Psychedelic Warp', desc: 'Deep liquid feedback warping & infinite tunnel', mode: 'warp' },
+    { id: 0, name: 'Beat-Synced Liquid Ripple', desc: 'Kick waves out, snare ripples in, melody undulates in tempo', mode: 'ripple' },
+    { id: 1, name: 'Kinetic Kick Shockwave', desc: 'Seismic wave rings bursting from center on kicks', mode: 'shockwave' },
+    { id: 2, name: 'Melody Harmonic Waves', desc: 'Fluid standing ripples dancing to vocals and melody', mode: 'melody' },
+    { id: 3, name: 'Snare & Kick Interlock', desc: 'Opposing drum waves colliding across the mandala', mode: 'interlock' },
+    { id: 4, name: '3D Stage Perspective Tilt', desc: '32-degree concert stage tilt revealing 3D wave relief', mode: 'tilt' },
   ],
 
   // Web Audio Transient Detection & Dynamics

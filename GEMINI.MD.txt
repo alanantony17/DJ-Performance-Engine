@@ -3,23 +3,24 @@
 ## Architecture & Core Directives
 - Output: Fullscreen 1920x1080 single-page app loaded into OBS Studio as a Browser Source.
 - Dual-Canvas Layout:
-  - Bottom Canvas (`#hydra-canvas`): WebGL visual pipeline running Hydra Synth (`https://unpkg.com/hydra-synth`).
+  - Bottom Canvas (`#three-canvas`): Three.js WebGLRenderer (alpha: true, powerPreference: high-performance) running 128x128 subdivided 3D mesh displacement with smooth organic water ripples, MirroredRepeatWrapping, and drag-and-drop loading.
   - Top Canvas (`#strobe-canvas`): 2D spatial lighting/strobe engine styled with `position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; mix-blend-mode: screen; pointer-events: none;`.
 - Hardware & Communication:
   - Native Web MIDI API (`navigator.requestMIDIAccess`) only. NEVER simulate keyboard events or use virtual keystrokes.
   - Native Web Audio API (`AnalyserNode`) listening to audio input / VB-Audio Virtual Cable for kick drum transient analysis (`a.fft[0]`).
 - Asset Pipeline:
-  - High-resolution artwork assets reside in `/assets/` (`art1.png` to `art4.png`).
-  - Hydra ingests assets via `s0.initImage()` and transforms them using `.kaleid()`, audio bass modulation, hue rotation, and feedback loops.
+  - High-resolution artwork assets reside in `/assets/` (`art1.png` to `art4.png`, `mandala.jpg`, etc.).
+  - Drag-and-drop support: Dropping any PNG/JPG onto the window hot-reloads the texture with `oldTexture.dispose()` to prevent memory leaks.
 
 ## AKAI MPK Mini 3 Mapping Matrix
-- Joystick X-Axis (Pitch Bend): Strobe beam horizontal pan.
-- Joystick Y-Axis (Modulation / CC 1): Strobe aperture/iris beam width.
-- Knob 1 (CC 70): Strobe pulse rate (LFO: 2Hz to 50Hz).
+- Joystick X-Axis (Pitch Bend): 3D Camera horizontal pan & strobe beam pan.
+- Joystick Y-Axis (Modulation / CC 1): 3D Camera zoom / aperture.
+- Knob 1 (CC 70): Ripple flow rate & strobe LFO (2Hz to 50Hz).
 - Knob 2 (CC 71): Visual hue shift / color palette morph.
-- Knob 3 (CC 72): Visual feedback decay trails.
-- Knob 4 (CC 73): Audio kick sensitivity multiplier.
+- Knob 3 (CC 72): Smooth wave spread / wavelength (1.8 to 3.6, no concentric bullseyes).
+- Knob 4 (CC 73): Wave depth / audio sensitivity multiplier.
 - Pad 1: Accelerating Snare Riser Strobe.
 - Pad 2: Horizontal Shutter Blinder.
 - Pad 3: Cycle to next artwork asset in `/assets/`.
-- Pad 4: DROP SLAM (instant blackout, cuts all strobes to 0).
+- Pad 4: DROP SLAM (instant blackout across all visuals and strobes).
+- Pad 5: Cycle 3D Motion Preset (Smooth Ripple, Subwoofer, Chladni, Shockwave, Stage Tilt).

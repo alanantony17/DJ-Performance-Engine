@@ -35,11 +35,20 @@ export class DiagnosticHud {
     this.pad4 = document.getElementById('hud-pad-4');
     this.pad5 = document.getElementById('hud-pad-5');
     this.visualStyleEl = document.getElementById('hud-visual-style');
+    this.hueStatusEl = document.getElementById('hud-hue-status');
 
     // Listen for dynamic style change events
     window.addEventListener('engine:styleChanged', (e) => {
       if (this.visualStyleEl && e.detail && e.detail.style) {
         this.visualStyleEl.textContent = e.detail.style.name;
+      }
+    });
+
+    // Listen for dynamic hue mode change events
+    window.addEventListener('engine:hueModeChanged', (e) => {
+      if (this.hueStatusEl && e.detail) {
+        this.hueStatusEl.textContent = e.detail.name;
+        this.hueStatusEl.style.color = e.detail.active ? '#22d3ee' : '#fbbf24';
       }
     });
 
@@ -114,14 +123,14 @@ export class DiagnosticHud {
     if (this.valK2) this.valK2.textContent = computedMidi.hydraHue.toFixed(2);
 
     if (this.barK3) this.barK3.style.width = `${Math.round(midiState.knobs.knob3 * 100)}%`;
-    if (this.valK3) this.valK3.textContent = computedMidi.hydraFeedback.toFixed(2);
+    if (this.valK3) this.valK3.textContent = (computedMidi.waveSpread || 2.5).toFixed(2);
 
     if (this.barK4) this.barK4.style.width = `${Math.round(midiState.knobs.knob4 * 100)}%`;
     if (this.valK4) this.valK4.textContent = `${computedMidi.audioSensitivity.toFixed(1)}x`;
 
     // 4. Performance Pads Active States
     if (this.pad1) this.pad1.classList.toggle('active', midiState.pads.pad1);
-    if (this.pad2) this.pad2.classList.toggle('active', midiState.pads.pad2);
+    if (this.pad2) this.pad2.classList.toggle('active', midiState.pads.pad2 || (window.threeEngine && window.threeEngine.hueFlowActive));
     if (this.pad3) this.pad3.classList.toggle('active', midiState.pads.pad3);
     if (this.pad4) this.pad4.classList.toggle('active', midiState.pads.pad4);
     if (this.pad5) this.pad5.classList.toggle('active', midiState.pads.pad5);

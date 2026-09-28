@@ -1,20 +1,18 @@
 /**
  * DJ Performance Engine - Main Orchestrator
- * Integrates Web MIDI, Web Audio, Strobe Engine, and Hydra Synth.
+ * Integrates Web MIDI, Web Audio, and Three.js 3D Displacement Engine.
  */
 
 import { CONFIG } from './config.js';
 import { MidiController } from './midi.js';
 import { AudioEngine } from './audio.js';
 import { DiagnosticHud } from './hud.js';
-import { StrobeEngine } from './strobe.js';
-import { VisualPipeline } from './visuals.js';
+import { ThreeDisplacementEngine } from './three-engine.js';
 
 console.log('[Engine] Initializing DJ Performance Engine Core...');
 
 // DOM References
-const hydraCanvas = document.getElementById('hydra-canvas');
-const strobeCanvas = document.getElementById('strobe-canvas');
+const threeCanvas = document.getElementById('three-canvas');
 const startOverlay = document.getElementById('start-overlay');
 const startBtn = document.getElementById('start-btn');
 const assetPreviewCard = document.getElementById('asset-preview-card');
@@ -28,6 +26,11 @@ const stylePreviewTag = document.getElementById('style-preview-tag');
 const stylePreviewMode = document.getElementById('style-preview-mode');
 const stylePreviewName = document.getElementById('style-preview-name');
 const stylePreviewDesc = document.getElementById('style-preview-desc');
+
+// Hue Mode Preview Card DOM References
+const huePreviewCard = document.getElementById('hue-preview-card');
+const huePreviewName = document.getElementById('hue-preview-name');
+const huePreviewDesc = document.getElementById('hue-preview-desc');
 
 // Audio Modal DOM References
 const audioSourcePill = document.getElementById('audio-source-pill');
@@ -44,23 +47,19 @@ const hudAudioChangeBtn = document.getElementById('hud-audio-change-btn');
 let currentAssetIndex = 0;
 let previewTimeout = null;
 let stylePreviewTimeout = null;
-let strobe = null;
-let visuals = null;
+let huePreviewTimeout = null;
+let threeEngine = null;
 
-// Resize handler to enforce 1920x1080 resolution
+// Synchronized Resize Handler for Three.js Engine
 function resizeCanvases() {
-  const width = CONFIG.display.width;
-  const height = CONFIG.display.height;
+  const width = window.innerWidth || CONFIG.display.width;
+  const height = window.innerHeight || CONFIG.display.height;
   
-  if (hydraCanvas.width !== width || hydraCanvas.height !== height) {
-    hydraCanvas.width = width;
-    hydraCanvas.height = height;
+  if (threeCanvas && (threeCanvas.width !== width || threeCanvas.height !== height)) {
+    threeCanvas.width = width;
+    threeCanvas.height = height;
   }
-  if (strobeCanvas.width !== width || strobeCanvas.height !== height) {
-    strobeCanvas.width = width;
-    strobeCanvas.height = height;
-  }
-  if (strobe) strobe.resize();
+  if (threeEngine) threeEngine.resize(width, height);
 }
 
 window.addEventListener('resize', resizeCanvases);
@@ -112,6 +111,38 @@ export function showStylePreview(style) {
   }, 2200);
 }
 
+// Show on-screen Hue Mode Preview card (smooth fade)
+export function showHuePreview(hueMode) {
+  if (!huePreviewCard || !hueMode) return;
+
+  if (huePreviewName) {
+    huePreviewName.textContent = hueMode.name;
+    huePreviewName.style.color = hueMode.active ? '#22d3ee' : '#fbbf24';
+  }
+  if (huePreviewDesc) {
+    huePreviewDesc.textContent = hueMode.active
+      ? 'Seamless full-spectrum color cycling active'
+      : '100% authentic artist colors preserved';
+  }
+
+  huePreviewCard.classList.remove('hidden');
+  huePreviewCard.classList.add('visible');
+
+  if (huePreviewTimeout) clearTimeout(huePreviewTimeout);
+  huePreviewTimeout = setTimeout(() => {
+    huePreviewCard.classList.remove('visible');
+    huePreviewCard.classList.add('hidden');
+  }, 2200);
+}
+
+// Toggle Seamless Hue Flow Mode (Pad 2 / Key 2 / H)
+export function toggleHue() {
+  if (threeEngine) {
+    const res = threeEngine.toggleHueFlow();
+    showHuePreview(res);
+  }
+}
+
 // Cycle to next asset
 export function cycleAsset() {
   currentAssetIndex = (currentAssetIndex + 1) % CONFIG.assets.list.length;
@@ -121,11 +152,11 @@ export function cycleAsset() {
   window.dispatchEvent(new CustomEvent('engine:assetChange', { detail: { index: currentAssetIndex, asset: CONFIG.assets.list[currentAssetIndex] } }));
 }
 
-// Cycle to next visual style (Pad 5 / Key 5 / V)
+// Cycle to next 3D motion preset (Pad 5 / Key 5 / V)
 export function cycleStyle() {
-  if (visuals) {
-    const activeStyle = visuals.cycleStyle();
-    showStylePreview(activeStyle);
+  if (threeEngine) {
+    const activePreset = threeEngine.cyclePreset();
+    showStylePreview(activePreset);
   }
 }
 
@@ -171,7 +202,9 @@ const midi = new MidiController({
     engageEngine();
   },
   onPadTrigger: (padId, velocity) => {
-    if (padId === 'pad3') {
+    if (padId === 'pad2') {
+      toggleHue();
+    } else if (padId === 'pad3') {
       cycleAsset();
     } else if (padId === 'pad5') {
       cycleStyle();
@@ -285,16 +318,35 @@ window.addEventListener('engine:audioSourceChanged', (e) => {
   }
 });
 
-// 4. Initialize Strobe Lighting Engine
-strobe = new StrobeEngine(strobeCanvas);
+// 4. Initialize Three.js 3D Mesh Displacement Engine (Layer 1: Bottom)
+if (threeCanvas && typeof THREE !== 'undefined') {
+  try {
+    threeEngine = new ThreeDisplacementEngine(threeCanvas);
+  } catch (err) {
+    console.error('[Engine] Failed to initialize Three.js Engine:', err);
+  }
+}
 
-// 5. Initialize Hydra Visual Pipeline
-visuals = new VisualPipeline(hydraCanvas);
-
-// Listen for asset change events
+// Listen for asset change events (Pad 3 / direct select)
 window.addEventListener('engine:assetChange', (e) => {
-  if (visuals) {
-    visuals.setAsset(e.detail.index);
+  if (threeEngine) {
+    threeEngine.setAsset(e.detail.index);
+  }
+});
+
+// Listen for drag-and-drop asset loaded events
+window.addEventListener('engine:assetLoaded', (e) => {
+  if (assetPreviewCard) {
+    assetPreviewThumb.src = e.detail.path;
+    assetPreviewTag.textContent = 'Custom Drag-Drop';
+    assetPreviewName.textContent = e.detail.name;
+    assetPreviewCard.classList.remove('hidden');
+    assetPreviewCard.classList.add('visible');
+    if (previewTimeout) clearTimeout(previewTimeout);
+    previewTimeout = setTimeout(() => {
+      assetPreviewCard.classList.remove('visible');
+      assetPreviewCard.classList.add('hidden');
+    }, CONFIG.assets.previewDurationMs);
   }
 });
 
@@ -303,14 +355,9 @@ function loop() {
   const computedMidi = midi.getComputedValues();
   const audioState = audio.update(computedMidi.audioSensitivity);
 
-  // Update Hydra GLSL dynamic uniform parameters
-  if (visuals) {
-    visuals.update(computedMidi, audioState);
-  }
-
-  // Render 2D Strobe & Lighting Overlay
-  if (strobe) {
-    strobe.render(midi.state, computedMidi, audioState);
+  // 1. Render Three.js 3D Mesh Displacement Engine (Pure visual, zero overlay light)
+  if (threeEngine) {
+    threeEngine.update(computedMidi, audioState);
   }
 
   // Update diagnostic HUD
@@ -327,10 +374,9 @@ setTimeout(() => showAssetPreview(0), 500);
 
 // Expose on window for diagnostics, OBS docks, and telemetry
 window.audio = audio;
-window.visuals = visuals;
-window.strobe = strobe;
+window.threeEngine = threeEngine;
 window.midi = midi;
 window.hud = hud;
 
-export { midi, audio, strobe, visuals, hud, currentAssetIndex };
-console.log('[Engine] Phase 4 Full Audiovisual Engine Online & Ready for OBS.');
+export { midi, audio, threeEngine, hud, currentAssetIndex };
+console.log('[Engine] High-Performance Three.js Audiovisual Rig Online & Ready for OBS.');

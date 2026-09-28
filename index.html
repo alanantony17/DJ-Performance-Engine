@@ -18,18 +18,17 @@
     });
   </script>
   <link rel="stylesheet" href="css/style.css">
-  <!-- Hydra Synth CDN -->
-  <script src="https://unpkg.com/hydra-synth"></script>
+  <!-- Three.js WebGL 3D Engine CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
-  <!-- Dual-Canvas Composition Shell -->
+  <!-- Canvas Output Shell -->
   <div id="canvas-container">
-    <!-- Layer 1: Hydra Synth WebGL Output -->
-    <canvas id="hydra-canvas" width="1920" height="1080"></canvas>
-
-    <!-- Layer 2: 2D Spatial Lighting & Strobe Engine (Screen Blended) -->
-    <canvas id="strobe-canvas" width="1920" height="1080"></canvas>
+    <!-- Layer 1: Three.js 3D Mesh Output (z-index: 1) -->
+    <canvas id="three-canvas" width="1920" height="1080"></canvas>
   </div>
+
+  <div id="drop-hint">[ Drop PNG/JPG onto screen to load image ]</div>
 
   <!-- Layer 3: Interactive Start Overlay (Auto-resumes AudioContext & triggers Engine) -->
   <div id="start-overlay">
@@ -62,6 +61,19 @@
       </div>
       <span class="style-preview-name" id="style-preview-name">Raw Asset (As-Is)</span>
       <span class="style-preview-desc" id="style-preview-desc">100% untouched raw artwork, zero transformations</span>
+    </div>
+  </div>
+
+  <!-- Layer 4c: On-Screen Hue Mode Preview Card (Toggled via Pad 2 / Key 2 / H) -->
+  <div id="hue-preview-card" class="hidden">
+    <div class="style-preview-icon" id="hue-preview-icon" style="background: rgba(6, 182, 212, 0.15); border-color: rgba(6, 182, 212, 0.3);">🎨</div>
+    <div class="style-preview-meta">
+      <div class="style-preview-header">
+        <span class="style-preview-tag" id="hue-preview-tag" style="color: #22d3ee;">HUE MODE</span>
+        <span class="style-preview-mode" id="hue-preview-badge" style="background: rgba(6, 182, 212, 0.2); border-color: #06b6d4; color: #22d3ee;">PAD 2</span>
+      </div>
+      <span class="style-preview-name" id="hue-preview-name">Seamless Auto Flow</span>
+      <span class="style-preview-desc" id="hue-preview-desc">Full-spectrum smooth color flow across artwork</span>
     </div>
   </div>
 
@@ -112,12 +124,12 @@
         <span id="hud-val-k2">0.00</span>
       </div>
       <div class="hud-row">
-        <span>Knob 3 (Trails):</span>
+        <span>Knob 3 (Spread):</span>
         <div class="hud-meter"><div class="hud-meter-bar" id="hud-bar-k3" style="width: 50%;"></div></div>
-        <span id="hud-val-k3">0.50</span>
+        <span id="hud-val-k3">2.50</span>
       </div>
       <div class="hud-row">
-        <span>Knob 4 (Gain):</span>
+        <span>Knob 4 (Depth):</span>
         <div class="hud-meter"><div class="hud-meter-bar" id="hud-bar-k4" style="width: 45%;"></div></div>
         <span id="hud-val-k4">1.5x</span>
       </div>
@@ -125,17 +137,21 @@
 
     <!-- Performance Pads Matrix -->
     <div class="hud-section">
-      <div class="hud-section-title">Pads (1: Riser | 2: Shutter | 3: Asset | 4: SLAM | 5: Style)</div>
+      <div class="hud-section-title">Pads (1: Riser | 2: Hue Flow | 3: Asset | 4: SLAM | 5: Preset)</div>
       <div class="hud-pads-grid">
         <div class="hud-pad" id="hud-pad-1">PAD 1<br>RISER</div>
-        <div class="hud-pad" id="hud-pad-2">PAD 2<br>BLINDS</div>
+        <div class="hud-pad" id="hud-pad-2">PAD 2<br>HUE FLOW</div>
         <div class="hud-pad" id="hud-pad-3">PAD 3<br>ASSET</div>
         <div class="hud-pad slam" id="hud-pad-4">PAD 4<br>SLAM</div>
-        <div class="hud-pad style" id="hud-pad-5">PAD 5<br>STYLE</div>
+        <div class="hud-pad style" id="hud-pad-5">PAD 5<br>PRESET</div>
       </div>
       <div class="hud-row" style="margin-top: 8px;">
-        <span>Visual Style:</span>
-        <span id="hud-visual-style" style="color: #c084fc; font-weight: 700;">Raw Asset (As-Is)</span>
+        <span>3D Motion Preset:</span>
+        <span id="hud-visual-style" style="color: #c084fc; font-weight: 700;">Smooth Liquid Ripple</span>
+      </div>
+      <div class="hud-row" style="margin-top: 4px;">
+        <span>Hue Mode:</span>
+        <span id="hud-hue-status" style="color: #fbbf24; font-weight: 700;">Original Palette</span>
       </div>
     </div>
 
@@ -171,7 +187,7 @@
       </div>
     </div>
     <div style="font-size: 9px; color: #64748b; text-align: center; margin-top: 8px;">
-      Press [D] to Toggle HUD | Keys 1-5 for Pads | 'V' for Style
+      Press [D] to Toggle HUD | Keys 1-5 for Pads | 'V' Style | 'H' Hue
     </div>
   </div>
 

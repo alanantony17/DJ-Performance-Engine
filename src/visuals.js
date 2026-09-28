@@ -10,12 +10,13 @@
 import { CONFIG } from './config.js';
 
 export class VisualPipeline {
-  constructor(canvas) {
+  constructor(canvas, threeCanvas = null) {
     this.canvas = canvas;
+    this.threeCanvas = threeCanvas;
     this.hydra = null;
     this.preloadedImages = [];
     this.currentAssetIndex = 0;
-    this.currentStyleIndex = 0; // Starts with Pure Spin & Breathe
+    this.currentStyleIndex = 0; // Starts with 3D Mesh Displacement
 
     // Timing and smooth rotation state
     this.lastTime = performance.now();
@@ -99,73 +100,75 @@ export class VisualPipeline {
     // Aspect ratio multiplier for 16:9 canvas (1080 / 1920 = 0.5625)
     const getAspectX = () => (window.innerHeight && window.innerWidth ? window.innerHeight / window.innerWidth : 9 / 16);
 
-    // STYLE 0: "Raw Asset (As-Is)"
-    // 100% untouched raw artwork, zero transformations, zero crop, zero zoom!
+    // STYLE 0: "3D Mesh Displacement (Direct Three.js)"
+    // Hydra canvas becomes transparent so Layer 1 (#three-canvas) shines directly through with 100% clarity
+    if (style.mode === 'three_direct') {
+      if (this.canvas) this.canvas.style.opacity = '0';
+      console.log('[Visuals] Mounted Style: 3D Mesh Displacement (Direct Three.js pass-through).');
+      return;
+    }
+
+    // For all other styles, make Hydra canvas visible
+    if (this.canvas) this.canvas.style.opacity = '1';
+
+    // STYLE 1: "3D Mesh + Hydra Feedback Trails"
+    // Ingests #three-canvas into s0 and applies feedback decay trails and hue shift
+    if (style.mode === 'three_feedback') {
+      if (this.threeCanvas && typeof s0 !== 'undefined' && s0.init) {
+        s0.init({ src: this.threeCanvas, dynamic: true });
+      }
+      src(s0)
+        .hue(getHueRotation)
+        .blend(o0, getFeedbackDecay)
+        .brightness(getBrightness)
+        .out(o0);
+      console.log('[Visuals] Mounted Style: 3D Mesh + Hydra Feedback Trails.');
+      return;
+    }
+
+    // STYLE 2: "3D Mesh + Liquid Vortex"
+    if (style.mode === 'three_vortex') {
+      if (this.threeCanvas && typeof s0 !== 'undefined' && s0.init) {
+        s0.init({ src: this.threeCanvas, dynamic: true });
+      }
+      const getRipple = () => (this.audioValues.kickPunch || this.audioValues.kickLevel) * 0.22;
+      src(s0)
+        .kaleid(8)
+        .modulateScale(osc(6, 0.08, 0).kaleid(8), getRipple)
+        .hue(getHueRotation)
+        .blend(o0, getFeedbackDecay)
+        .brightness(getBrightness)
+        .out(o0);
+      console.log('[Visuals] Mounted Style: 3D Mesh + Liquid Vortex.');
+      return;
+    }
+
+    // For 2D styles, ensure s0 is initialized with current 2D asset
+    const currentAsset = CONFIG.assets.list[this.currentAssetIndex];
+    if (typeof s0 !== 'undefined' && s0.initImage && currentAsset) {
+      s0.initImage(currentAsset.path);
+    }
+
+    // STYLE 3: "Raw Asset (As-Is)"
     if (style.mode === 'raw') {
       src(s0)
         .brightness(getBrightness)
         .out(o0);
-      console.log('[Visuals] Mounted Style 0: Raw Asset (As-Is, no transformations).');
+      console.log('[Visuals] Mounted Style: Raw Asset (As-Is, no transformations).');
       return;
     }
 
-    // STYLE 1: "Pure Axis Spin"
-    // Full artwork turning cleanly on its central axis to BPM, zero crop, zero masks, zero zoom!
+    // STYLE 4: "Pure Axis Spin"
     if (style.mode === 'pure') {
       src(s0)
         .rotate(getRotation)
         .brightness(getBrightness)
         .out(o0);
-      console.log('[Visuals] Mounted Style 1: Pure Axis Spin (spinning on axis, uncropped).');
+      console.log('[Visuals] Mounted Style: Pure Axis Spin (spinning on axis, uncropped).');
       return;
     }
 
-    // Dynamic Scale for Geometric Mandala modes:
-    const getMandalaScale = () => {
-      const breathe = Math.sin(this.audioValues.beatPhase * Math.PI * 2) * 0.04;
-      const punch = (this.audioValues.kickPunch || this.audioValues.kickLevel) * 0.32;
-      return 1.0 + breathe + punch;
-    };
-
-    // STYLE 1: "Hypnotic Vortex" (8-petal sacred mandala symmetry with liquid ripples)
-    if (style.mode === 'vortex') {
-      const getRipple = () => (this.audioValues.kickPunch || this.audioValues.kickLevel) * 0.22;
-
-      src(s0)
-        .scale(getMandalaScale)
-        .rotate(getRotation)
-        .kaleid(8)
-        .modulateScale(osc(6, 0.08, 0).kaleid(8), getRipple)
-        .hue(getHueRotation)
-        .color(getColorR, getColorG, getColorB)
-        .blend(o0, getFeedbackDecay)
-        .brightness(getBrightness)
-        .out(o0);
-
-      console.log('[Visuals] Mounted Style: Hypnotic Vortex (8-petal mandala).');
-      return;
-    }
-
-    // STYLE 2: "Flower of Life" (6-petal hexagonal sacred geometry)
-    if (style.mode === 'flower') {
-      const getRipple = () => (this.audioValues.kickPunch || this.audioValues.kickLevel) * 0.18;
-
-      src(s0)
-        .scale(getMandalaScale)
-        .rotate(getRotation)
-        .kaleid(6)
-        .modulateScale(osc(6, 0.08, 0).kaleid(6), getRipple)
-        .hue(getHueRotation)
-        .color(getColorR, getColorG, getColorB)
-        .blend(o0, getFeedbackDecay)
-        .brightness(getBrightness)
-        .out(o0);
-
-      console.log('[Visuals] Mounted Style: Flower of Life (6-petal geometry).');
-      return;
-    }
-
-    // STYLE 3: "Psychedelic Warp" (Liquid feedback warp tunnel)
+    // STYLE 5: "Psychedelic Warp" (Liquid feedback warp tunnel)
     if (style.mode === 'warp') {
       const getWarp = () => (this.audioValues.kickPunch || this.audioValues.kickLevel) * 0.38;
 
@@ -182,6 +185,16 @@ export class VisualPipeline {
 
       console.log('[Visuals] Mounted Style: Psychedelic Warp.');
       return;
+    }
+  }
+
+  resize(width, height) {
+    if (this.hydra && this.hydra.setResolution) {
+      try {
+        this.hydra.setResolution(width, height);
+      } catch (e) {
+        // Fallback or ignore if not supported in build
+      }
     }
   }
 

@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mandala 3D Displacement Lab - Three.js WebGL Engine</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      overflow: hidden;
+      user-select: none;
+    }
+    body, html {
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+      color: #fff;
+    }
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+    /* Strobe flash overlay */
+    #strobe-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+      opacity: 0;
+      mix-blend-mode: screen;
+      transition: opacity 0.05s ease;
+    }
+    /* HUD / Telemetry Bottom Left */
+    #hud {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      color: #00f0ff;
+      font-size: 11px;
+      z-index: 30;
+      background: rgba(8, 10, 18, 0.85);
+      backdrop-filter: blur(10px);
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 240, 255, 0.25);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.7);
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    #hud .title {
+      font-weight: 700;
+      color: #facc15;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+    }
+    /* Quick Tips Top Left */
+    #tips {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 11px;
+      color: #94a3b8;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 30;
+      pointer-events: none;
+    }
+    #tips span {
+      color: #facc15;
+      font-weight: bold;
+    }
+    /* Control Panel UI Top Right */
+    #ui-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 360px;
+      max-height: calc(100vh - 40px);
+      background: rgba(10, 12, 22, 0.90);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 12px;
+      padding: 18px;
+      font-size: 12px;
+      z-index: 40;
+      overflow-y: auto;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 24px rgba(0, 240, 255, 0.12);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+    }
+    #ui-panel.collapsed {
+      transform: translateX(390px);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .panel-title {
+      font-weight: 700;
+      font-size: 14px;
+      color: #facc15;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .badge {
+      font-size: 9px;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(0, 240, 255, 0.15);
+      color: #00f0ff;
+      font-weight: 700;
+    }
+    .section-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #94a3b8;
+      margin: 14px 0 6px 0;
+      font-weight: 700;
+    }
+    /* Mode Buttons Grid */
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .grid-2col {
+      grid-template-columns: 1fr 1fr;
+    }
+    .mode-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: #cbd5e1;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      transition: all 0.15s ease;
+    }
+    .mode-btn:hover {
+      background: rgba(0, 240, 255, 0.1);
+      border-color: rgba(0, 240, 255, 0.3);
+    }
+    .mode-btn.active {
+      background: rgba(0, 240, 255, 0.18);
+      border-color: #00f0ff;
+      color: #fff;
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+    }
+    .mode-btn-name {
+      font-weight: 600;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .mode-btn-desc {
+      font-size: 10px;
+      color: #94a3b8;
+      line-height: 1.25;
+    }
+    /* Sliders */
+    .control-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+    }
+    .control-label {
+      color: #cbd5e1;
+      font-size: 11px;
+    }
+    .control-val {
+      font-family: monospace;
+      font-size: 11px;
+      color: #facc15;
+    }
+    input[type="range"] {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 2px;
+      outline: none;
+      -webkit-appearance: none;
+      margin: 3px 0 8px 0;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #00f0ff;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+    }
+    /* Beat Indicators */
+    .beat-indicators {
+      display: flex;
+      gap: 6px;
+      margin: 8px 0;
+    }
+    .beat-box {
+      flex: 1;
+      height: 22px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      color: #64748b;
+      transition: all 0.05s ease;
+    }
+    .beat-box.flash-kick { background: #ef4444; color: #fff; box-shadow: 0 0 10px #ef4444; }
+    .beat-box.flash-snare { background: #38bdf8; color: #fff; box-shadow: 0 0 10px #38bdf8; }
+    .beat-box.flash-hat { background: #facc15; color: #000; box-shadow: 0 0 8px #facc15; }
+    
+    .action-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #f1f5f9;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+    .action-btn:hover { background: rgba(255, 255, 255, 0.15); }
+    .action-btn.active { background: #0284c7; border-color: #38bdf8; color: #fff; }
+  </style>
+  <!-- Three.js r128 CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <div id="canvas-container"></div>
+  <div id="strobe-layer"></div>
+
+  <div id="tips">
+    Press <span>H</span> to hide/show panel | <span>SPACE</span> for Kick hit | Click & Drag to Orbit 3D Camera
+  </div>
+
+  <div id="hud">
+    <div class="title">MANDALA 3D DISPLACEMENT ENGINE</div>
+    <div id="hud-status">AKAI MPK: Listening | Mode: Concentric Ripple</div>
+    <div id="hud-stats" style="color: #94a3b8; font-size: 10px;">Grid: 128x128 (16,641 vertices) | 60 FPS</div>
+  </div>
+
+  <!-- Interactive Control Panel -->
+  <div id="ui-panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span>🌊 3D Vertex Wave Lab</span>
+        <span class="badge">Zero-Cut WebGL</span>
+      </div>
+      <span style="font-size: 11px; color: #94a3b8;">1080p 60FPS</span>
+    </div>
+
+    <!-- Displacement Wave Modes -->
+    <div class="section-title">3D Displacement Wave Physics</div>
+    <div class="btn-grid">
+      <!-- Mode 1: Classic Concentric Ripple -->
+      <button class="mode-btn active" data-wave="ripple">
+        <div class="mode-btn-name">
+          <span>1. Concentric Water Ripple</span>
+          <span style="color: #00f0ff;">★ Original</span>
+        </div>
+        <div class="mode-btn-desc">Radial liquid waves roll outward across lotus, tigers & gold rim. Zero cuts.</div>
+      </button>
+
+      <!-- Mode 2: Chladni Cymbal Resonance -->
+      <button class="mode-btn" data-wave="cymbal">
+        <div class="mode-btn-name">
+          <span>2. Chladni Cymbal Resonance</span>
+          <span style="color: #facc15;">★ 8-Fold Sacred</span>
+        </div>
+        <div class="mode-btn-desc">Standing nodal waves align with the 4 tigers & 8 arches like a vibrating bronze gong.</div>
+      </button>
+
+      <!-- Mode 3: Subwoofer Excursion -->
+      <button class="mode-btn" data-wave="speaker">
+        <div class="mode-btn-name">
+          <span>3. Subwoofer Dust-Cap Thump</span>
+          <span style="color: #ef4444;">★ Heavy Bass</span>
+        </div>
+        <div class="mode-btn-desc">The central lotus physically punches forward like a subwoofer cone on kick hits.</div>
+      </button>
+
+      <!-- Mode 4: Shockwave Pulse -->
+      <button class="mode-btn" data-wave="shockwave">
+        <div class="mode-btn-name">
+          <span>4. Kinetic Shockwave Pulse</span>
+          <span style="color: #a855f7;">★ Fast Attack</span>
+        </div>
+        <div class="mode-btn-desc">Each kick triggers a high-speed seismic ring bursting outward from the core.</div>
+      </button>
+    </div>
+
+    <!-- Camera Angle Selector -->
+    <div class="section-title">Camera Perspective</div>
+    <div class="btn-grid grid-2col">
+      <button class="action-btn active" id="btn-cam-top">Top-Down View</button>
+      <button class="action-btn" id="btn-cam-tilt">3D Stage Perspective</button>
+    </div>
+
+    <!-- Material & Lighting -->
+    <div class="section-title">Lighting & Rendering</div>
+    <div class="btn-grid grid-2col">
+      <button class="action-btn active" id="btn-mat-lit">Gilded Studio Light</button>
+      <button class="action-btn" id="btn-mat-wire">Wireframe Overlay</button>
+    </div>
+
+    <!-- Audio Source -->
+    <div class="section-title">Audio & Beat Input</div>
+    <div class="beat-indicators">
+      <div class="beat-box" id="box-kick">KICK</div>
+      <div class="beat-box" id="box-snare">SNARE</div>
+      <div class="beat-box" id="box-hat">HI-HAT</div>
+    </div>
+    <div class="btn-grid grid-2col">
+      <button class="action-btn active" id="btn-sim-audio">Simulated 128 BPM</button>
+      <button class="action-btn" id="btn-mic-audio">Enable Live Mic</button>
+    </div>
+
+    <!-- Sliders -->
+    <div class="section-title" style="margin-top: 12px;">Real-Time Physics Tuning</div>
+
+    <div class="control-row">
+      <span class="control-label">Wave Height (Bass Excursion Z)</span>
+      <span class="control-val" id="val-wave-z">0.85</span>
+    </div>
+    <input type="range" id="slider-wave-z" min="0.1" max="2.5" step="0.05" value="0.85">
+
+    <div class="control-row">
+      <span class="control-label">Wave Symmetry / Frequency</span>
+      <span class="control-val" id="val-sym">4</span>
+    </div>
+    <input type="range" id="slider-sym" min="1" max="16" step="1" value="4">
+
+    <div class="control-row">
+      <span class="control-label">Rotation Speed</span>
+      <span class="control-val" id="val-rot">0.006</span>
+    </div>
+    <input type="range" id="slider-rot" min="-0.03" max="0.03" step="0.001" value="0.006">
+
+    <div class="control-row">
+      <span class="control-label">Light Shimmer & Specular Power</span>
+      <span class="control-val" id="val-spec">1.2</span>
+    </div>
+    <input type="range" id="slider-spec" min="0.0" max="3.0" step="0.1" value="1.2">
+
+    <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 11px; color: #64748b; line-height: 1.4;">
+      💎 <strong>Zero Texture Tearing:</strong> UV coordinates remain static while 16,641 vertices displace smoothly along the Z-axis to the beat.
+    </div>
+  </div>
+
+  <script>
+    // --- Application State ---
+    const State = {
+      waveType: 'ripple', // 'ripple', 'cymbal', 'speaker', 'shockwave'
+      camMode: 'top',     // 'top' or 'tilt'
+      litMode: true,
+      wireframe: false,
+
+      // Physics & Audio
+      bass: 0.0,
+      snare: 0.0,
+      treble: 0.0,
+      waveZMultiplier: 0.85,
+      symmetry: 4,
+      rotSpeed: 0.006,
+      specularPower: 1.2,
+
+      // Strobe & MIDI
+      strobeActive: false,
+      strobeMode: 'white',
+      panX: 0.0,
+      apertureY: 1.0,
+      colorHue: 0.1,
+
+      // Beat Sync
+      bpm: 128.0,
+      beatPhase: 0.0,
+      currentBeat: 0,
+      simulated: true,
+
+      // Dynamic shockwave ring
+      shockwaveDist: 0.0,
+    };
+
+    // --- Scene, Camera, Renderer Setup ---
+    const container = document.getElementById('canvas-container');
+    const hudStatus = document.getElementById('hud-status');
+    const strobeLayer = document.getElementById('strobe-layer');
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 0, 6.2);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
+    container.appendChild(renderer.domElement);
+
+    // --- Lighting ---
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
+
+    const pointLight = new THREE.PointLight(0xfff0c0, 2.0, 20);
+    pointLight.position.set(2, 3, 4);
+    scene.add(pointLight);
+
+    const rimLight = new THREE.PointLight(0x00f0ff, 1.2, 15);
+    rimLight.position.set(-3, -2, 3);
+    scene.add(rimLight);
+
+    // --- Load Artwork onto Subdivided Plane Geometry ---
+    // 128x128 grid = 16,641 vertices for ultra-smooth liquid curves
+    const gridRes = 128;
+    const planeGeo = new THREE.PlaneGeometry(6.2, 6.2, gridRes, gridRes);
+
+    const textureLoader = new THREE.TextureLoader();
+    const mandalaTex = textureLoader.load('assets/mandala.jpg', () => {
+      mandalaTex.generateMipmaps = true;
+      mandalaTex.minFilter = THREE.LinearMipmapLinearFilter;
+      mandalaTex.magFilter = THREE.LinearFilter;
+      console.log('[Three] Mandala texture loaded successfully.');
+    });
+
+    // Material with specular reflections off waves
+    const mandalaMaterial = new THREE.MeshPhongMaterial({
+      map: mandalaTex,
+      shininess: 45,
+      specular: 0xffe080,
+      side: THREE.DoubleSide,
+      wireframe: false,
+    });
+
+    const mandalaMesh = new THREE.Mesh(planeGeo, mandalaMaterial);
+    scene.add(mandalaMesh);
+
+    // Cache initial Z vertex positions
+    const posAttr = planeGeo.attributes.position;
+    const vertexCount = posAttr.count;
+    const initialZ = new Float32Array(vertexCount);
+    for (let i = 0; i < vertexCount; i++) {
+      initialZ[i] = posAttr.getZ(i);
+    }
+
+    // --- Orbit & Drag Controls ---
+    let isDragging = false;
+    let prevMouseX = 0, prevMouseY = 0;
+    let orbitAngleX = 0.0, orbitAngleY = 0.0;
+
+    window.addEventListener('mousedown', (e) => {
+      if (e.target.closest('#ui-panel')) return;
+      isDragging = true;
+      prevMouseX = e.clientX;
+      prevMouseY = e.clientY;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - prevMouseX;
+      const dy = e.clientY - prevMouseY;
+      prevMouseX = e.clientX;
+      prevMouseY = e.clientY;
+
+      orbitAngleY += dx * 0.005;
+      orbitAngleX += dy * 0.005;
+      orbitAngleX = Math.max(-1.2, Math.min(1.2, orbitAngleX));
+    });
+
+    window.addEventListener('mouseup', () => { isDragging = false; });
+
+    // --- Audio Simulation Engine ---
+    let lastBeatTime = performance.now();
+    function updateSimulatedAudio() {
+      const beatInterval = (60.0 / State.bpm) * 1000;
+      const now = performance.now();
+      const elapsed = now - lastBeatTime;
+      State.beatPhase = (elapsed % beatInterval) / beatInterval;
+
+      // Exponential decay on transient hits
+      State.bass *= 0.88;
+      State.snare *= 0.84;
+      State.treble *= 0.80;
+
+      if (elapsed >= beatInterval) {
+        lastBeatTime = now;
+        State.currentBeat = (State.currentBeat + 1) % 16;
+
+        // 4-on-the-floor kick
+        if (State.currentBeat % 4 === 0 || State.currentBeat % 4 === 2) {
+          triggerKick(1.0);
+        }
+        // Snare on 4 and 12
+        if (State.currentBeat === 4 || State.currentBeat === 12) {
+          triggerSnare(1.0);
+        }
+        // Hi-Hats
+        triggerHat(0.85);
+      }
+    }
+
+    function triggerKick(strength = 1.0) {
+      State.bass = strength;
+      State.shockwaveDist = 0.0; // Trigger seismic outward burst
+
+      const box = document.getElementById('box-kick');
+      box.classList.add('flash-kick');
+      setTimeout(() => box.classList.remove('flash-kick'), 80);
+    }
+
+    function triggerSnare(strength = 1.0) {
+      State.snare = strength;
+      const box = document.getElementById('box-snare');
+      box.classList.add('flash-snare');
+      setTimeout(() => box.classList.remove('flash-snare'), 70);
+    }
+
+    function triggerHat(strength = 1.0) {
+      State.treble = strength;
+      const box = document.getElementById('box-hat');
+      box.classList.add('flash-hat');
+      setTimeout(() => box.classList.remove('flash-hat'), 50);
+    }
+
+    // --- Web Audio Microphone Input ---
+    let audioCtx, analyser, dataArray;
+    async function initLiveMic() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        audioCtx.createMediaStreamSource(stream).connect(analyser);
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        State.simulated = false;
+        document.getElementById('btn-mic-audio').classList.add('active');
+        document.getElementById('btn-sim-audio').classList.remove('active');
+        hudStatus.innerText = "AKAI MPK: Live Mic Connected | Engine Active";
+      } catch (err) {
+        alert("Microphone access failed: " + err.message);
+      }
+    }
+
+    function processLiveAudio() {
+      if (!analyser) return;
+      analyser.getByteFrequencyData(dataArray);
+
+      // Low bass bins
+      const rawBass = (dataArray[1] + dataArray[2] + dataArray[3]) / (3 * 255);
+      const rawSnare = (dataArray[8] + dataArray[12]) / (2 * 255);
+      const rawHigh = (dataArray[25] + dataArray[35]) / (2 * 255);
+
+      if (rawBass > 0.45 && State.bass < 0.2) {
+        triggerKick(rawBass * 1.4);
+      } else {
+        State.bass = Math.max(State.bass * 0.88, rawBass * 0.7);
+      }
+      State.snare = rawSnare;
+      State.treble = rawHigh;
+    }
+
+    // --- Web MIDI Integration (AKAI MPK Mini 3) ---
+    if (navigator.requestMIDIAccess) {
+      navigator.requestMIDIAccess().then((midi) => {
+        hudStatus.innerText = "AKAI MPK Mini 3: Connected | WebGL Ready";
+        for (let input of midi.inputs.values()) {
+          input.onmidimessage = handleMIDIMessage;
+        }
+      }, () => console.log('MIDI Standby'));
+    }
+
+    function handleMIDIMessage(event) {
+      const [status, data1, data2] = event.data;
+      const cmd = status >> 4;
+
+      // Note On (Pads)
+      if (cmd === 9 && data2 > 0) {
+        if (data1 === 36 || data1 === 48) triggerKick(1.5); // Pad 1
+        if (data1 === 37 || data1 === 49) triggerStrobe('white'); // Pad 2
+        if (data1 === 38 || data1 === 50) cycleWaveMode(); // Pad 3
+        if (data1 === 39 || data1 === 51) killAllStrobes(); // Pad 4: DROP SLAM
+      }
+
+      // Continuous Controls (Knobs)
+      if (cmd === 11) {
+        const val = data2 / 127;
+        if (data1 === 70 || data1 === 16) {
+          State.rotSpeed = (val - 0.5) * 0.04;
+          document.getElementById('slider-rot').value = State.rotSpeed;
+          document.getElementById('val-rot').innerText = State.rotSpeed.toFixed(3);
+        }
+        if (data1 === 71 || data1 === 17) {
+          State.symmetry = Math.floor(1 + val * 15);
+          document.getElementById('slider-sym').value = State.symmetry;
+          document.getElementById('val-sym').innerText = State.symmetry;
+        }
+        if (data1 === 72 || data1 === 18) {
+          State.waveZMultiplier = 0.1 + val * 2.4;
+          document.getElementById('slider-wave-z').value = State.waveZMultiplier;
+          document.getElementById('val-wave-z').innerText = State.waveZMultiplier.toFixed(2);
+        }
+        if (data1 === 73 || data1 === 19) {
+          State.specularPower = val * 3.0;
+          document.getElementById('slider-spec').value = State.specularPower;
+          document.getElementById('val-spec').innerText = State.specularPower.toFixed(1);
+        }
+      }
+
+      // Pitch Bend (Joystick Pan)
+      if (cmd === 14) {
+        State.panX = ((data2 - 64) / 64) * 2.5;
+      }
+    }
+
+    function cycleWaveMode() {
+      const modes = ['ripple', 'cymbal', 'speaker', 'shockwave'];
+      const next = modes[(modes.indexOf(State.waveType) + 1) % modes.length];
+      setWaveMode(next);
+    }
+
+    function triggerStrobe(mode) {
+      strobeLayer.style.background = mode === 'white' ? '#fff' : '#ffaa00';
+      strobeLayer.style.opacity = '0.9';
+      setTimeout(() => { strobeLayer.style.opacity = '0'; }, 60);
+    }
+
+    function killAllStrobes() {
+      strobeLayer.style.opacity = '0';
+    }
+
+    // --- Main Render & Vertex Displacement Loop (60 FPS) ---
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const time = clock.getElapsedTime();
+
+      // Audio update
+      if (State.simulated) {
+        updateSimulatedAudio();
+      } else {
+        processLiveAudio();
+      }
+
+      // Expand outward shockwave
+      State.shockwaveDist += delta * 7.5;
+
+      // Base rotation
+      mandalaMesh.rotation.z += State.rotSpeed;
+
+      // Bass scale bounce
+      const scalePunch = 1.0 + State.bass * 0.12;
+      mandalaMesh.scale.set(scalePunch, scalePunch, 1.0);
+
+      // Camera interpolation
+      let targetCamX = State.panX;
+      let targetCamY = 0.0;
+      let targetCamZ = 6.2;
+      let targetRotX = orbitAngleX;
+      let targetRotY = orbitAngleY;
+
+      if (State.camMode === 'tilt') {
+        targetRotX += 0.55; // 32 degree concert stage tilt
+        targetCamY -= 1.4;
+        targetCamZ = 5.8;
+      }
+
+      camera.position.x = THREE.MathUtils.lerp(camera.position.x, targetCamX, 0.08);
+      camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetCamY, 0.08);
+      camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetCamZ, 0.08);
+      camera.rotation.x = THREE.MathUtils.lerp(camera.rotation.x, targetRotX, 0.08);
+      camera.rotation.y = THREE.MathUtils.lerp(camera.rotation.y, targetRotY, 0.08);
+
+      // Dynamic light orbit & specular shine
+      pointLight.position.x = Math.sin(time * 0.8) * 3.5;
+      pointLight.position.y = Math.cos(time * 0.8) * 3.5;
+      pointLight.position.z = 2.8 + State.bass * 1.5;
+      pointLight.intensity = (1.5 + State.treble * 1.8) * State.specularPower;
+
+      // -------------------------------------------------------------
+      // 3D VERTEX DISPLACEMENT KERNEL (ZERO-CUT DETAIL PRESERVATION)
+      // -------------------------------------------------------------
+      const zAmp = State.waveZMultiplier;
+      const bassVal = State.bass;
+      const sym = State.symmetry;
+
+      for (let i = 0; i < vertexCount; i++) {
+        const u = posAttr.getX(i);
+        const v = posAttr.getY(i);
+        const dist = Math.sqrt(u * u + v * v);
+        let zOffset = 0.0;
+
+        switch (State.waveType) {
+          // 1. Concentric Water Ripple (User's Classic)
+          case 'ripple': {
+            const wave = Math.sin(dist * sym - time * 5.0);
+            zOffset = wave * bassVal * zAmp * 0.7;
+            break;
+          }
+
+          // 2. Chladni Cymbal Resonance (8-Fold Standing Wave matching Tigers & Arches)
+          case 'cymbal': {
+            const angle = Math.atan2(v, u);
+            const radial = Math.sin(dist * sym * 0.8 - time * 2.0);
+            const harmonic = Math.cos(angle * 8.0); // 8-fold symmetry
+            zOffset = radial * harmonic * bassVal * zAmp * 0.9;
+            break;
+          }
+
+          // 3. Subwoofer Dust-Cap Thump (Lotus Excursion)
+          case 'speaker': {
+            const falloff = Math.exp(-dist * 1.4);
+            const pulse = Math.sin(time * 12.0) * falloff * bassVal * zAmp * 1.4;
+            zOffset = pulse;
+            break;
+          }
+
+          // 4. Kinetic Shockwave Pulse (Instant seismic burst ring)
+          case 'shockwave': {
+            const deltaDist = Math.abs(dist - State.shockwaveDist);
+            const ring = Math.exp(-deltaDist * deltaDist * 8.0) * bassVal * zAmp * 1.2;
+            zOffset = ring;
+            break;
+          }
+        }
+
+        posAttr.setZ(i, initialZ[i] + zOffset);
+      }
+
+      posAttr.needsUpdate = true;
+      if (State.litMode) {
+        planeGeo.computeVertexNormals(); // Recompute normals so light glances realistically off wave crests!
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // --- UI Listeners & Sliders ---
+    function setWaveMode(type) {
+      State.waveType = type;
+      document.querySelectorAll('[data-wave]').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-wave') === type);
+      });
+      hudStatus.innerText = `AKAI MPK: Active | Wave: ${type.toUpperCase()}`;
+    }
+
+    document.querySelectorAll('[data-wave]').forEach(btn => {
+      btn.addEventListener('click', () => setWaveMode(btn.getAttribute('data-wave')));
+    });
+
+    document.getElementById('btn-cam-top').addEventListener('click', () => {
+      State.camMode = 'top';
+      orbitAngleX = 0; orbitAngleY = 0;
+      document.getElementById('btn-cam-top').classList.add('active');
+      document.getElementById('btn-cam-tilt').classList.remove('active');
+    });
+
+    document.getElementById('btn-cam-tilt').addEventListener('click', () => {
+      State.camMode = 'tilt';
+      document.getElementById('btn-cam-tilt').classList.add('active');
+      document.getElementById('btn-cam-top').classList.remove('active');
+    });
+
+    document.getElementById('btn-mat-lit').addEventListener('click', (e) => {
+      State.litMode = !State.litMode;
+      e.target.classList.toggle('active', State.litMode);
+      pointLight.visible = State.litMode;
+      ambientLight.intensity = State.litMode ? 0.7 : 1.3;
+    });
+
+    document.getElementById('btn-mat-wire').addEventListener('click', (e) => {
+      State.wireframe = !State.wireframe;
+      mandalaMaterial.wireframe = State.wireframe;
+      e.target.classList.toggle('active', State.wireframe);
+    });
+
+    document.getElementById('slider-wave-z').addEventListener('input', (e) => {
+      State.waveZMultiplier = parseFloat(e.target.value);
+      document.getElementById('val-wave-z').innerText = State.waveZMultiplier.toFixed(2);
+    });
+
+    document.getElementById('slider-sym').addEventListener('input', (e) => {
+      State.symmetry = parseInt(e.target.value);
+      document.getElementById('val-sym').innerText = State.symmetry;
+    });
+
+    document.getElementById('slider-rot').addEventListener('input', (e) => {
+      State.rotSpeed = parseFloat(e.target.value);
+      document.getElementById('val-rot').innerText = State.rotSpeed.toFixed(3);
+    });
+
+    document.getElementById('slider-spec').addEventListener('input', (e) => {
+      State.specularPower = parseFloat(e.target.value);
+      document.getElementById('val-spec').innerText = State.specularPower.toFixed(1);
+    });
+
+    document.getElementById('btn-sim-audio').addEventListener('click', () => {
+      State.simulated = true;
+      document.getElementById('btn-sim-audio').classList.add('active');
+      document.getElementById('btn-mic-audio').classList.remove('active');
+    });
+
+    document.getElementById('btn-mic-audio').addEventListener('click', () => {
+      initLiveMic();
+    });
+
+    // Keyboard controls
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'KeyH') {
+        document.getElementById('ui-panel').classList.toggle('collapsed');
+      } else if (e.code === 'Space') {
+        e.preventDefault();
+        triggerKick(1.6);
+      } else if (e.code === 'Digit1') setWaveMode('ripple');
+      else if (e.code === 'Digit2') setWaveMode('cymbal');
+      else if (e.code === 'Digit3') setWaveMode('speaker');
+      else if (e.code === 'Digit4') setWaveMode('shockwave');
+    });
+
+    // Window resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>

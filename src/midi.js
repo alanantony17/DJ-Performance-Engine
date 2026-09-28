@@ -227,7 +227,7 @@ export class MidiController {
       const kb = CONFIG.midi.keyboardFallback;
 
       if (e.code === kb.pad1) this.triggerPad('pad1', true, 1.0);
-      else if (e.code === kb.pad2) this.triggerPad('pad2', true, 1.0);
+      else if (e.code === kb.pad2 || e.code === kb.toggleHueKey) this.triggerPad('pad2', true, 1.0);
       else if (e.code === kb.pad3) this.triggerPad('pad3', true, 1.0);
       else if (e.code === kb.pad4) this.triggerPad('pad4', true, 1.0);
       else if (e.code === kb.pad5 || e.code === kb.cycleStyleKey) this.triggerPad('pad5', true, 1.0);
@@ -286,7 +286,7 @@ export class MidiController {
     window.addEventListener('keyup', (e) => {
       const kb = CONFIG.midi.keyboardFallback;
       if (e.code === kb.pad1) this.triggerPad('pad1', false, 0);
-      else if (e.code === kb.pad2) this.triggerPad('pad2', false, 0);
+      else if (e.code === kb.pad2 || e.code === kb.toggleHueKey) this.triggerPad('pad2', false, 0);
       else if (e.code === kb.pad3) this.triggerPad('pad3', false, 0);
       else if (e.code === kb.pad4) this.triggerPad('pad4', false, 0);
       else if (e.code === kb.pad5 || e.code === kb.cycleStyleKey) this.triggerPad('pad5', false, 0);
@@ -310,6 +310,7 @@ export class MidiController {
       aperture: this.state.joystick.aperture, // 0.03 - 1.0
       strobeLfoHz: k.knob1.min + this.state.knobs.knob1 * (k.knob1.max - k.knob1.min),
       hydraHue: k.knob2.min + this.state.knobs.knob2 * (k.knob2.max - k.knob2.min),
+      waveSpread: k.knob3.min + this.state.knobs.knob3 * (k.knob3.max - k.knob3.min),
       hydraFeedback: k.knob3.min + this.state.knobs.knob3 * (k.knob3.max - k.knob3.min),
       audioSensitivity: k.knob4.min + this.state.knobs.knob4 * (k.knob4.max - k.knob4.min),
       padRiser: this.state.pads.pad1,
