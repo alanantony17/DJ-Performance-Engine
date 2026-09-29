@@ -41,12 +41,13 @@ export const CONFIG = {
       apertureDefault: 0.35,
     },
 
-    // Rotary Knobs (CC 70 - 73 on MPK Mini 3 Prog 1)
+    // Rotary Knobs (CC 70 - 74 on MPK Mini 3 Prog 1)
     knobs: {
       knob1: { cc: 70, name: 'Rotation Speed', min: 2.0, max: 50.0, default: 8.0 },   // 2Hz - 50Hz
       knob2: { cc: 71, name: 'Palette Hue', min: 0.0, max: 1.0, default: 0.0 },        // 0.0 - 1.0
       knob3: { cc: 72, name: 'Wave Spread', min: 1.8, max: 3.6, default: 2.5 },        // 1.8 - 3.6 smooth wavelength
       knob4: { cc: 73, name: 'Wave Depth', min: 0.2, max: 3.5, default: 1.5 },         // Multiplier
+      knob5: { cc: 74, name: 'Drop Cadence Threshold', min: 0.05, max: 0.95, default: 0.50 },  // 4/4 Kick Cadence Lock sensitivity (50% = natural sweet spot: 3 kicks)
     },
 
     // Performance Pads (Prog 1 Note On / Off or CC mode fallback)
@@ -86,6 +87,13 @@ export const CONFIG = {
         name: 'Cycle 3D Motion Preset',
         type: 'style_cycle',
       },
+      // Pad 6: Toggle Drop / Chorus Mode Override (Auto vs Forced Drop)
+      pad6: {
+        notes: [41, 53], // F1 or F2
+        cc: 25,
+        name: 'Toggle Drop Mode',
+        type: 'drop_toggle',
+      },
     },
 
     // Fallback Keyboard Shortcuts for Headless / Offline Testing
@@ -95,10 +103,14 @@ export const CONFIG = {
       pad3: 'Digit3',
       pad4: 'Digit4',
       pad5: 'Digit5',
+      pad6: 'Digit6',
       cycleStyleKey: 'KeyV',
       toggleHueKey: 'KeyH',
+      toggleDropKey: 'KeyB',
       toggleHud: 'KeyD',
       resetPan: 'KeyC',
+      knob5Up: 'KeyT',
+      knob5Down: 'KeyG',
     },
   },
 
@@ -108,7 +120,6 @@ export const CONFIG = {
     { id: 1, name: 'Kinetic Kick Shockwave', desc: 'Seismic wave rings bursting from center on kicks', mode: 'shockwave' },
     { id: 2, name: 'Melody Harmonic Waves', desc: 'Fluid standing ripples dancing to vocals and melody', mode: 'melody' },
     { id: 3, name: 'Snare & Kick Interlock', desc: 'Opposing drum waves colliding across the mandala', mode: 'interlock' },
-    { id: 4, name: '3D Stage Perspective Tilt', desc: '32-degree concert stage tilt revealing 3D wave relief', mode: 'tilt' },
   ],
 
   // Web Audio Transient Detection & Dynamics
@@ -135,11 +146,29 @@ export const CONFIG = {
       decay: 0.88,
     },
 
+    // 4-on-the-Floor Kick Cadence Tracker (House & Techno)
+    cadence: {
+      minIntervalMs: 340,   // ~176 BPM max tempo bound
+      maxIntervalMs: 640,   // ~94 BPM min tempo bound
+      defaultBpm: 128.0,
+      jitterTolerance: 0.20, // Max inter-beat jitter for quantized 4/4 dance kicks
+      cutoutMultiplier: 1.45,// Multiplier of beat interval before declaring kick cutout
+    },
+
     // Dynamic Contrast & High-Energy Section / Drop Tuning
     dynamics: {
       powerGamma: 2.4,          // Non-linear power expansion: squashes soft verse bass, boosts drop peaks
       dropBoostMultiplier: 1.6, // Drop section amplifier
-      longWindowFrames: 180,    // ~3-second rolling window for background energy baseline
+      longWindowFrames: 360,    // ~6-second rolling window for background energy baseline
+      drop: {
+        verseScaleMultiplier: 0.018, // Max +1.8% scale pump in verse/breakdown (barely noticeable)
+        dropScaleMultiplier: 0.28,   // Up to +28% scale pump on kick hits during drop
+        verseWaveMultiplier: 0.26,   // Calm, glassy 3D wave depth in verse
+        dropWaveMultiplier: 1.95,    // Towering 3D wave canyons in drop
+        camKickImpulse: 0.85,        // Dynamic camera Z recoil forward on drop kicks
+        surgeVerse: 0.04,            // Gentle rotation kick surge in verse
+        surgeDrop: 0.45,             // High-octane angular surge in drop
+      },
     },
   },
 

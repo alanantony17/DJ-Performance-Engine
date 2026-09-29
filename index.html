@@ -56,11 +56,11 @@
     <div class="style-preview-icon">✨</div>
     <div class="style-preview-meta">
       <div class="style-preview-header">
-        <span class="style-preview-tag" id="style-preview-tag">Style [1/5]</span>
-        <span class="style-preview-mode" id="style-preview-mode">RAW</span>
+        <span class="style-preview-tag" id="style-preview-tag">Style [1/4]</span>
+        <span class="style-preview-mode" id="style-preview-mode">RIPPLE</span>
       </div>
-      <span class="style-preview-name" id="style-preview-name">Raw Asset (As-Is)</span>
-      <span class="style-preview-desc" id="style-preview-desc">100% untouched raw artwork, zero transformations</span>
+      <span class="style-preview-name" id="style-preview-name">Beat-Synced Liquid Ripple</span>
+      <span class="style-preview-desc" id="style-preview-desc">Kick waves out, snare ripples in, melody undulates in tempo</span>
     </div>
   </div>
 
@@ -74,6 +74,19 @@
       </div>
       <span class="style-preview-name" id="hue-preview-name">Seamless Auto Flow</span>
       <span class="style-preview-desc" id="hue-preview-desc">Full-spectrum smooth color flow across artwork</span>
+    </div>
+  </div>
+
+  <!-- Layer 4d: On-Screen Drop Mode Preview Card (Toggled via Pad 6 / Key B) -->
+  <div id="drop-preview-card" class="hidden">
+    <div class="style-preview-icon" id="drop-preview-icon" style="background: rgba(244, 63, 94, 0.2); border-color: rgba(244, 63, 94, 0.4);">🔥</div>
+    <div class="style-preview-meta">
+      <div class="style-preview-header">
+        <span class="style-preview-tag" id="drop-preview-tag" style="color: #f43f5e;">DYNAMICS</span>
+        <span class="style-preview-mode" id="drop-preview-mode" style="background: rgba(244, 63, 94, 0.2); border-color: #f43f5e; color: #fda4af;">AUTO</span>
+      </div>
+      <span class="style-preview-name" id="drop-preview-name">DROP / CHORUS ACTIVE</span>
+      <span class="style-preview-desc" id="drop-preview-desc">Visceral bass pumping, 3D wave canyons & camera recoil unlocked</span>
     </div>
   </div>
 
@@ -133,17 +146,23 @@
         <div class="hud-meter"><div class="hud-meter-bar" id="hud-bar-k4" style="width: 45%;"></div></div>
         <span id="hud-val-k4">1.5x</span>
       </div>
+      <div class="hud-row">
+        <span>Knob 5 (Drop Thresh):</span>
+        <div class="hud-meter"><div class="hud-meter-bar" id="hud-bar-k5" style="width: 50%; background: #f43f5e;"></div></div>
+        <span id="hud-val-k5">50%</span>
+      </div>
     </div>
 
     <!-- Performance Pads Matrix -->
     <div class="hud-section">
-      <div class="hud-section-title">Pads (1: Riser | 2: Hue Flow | 3: Asset | 4: SLAM | 5: Preset)</div>
+      <div class="hud-section-title">Pads (1: Riser | 2: Hue | 3: Asset | 4: SLAM | 5: Preset | 6: Drop)</div>
       <div class="hud-pads-grid">
         <div class="hud-pad" id="hud-pad-1">PAD 1<br>RISER</div>
-        <div class="hud-pad" id="hud-pad-2">PAD 2<br>HUE FLOW</div>
+        <div class="hud-pad" id="hud-pad-2">PAD 2<br>HUE</div>
         <div class="hud-pad" id="hud-pad-3">PAD 3<br>ASSET</div>
         <div class="hud-pad slam" id="hud-pad-4">PAD 4<br>SLAM</div>
         <div class="hud-pad style" id="hud-pad-5">PAD 5<br>PRESET</div>
+        <div class="hud-pad drop" id="hud-pad-6">PAD 6<br>DROP</div>
       </div>
       <div class="hud-row" style="margin-top: 8px;">
         <span>3D Motion Preset:</span>
@@ -162,8 +181,15 @@
         <span>Source:</span>
         <span id="hud-audio-source" style="color: #4ade80; font-weight: 600; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Default Mic</span>
       </div>
-      <div class="hud-row" style="margin-top: 4px; margin-bottom: 8px;">
+      <div class="hud-row" style="margin-top: 4px; margin-bottom: 6px;">
         <button id="hud-audio-change-btn" class="audio-btn" style="width: 100%; padding: 4px; font-size: 10px;">Select Audio Source / Tab</button>
+      </div>
+      <div class="hud-row">
+        <span>Drop Dynamics:</span>
+        <span id="hud-drop-badge" class="hud-drop-badge verse" title="Click or Press [B] to toggle Auto / Force Drop">🌊 VERSE / CHILL</span>
+      </div>
+      <div class="hud-row" style="margin-top: 4px; margin-bottom: 6px;">
+        <button id="hud-drop-btn" class="audio-btn" style="width: 100%; padding: 4px; font-size: 10px; background: rgba(244, 63, 94, 0.2); border-color: rgba(244, 63, 94, 0.4);">Toggle Drop Mode (Key: B)</button>
       </div>
       <div class="hud-row">
         <span>Kick / Bass:</span>
@@ -176,8 +202,8 @@
         <span id="hud-val-punch">0.00</span>
       </div>
       <div class="hud-row">
-        <span>Drop Energy:</span>
-        <div class="hud-meter"><div class="hud-meter-bar" id="hud-bar-drop" style="width: 0%; background: linear-gradient(90deg, #3b82f6, #06b6d4);"></div></div>
+        <span>Drop Intensity:</span>
+        <div class="hud-meter"><div class="hud-meter-bar" id="hud-bar-drop" style="width: 0%; background: linear-gradient(90deg, #3b82f6, #ec4899, #ef4444);"></div></div>
         <span id="hud-val-drop">0%</span>
       </div>
       <div class="hud-row">
@@ -187,7 +213,7 @@
       </div>
     </div>
     <div style="font-size: 9px; color: #64748b; text-align: center; margin-top: 8px;">
-      Press [D] to Toggle HUD | Keys 1-5 for Pads | 'V' Style | 'H' Hue
+      Press [D] to Toggle HUD | Keys 1-6 for Pads | 'B' Drop | 'V' Style | 'H' Hue
     </div>
   </div>
 

@@ -25,6 +25,7 @@ export class MidiController {
         knob2: CONFIG.midi.knobs.knob2.default,
         knob3: CONFIG.midi.knobs.knob3.default,
         knob4: (CONFIG.midi.knobs.knob4.default - CONFIG.midi.knobs.knob4.min) / (CONFIG.midi.knobs.knob4.max - CONFIG.midi.knobs.knob4.min),
+        knob5: CONFIG.midi.knobs.knob5 ? (CONFIG.midi.knobs.knob5.default - CONFIG.midi.knobs.knob5.min) / (CONFIG.midi.knobs.knob5.max - CONFIG.midi.knobs.knob5.min) : 0.5,
       },
       pads: {
         pad1: false, // Snare Riser
@@ -32,6 +33,7 @@ export class MidiController {
         pad3: false, // Asset Cycle
         pad4: false, // DROP SLAM
         pad5: false, // Visual Style Cycle
+        pad6: false, // Toggle Drop Mode
       },
       padVelocities: {
         pad1: 0,
@@ -39,6 +41,7 @@ export class MidiController {
         pad3: 0,
         pad4: 0,
         pad5: 0,
+        pad6: 0,
       }
     };
 
@@ -165,7 +168,7 @@ export class MidiController {
       return;
     }
 
-    // Rotary Knobs (CC 70 - 73)
+    // Rotary Knobs (CC 70 - 74)
     if (cc === CONFIG.midi.knobs.knob1.cc) {
       this.state.knobs.knob1 = normalized;
     } else if (cc === CONFIG.midi.knobs.knob2.cc) {
@@ -174,6 +177,8 @@ export class MidiController {
       this.state.knobs.knob3 = normalized;
     } else if (cc === CONFIG.midi.knobs.knob4.cc) {
       this.state.knobs.knob4 = normalized;
+    } else if (CONFIG.midi.knobs.knob5 && cc === CONFIG.midi.knobs.knob5.cc) {
+      this.state.knobs.knob5 = normalized;
     }
 
     // CC Pad Triggers (in case AKAI is in CC pad bank mode)
@@ -187,6 +192,8 @@ export class MidiController {
       this.triggerPad('pad4', value > 0, normalized);
     } else if (cc === CONFIG.midi.pads.pad5.cc && value > 0) {
       this.triggerPad('pad5', true, normalized);
+    } else if (CONFIG.midi.pads.pad6 && cc === CONFIG.midi.pads.pad6.cc && value > 0) {
+      this.triggerPad('pad6', true, normalized);
     }
   }
 
@@ -206,6 +213,9 @@ export class MidiController {
     } else if (pads.pad5.notes.includes(note)) {
       if (isDown) this.triggerPad('pad5', true, normVel);
       else this.triggerPad('pad5', false, 0);
+    } else if (pads.pad6 && pads.pad6.notes && pads.pad6.notes.includes(note)) {
+      if (isDown) this.triggerPad('pad6', true, normVel);
+      else this.triggerPad('pad6', false, 0);
     }
   }
 
@@ -231,6 +241,7 @@ export class MidiController {
       else if (e.code === kb.pad3) this.triggerPad('pad3', true, 1.0);
       else if (e.code === kb.pad4) this.triggerPad('pad4', true, 1.0);
       else if (e.code === kb.pad5 || e.code === kb.cycleStyleKey) this.triggerPad('pad5', true, 1.0);
+      else if (e.code === kb.pad6 || e.code === kb.toggleDropKey) this.triggerPad('pad6', true, 1.0);
       else if (e.code === kb.resetPan) {
         this.state.joystick.pan = 0.5;
         this.notify();
@@ -281,6 +292,14 @@ export class MidiController {
         this.state.knobs.knob4 = Math.max(0, this.state.knobs.knob4 - 0.08);
         this.notify();
       }
+      // Knob 5 (Drop Threshold): T / G
+      else if (e.code === kb.knob5Up) {
+        this.state.knobs.knob5 = Math.min(1, (this.state.knobs.knob5 !== undefined ? this.state.knobs.knob5 : 0.5) + 0.05);
+        this.notify();
+      } else if (e.code === kb.knob5Down) {
+        this.state.knobs.knob5 = Math.max(0, (this.state.knobs.knob5 !== undefined ? this.state.knobs.knob5 : 0.5) - 0.05);
+        this.notify();
+      }
     });
 
     window.addEventListener('keyup', (e) => {
@@ -290,6 +309,7 @@ export class MidiController {
       else if (e.code === kb.pad3) this.triggerPad('pad3', false, 0);
       else if (e.code === kb.pad4) this.triggerPad('pad4', false, 0);
       else if (e.code === kb.pad5 || e.code === kb.cycleStyleKey) this.triggerPad('pad5', false, 0);
+      else if (e.code === kb.pad6 || e.code === kb.toggleDropKey) this.triggerPad('pad6', false, 0);
     });
 
     // Optional mouse drag for Joystick testing
@@ -305,6 +325,7 @@ export class MidiController {
   // Compute scaled values based on config boundaries
   getComputedValues() {
     const k = CONFIG.midi.knobs;
+    const k5Norm = this.state.knobs.knob5 !== undefined ? this.state.knobs.knob5 : 0.5;
     return {
       panX: this.state.joystick.pan, // 0.0 - 1.0
       aperture: this.state.joystick.aperture, // 0.03 - 1.0
@@ -313,11 +334,14 @@ export class MidiController {
       waveSpread: k.knob3.min + this.state.knobs.knob3 * (k.knob3.max - k.knob3.min),
       hydraFeedback: k.knob3.min + this.state.knobs.knob3 * (k.knob3.max - k.knob3.min),
       audioSensitivity: k.knob4.min + this.state.knobs.knob4 * (k.knob4.max - k.knob4.min),
+      dropThreshold: k.knob5 ? (k.knob5.min + k5Norm * (k.knob5.max - k.knob5.min)) : 0.50,
+      dropThresholdNorm: k5Norm,
       padRiser: this.state.pads.pad1,
       padShutter: this.state.pads.pad2,
       padAsset: this.state.pads.pad3,
       padSlam: this.state.pads.pad4,
       padStyle: this.state.pads.pad5,
+      padDrop: this.state.pads.pad6,
     };
   }
 

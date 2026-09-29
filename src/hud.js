@@ -27,6 +27,8 @@ export class DiagnosticHud {
     this.valK3 = document.getElementById('hud-val-k3');
     this.barK4 = document.getElementById('hud-bar-k4');
     this.valK4 = document.getElementById('hud-val-k4');
+    this.barK5 = document.getElementById('hud-bar-k5');
+    this.valK5 = document.getElementById('hud-val-k5');
 
     // Pads
     this.pad1 = document.getElementById('hud-pad-1');
@@ -34,8 +36,21 @@ export class DiagnosticHud {
     this.pad3 = document.getElementById('hud-pad-3');
     this.pad4 = document.getElementById('hud-pad-4');
     this.pad5 = document.getElementById('hud-pad-5');
+    this.pad6 = document.getElementById('hud-pad-6');
     this.visualStyleEl = document.getElementById('hud-visual-style');
     this.hueStatusEl = document.getElementById('hud-hue-status');
+
+    // Drop Dynamics Controls
+    this.dropBadge = document.getElementById('hud-drop-badge');
+    this.dropBtn = document.getElementById('hud-drop-btn');
+    const onDropToggle = (e) => {
+      e.stopPropagation();
+      if (window.audio && window.audio.toggleDropOverride) {
+        window.audio.toggleDropOverride();
+      }
+    };
+    if (this.dropBadge) this.dropBadge.addEventListener('click', onDropToggle);
+    if (this.dropBtn) this.dropBtn.addEventListener('click', onDropToggle);
 
     // Listen for dynamic style change events
     window.addEventListener('engine:styleChanged', (e) => {
@@ -128,12 +143,20 @@ export class DiagnosticHud {
     if (this.barK4) this.barK4.style.width = `${Math.round(midiState.knobs.knob4 * 100)}%`;
     if (this.valK4) this.valK4.textContent = `${computedMidi.audioSensitivity.toFixed(1)}x`;
 
+    if (this.barK5) this.barK5.style.width = `${Math.round(computedMidi.dropThresholdNorm * 100)}%`;
+    const k5Norm = computedMidi.dropThresholdNorm;
+    let threshDesc = 'Sweet Spot';
+    if (k5Norm < 0.35) threshDesc = 'Sensitive';
+    else if (k5Norm > 0.65) threshDesc = 'Strict';
+    if (this.valK5) this.valK5.textContent = `${Math.round(k5Norm * 100)}% (${threshDesc})`;
+
     // 4. Performance Pads Active States
     if (this.pad1) this.pad1.classList.toggle('active', midiState.pads.pad1);
     if (this.pad2) this.pad2.classList.toggle('active', midiState.pads.pad2 || (window.threeEngine && window.threeEngine.hueFlowActive));
     if (this.pad3) this.pad3.classList.toggle('active', midiState.pads.pad3);
     if (this.pad4) this.pad4.classList.toggle('active', midiState.pads.pad4);
     if (this.pad5) this.pad5.classList.toggle('active', midiState.pads.pad5);
+    if (this.pad6) this.pad6.classList.toggle('active', midiState.pads.pad6 || (audioState && audioState.dropMode === 'forced'));
 
     // 5. Audio Transient Followers & Source
     if (audioState) {
@@ -153,6 +176,28 @@ export class DiagnosticHud {
 
       if (this.barHigh) this.barHigh.style.width = `${Math.round(Math.min(1.0, audioState.highLevel) * 100)}%`;
       if (this.valHigh) this.valHigh.textContent = audioState.highLevel.toFixed(2);
+
+      // Dynamic Drop Dynamics Badge & 4/4 Kick Cadence Lock Status
+      if (this.dropBadge) {
+        const intensity = audioState.dropIntensity || 0;
+        const mode = audioState.dropMode || 'auto';
+        if (mode === 'forced') {
+          this.dropBadge.className = 'hud-drop-badge drop';
+          this.dropBadge.textContent = '🔥 FORCED DROP';
+        } else if (mode === 'chill') {
+          this.dropBadge.className = 'hud-drop-badge verse';
+          this.dropBadge.textContent = '❄️ FORCED CHILL';
+        } else if (intensity >= 0.50) {
+          this.dropBadge.className = 'hud-drop-badge drop';
+          this.dropBadge.textContent = `🔥 DROP / CHORUS (${Math.round(audioState.bpm)} BPM)`;
+        } else if (intensity >= 0.22 || (audioState.kickCadenceLock && audioState.kickCadenceLock > 0.3)) {
+          this.dropBadge.className = 'hud-drop-badge buildup';
+          this.dropBadge.textContent = `⚡ BUILDING UP (${dropPct}%)`;
+        } else {
+          this.dropBadge.className = 'hud-drop-badge verse';
+          this.dropBadge.textContent = '🌊 VERSE / CHILL';
+        }
+      }
     }
   }
 }

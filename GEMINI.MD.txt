@@ -19,8 +19,10 @@
 - Knob 2 (CC 71): Visual hue shift / color palette morph.
 - Knob 3 (CC 72): Smooth wave spread / wavelength (1.8 to 3.6, no concentric bullseyes).
 - Knob 4 (CC 73): Wave depth / audio sensitivity multiplier.
+- Knob 5 (CC 74): 4-on-the-Floor Kick Cadence Drop Threshold (50% center = sweet spot requiring 3 regular kicks; higher = 4-5 kicks; lower = 2 kicks).
 - Pad 1: Accelerating Snare Riser Strobe.
 - Pad 2: Horizontal Shutter Blinder.
 - Pad 3: Cycle to next artwork asset in `/assets/`.
 - Pad 4: DROP SLAM (instant blackout across all visuals and strobes).
-- Pad 5: Cycle 3D Motion Preset (Smooth Ripple, Subwoofer, Chladni, Shockwave, Stage Tilt).
+- Pad 5: Cycle 3D Motion Preset (Smooth Ripple, Subwoofer Shockwave, Melody Harmonics, Snare/Kick Interlock).
+- Pad 6: Toggle Drop Dynamics Override (Auto vs Forced Drop / Chorus Mode).

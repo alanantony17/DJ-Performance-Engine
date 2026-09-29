@@ -32,6 +32,14 @@ const huePreviewCard = document.getElementById('hue-preview-card');
 const huePreviewName = document.getElementById('hue-preview-name');
 const huePreviewDesc = document.getElementById('hue-preview-desc');
 
+// Drop Mode Preview Card DOM References
+const dropPreviewCard = document.getElementById('drop-preview-card');
+const dropPreviewIcon = document.getElementById('drop-preview-icon');
+const dropPreviewTag = document.getElementById('drop-preview-tag');
+const dropPreviewMode = document.getElementById('drop-preview-mode');
+const dropPreviewName = document.getElementById('drop-preview-name');
+const dropPreviewDesc = document.getElementById('drop-preview-desc');
+
 // Audio Modal DOM References
 const audioSourcePill = document.getElementById('audio-source-pill');
 const audioPillLabel = document.getElementById('audio-pill-label');
@@ -48,6 +56,7 @@ let currentAssetIndex = 0;
 let previewTimeout = null;
 let stylePreviewTimeout = null;
 let huePreviewTimeout = null;
+let dropPreviewTimeout = null;
 let threeEngine = null;
 
 // Synchronized Resize Handler for Three.js Engine
@@ -135,6 +144,60 @@ export function showHuePreview(hueMode) {
   }, 2200);
 }
 
+// Show on-screen Drop Dynamics Preview card (smooth fade)
+export function showDropPreview(dropDetail) {
+  if (!dropPreviewCard || !dropDetail) return;
+
+  if (dropDetail.mode === 'forced') {
+    if (dropPreviewIcon) dropPreviewIcon.textContent = '🔥';
+    if (dropPreviewTag) dropPreviewTag.textContent = 'DYNAMICS [FORCED]';
+    if (dropPreviewMode) {
+      dropPreviewMode.textContent = 'DROP MODE';
+      dropPreviewMode.style.borderColor = '#ef4444';
+      dropPreviewMode.style.color = '#fef08a';
+    }
+    if (dropPreviewName) dropPreviewName.textContent = 'DROP / CHORUS LOCKED';
+    if (dropPreviewDesc) dropPreviewDesc.textContent = 'Massive bass pumping, 3D wave canyons & camera recoil unlocked';
+  } else if (dropDetail.mode === 'chill') {
+    if (dropPreviewIcon) dropPreviewIcon.textContent = '❄️';
+    if (dropPreviewTag) dropPreviewTag.textContent = 'DYNAMICS [FORCED]';
+    if (dropPreviewMode) {
+      dropPreviewMode.textContent = 'CHILL MODE';
+      dropPreviewMode.style.borderColor = '#38bdf8';
+      dropPreviewMode.style.color = '#bae6fd';
+    }
+    if (dropPreviewName) dropPreviewName.textContent = 'VERSE / CHILL LOCKED';
+    if (dropPreviewDesc) dropPreviewDesc.textContent = 'Calm floating motion, shallow ripples, minimal scale pump';
+  } else {
+    if (dropPreviewIcon) dropPreviewIcon.textContent = '⚡';
+    if (dropPreviewTag) dropPreviewTag.textContent = 'DYNAMICS [AUTO]';
+    if (dropPreviewMode) {
+      dropPreviewMode.textContent = 'AUTO TRACKING';
+      dropPreviewMode.style.borderColor = '#a855f7';
+      dropPreviewMode.style.color = '#e9d5ff';
+    }
+    if (dropPreviewName) dropPreviewName.textContent = 'AUTO DYNAMICS RESUMED';
+    if (dropPreviewDesc) dropPreviewDesc.textContent = 'Smart dynamic analysis will trigger drops automatically';
+  }
+
+  dropPreviewCard.classList.remove('hidden');
+  dropPreviewCard.classList.add('visible');
+
+  if (dropPreviewTimeout) clearTimeout(dropPreviewTimeout);
+  dropPreviewTimeout = setTimeout(() => {
+    dropPreviewCard.classList.remove('visible');
+    dropPreviewCard.classList.add('hidden');
+  }, 2200);
+}
+
+// Toggle Drop Dynamics Mode (Pad 6 / Key B)
+export function toggleDrop() {
+  if (audio) {
+    const res = audio.toggleDropOverride();
+    showDropPreview(res);
+  }
+}
+
 // Toggle Seamless Hue Flow Mode (Pad 2 / Key 2 / H)
 export function toggleHue() {
   if (threeEngine) {
@@ -208,6 +271,8 @@ const midi = new MidiController({
       cycleAsset();
     } else if (padId === 'pad5') {
       cycleStyle();
+    } else if (padId === 'pad6') {
+      toggleDrop();
     }
   },
   onStateChange: (rawState, computed) => {
@@ -215,10 +280,13 @@ const midi = new MidiController({
   }
 });
 
-// Key bindings for HUD and Direct Asset Switching
+// Key bindings for HUD, Drop Mode, and Direct Asset Switching
 window.addEventListener('keydown', (e) => {
   if (e.code === CONFIG.midi.keyboardFallback.toggleHud) {
     hud.toggle();
+  }
+  if (e.code === CONFIG.midi.keyboardFallback.toggleDropKey) {
+    toggleDrop();
   }
   // Direct asset selection via Shift + 1..9
   if (e.shiftKey && e.code.startsWith('Digit')) {
@@ -230,6 +298,11 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'Escape' && audioModal && !audioModal.classList.contains('hidden')) {
     closeAudioModal();
   }
+});
+
+// Listen for drop mode change events from audio or UI
+window.addEventListener('engine:dropModeChanged', (e) => {
+  showDropPreview(e.detail);
 });
 
 // Audio Source Modal Management
@@ -353,7 +426,7 @@ window.addEventListener('engine:assetLoaded', (e) => {
 // Main Animation & Update Loop
 function loop() {
   const computedMidi = midi.getComputedValues();
-  const audioState = audio.update(computedMidi.audioSensitivity);
+  const audioState = audio.update(computedMidi.audioSensitivity, computedMidi.dropThresholdNorm);
 
   // 1. Render Three.js 3D Mesh Displacement Engine (Pure visual, zero overlay light)
   if (threeEngine) {

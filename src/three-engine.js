@@ -30,6 +30,11 @@ export class ThreeDisplacementEngine {
     this.camPosY = 0.0;
     this.camPosZ = 6.2;
 
+    // Drop / Chorus Dynamic Response Registers
+    this.dropIntensity = 0.0;
+    this.meshScaleRecoil = 0.0;
+    this.camKickImpulse = 0.0;
+
     // Physical Kick Wave Rings (Up to 4 concurrent expanding waves)
     this.kickRings = [
       { radius: 0.0, intensity: 0.0, width: 0.75, speed: 4.5 },
@@ -90,6 +95,7 @@ export class ThreeDisplacementEngine {
       uBass: { value: 0.0 },
       uAmp: { value: 1.0 },
       uSpread: { value: 2.5 }, // Controlled by Knob 3 (smooth wavelength, 1.8 to 3.6)
+      uDrop: { value: 0.0 },   // Dynamic Drop / Chorus Intensity (0.0 = Verse, 1.0 = Peak Drop)
       uPreset: { value: 0 },
       uHue: { value: 0.0 },
       uPadSlam: { value: 0.0 },
@@ -119,6 +125,7 @@ export class ThreeDisplacementEngine {
       uniform float uBass;
       uniform float uAmp;
       uniform float uSpread;
+      uniform float uDrop;
       uniform int uPreset;
 
       varying vec2 vUv;
@@ -131,10 +138,11 @@ export class ThreeDisplacementEngine {
         float r = length(pos.xy);
         float rMod = r;
 
-        // Smooth subtle radial breathing on X/Y on beat phase
+        // Smooth subtle radial breathing on X/Y: gentle in verse, heavily amplified in drop
         if (r > 0.0001) {
           vec2 dir = pos.xy / r;
-          float expand = sin(uBeatPhase * 6.28318) * (uBass * 0.08 + uMelody * 0.06);
+          float expandAmount = mix(0.015, 0.16, uDrop);
+          float expand = sin(uBeatPhase * 6.28318) * (uBass * expandAmount + uMelody * 0.03);
           pos.xy += dir * expand;
         }
 
@@ -178,8 +186,8 @@ export class ThreeDisplacementEngine {
         float z = 0.0;
 
         // Apply according to active 3D motion preset
-        if (uPreset == 0 || uPreset == 4) {
-          // PRESET 0 & 4: Beat-Synced Liquid Ripple (All instruments combined)
+        if (uPreset == 0) {
+          // PRESET 0: Beat-Synced Liquid Ripple (All instruments combined)
           z = (kickWave * 0.95 + snareWave * 0.65 + melodyWave) * uAmp;
         } else if (uPreset == 1) {
           // PRESET 1: Kinetic Kick Shockwave (Pure focus on kick transient rings + lotus bounce)
@@ -207,6 +215,7 @@ export class ThreeDisplacementEngine {
       uniform float uHue;
       uniform float uBass;
       uniform float uMid;
+      uniform float uDrop;
       uniform float uPadSlam;
 
       varying vec2 vUv;
@@ -242,14 +251,14 @@ export class ThreeDisplacementEngine {
         vec4 texColor = texture2D(uTexture, finalUv);
 
         // 100% PURE, VIBRANT ARTWORK COLORS
-        // Zero harsh specular glare!
-        // Organic wave depth shading: wave crests gently lift luminance (+12%),
-        // while troughs dip subtly (-10%) to accentuate 3D movement naturally.
-        float waveShade = 1.0 + clamp(vZ * 0.18, -0.14, 0.14);
+        // Wave depth shading: subtle in verse (+12% / -10%), deep dramatic contrast in drop (+25% / -20%)
+        float shadeDepth = mix(0.12, 0.35, uDrop);
+        float waveShade = 1.0 + clamp(vZ * shadeDepth, -0.22, 0.22);
         vec3 col = texColor.rgb * waveShade;
 
-        // Warm sub-bass punch on kicks
-        col += texColor.rgb * (uBass * 0.08);
+        // Sub-bass warm punch on kicks: gentle in verse (+2%), punchy in drop (+16%)
+        float bassGlow = mix(0.02, 0.16, uDrop);
+        col += texColor.rgb * (uBass * bassGlow);
 
         // Color Hue shift from AKAI Knob 2
         if (uHue > 0.001) {
@@ -386,6 +395,20 @@ export class ThreeDisplacementEngine {
     let bpm = 128.0;
     let beatPhase = 0.0;
 
+    // Dynamic Drop Intensity Tracking & Configuration
+    const rawDrop = audioState ? (audioState.dropIntensity || 0.0) : 0.0;
+    this.dropIntensity = THREE.MathUtils.lerp(this.dropIntensity, rawDrop, 0.18);
+    const dropFactor = this.dropIntensity;
+    const dropCfg = CONFIG.audio?.dynamics?.drop || {
+      verseScaleMultiplier: 0.018,
+      dropScaleMultiplier: 0.28,
+      verseWaveMultiplier: 0.26,
+      dropWaveMultiplier: 1.95,
+      camKickImpulse: 0.85,
+      surgeVerse: 0.04,
+      surgeDrop: 0.45,
+    };
+
     if (audioState) {
       bass = audioState.kickPunch !== undefined ? audioState.kickPunch : audioState.kickLevel;
       snare = audioState.highLevel || 0.0;
@@ -401,9 +424,12 @@ export class ThreeDisplacementEngine {
         melody = audioState.energyLevel || 0.0;
       }
 
-      // Kinetic Angular Surge from kick strikes
+      // Kinetic Angular Surge from kick strikes:
+      // In verse: gentle +0.04 (minimal deviation from steady rotation)
+      // In drop: high-octane +0.45 surge per kick strike!
       if (audioState.kickTrigger) {
-        this.surgeVelocity += bass * 0.28;
+        const surgeRate = THREE.MathUtils.lerp(dropCfg.surgeVerse, dropCfg.surgeDrop, dropFactor);
+        this.surgeVelocity += bass * surgeRate;
       }
 
       // ==============================================================
@@ -414,9 +440,19 @@ export class ThreeDisplacementEngine {
         this.lastKickTimestamp = now;
         const ring = this.kickRings[this.kickRingIndex];
         ring.radius = 0.05; // Born right at the center lotus!
-        ring.intensity = Math.min(1.4, bass * 1.25);
-        // Speed calibrated to travel across the 4.0 unit radius in exact 1 beat!
-        ring.speed = (bpm / 60.0) * 3.8;
+
+        // In verse: gentle, subtle ripples (0.35 max)
+        // In drop: explosive high-power shockwaves (1.8 max)
+        const waveIntensity = THREE.MathUtils.lerp(
+          Math.min(0.35, bass * 0.35),
+          Math.min(1.8, bass * 1.5),
+          dropFactor
+        );
+        ring.intensity = waveIntensity;
+
+        // Wave propagation speed: calm in verse, fast in drop
+        const baseSpeed = THREE.MathUtils.lerp(2.6, 4.6, dropFactor);
+        ring.speed = (bpm / 60.0) * baseSpeed;
         ring.width = 0.65 + (computedMidi.waveSpread ? (computedMidi.waveSpread - 1.8) * 0.2 : 0.15);
         this.kickRingIndex = (this.kickRingIndex + 1) % this.kickRings.length;
       }
@@ -472,7 +508,11 @@ export class ThreeDisplacementEngine {
     const waveSpread = computedMidi.waveSpread || 2.5; // Knob 3: Wave Spread (1.8 to 3.6)
     const sensitivity = computedMidi.audioSensitivity || 1.5; // Knob 4: Wave Depth Multiplier
 
-    const waveAmp = 0.40 + sensitivity * 0.45;
+    // Drop Wave Depth Multiplier:
+    // In verse/breakdown: 0.26x (calm, glassy, subtle 3D displacement)
+    // In drop/chorus: 1.95x (towering 3D wave canyons)
+    const waveDepthMult = THREE.MathUtils.lerp(dropCfg.verseWaveMultiplier, dropCfg.dropWaveMultiplier, dropFactor);
+    const waveAmp = (0.25 + sensitivity * 0.45) * waveDepthMult;
 
     // 3. Rotation Physics (Base + Kinetic Surge on Kicks)
     this.rotationAngle += (this.rotSpeed + this.surgeVelocity) * dt * 60;
@@ -480,19 +520,31 @@ export class ThreeDisplacementEngine {
     this.surgeVelocity *= Math.exp(-6.0 * dt);
 
     // 4. Sub-bass (Kick) Master Mesh Pulse Scale
-    const scalePunch = 1.0 + bass * 0.08;
+    // IN VERSE: Max +1.8% scale pump with gentle beat breath (barely noticeable)
+    // IN DROP: Massive +28% scale pump on kick beats with elastic recoil!
+    if (audioState && audioState.kickTrigger && dropFactor > 0.15) {
+      this.meshScaleRecoil = Math.min(0.22, bass * 0.20 * dropFactor);
+    }
+    this.meshScaleRecoil *= Math.exp(-10.5 * dt);
+
+    const verseScale = 1.0 + (bass * dropCfg.verseScaleMultiplier) + Math.sin(beatPhase * 6.28318) * 0.005;
+    const dropKickPump = Math.pow(Math.min(1.0, bass), 1.35) * dropCfg.dropScaleMultiplier;
+    const dropScale = 1.0 + dropKickPump + this.meshScaleRecoil;
+
+    const scalePunch = THREE.MathUtils.lerp(verseScale, dropScale, dropFactor);
     this.mesh.scale.set(scalePunch, scalePunch, 1.0);
 
-    // 5. Camera Interpolation (Preset 4 provides 32-degree Stage Tilt)
+    // 5. Camera Target Setup
     let targetTiltX = 0.0;
     let targetPosY = 0.0;
     let targetPosZ = 6.2;
 
-    if (this.currentPresetIndex === 4) {
-      targetTiltX = 0.55; // 32 degrees concert perspective
-      targetPosY = -1.35;
-      targetPosZ = 5.8;
+    // Dynamic Camera Z Recoil on heavy drop kicks
+    if (audioState && audioState.kickTrigger && dropFactor > 0.25) {
+      this.camKickImpulse += bass * dropCfg.camKickImpulse * dropFactor;
     }
+    this.camKickImpulse *= Math.exp(-8.0 * dt);
+    targetPosZ -= this.camKickImpulse;
 
     // Joystick Pan & Aperture
     const targetCamX = (computedMidi.panX - 0.5) * 4.0;
@@ -515,6 +567,7 @@ export class ThreeDisplacementEngine {
     this.uniforms.uBass.value = bass;
     this.uniforms.uAmp.value = waveAmp;
     this.uniforms.uSpread.value = waveSpread;
+    this.uniforms.uDrop.value = dropFactor;
     this.uniforms.uPreset.value = this.currentPresetIndex;
     this.uniforms.uHue.value = effectiveHue;
     this.uniforms.uPadSlam.value = computedMidi.padSlam ? 1.0 : 0.0;
