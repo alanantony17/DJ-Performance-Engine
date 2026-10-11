@@ -45,7 +45,7 @@
   <div id="asset-preview-card" class="hidden">
     <img id="asset-preview-thumb" src="assets/art1.png" alt="Artwork Preview">
     <div class="asset-preview-meta">
-      <span class="asset-preview-tag" id="asset-preview-tag">Asset [1/4]</span>
+      <span class="asset-preview-tag" id="asset-preview-tag">Asset [1/29]</span>
       <span class="asset-preview-name" id="asset-preview-name">Mandala Solar</span>
       <span class="asset-preview-hint">Toggled via Pad 3 / Direct Select</span>
     </div>
@@ -90,12 +90,43 @@
     </div>
   </div>
 
+  <!-- Layer 4e: On-Screen Buildup Preview Card (Toggled via Pad 1 / Pad 2) -->
+  <div id="buildup-preview-card" class="hidden">
+    <div class="style-preview-icon" id="buildup-preview-icon" style="background: rgba(234, 179, 8, 0.2); border-color: rgba(234, 179, 8, 0.4);">⚡</div>
+    <div class="style-preview-meta">
+      <div class="style-preview-header">
+        <span class="style-preview-tag" id="buildup-preview-tag" style="color: #eab308;">BUILDUP SEQUENCE</span>
+        <span class="style-preview-mode" id="buildup-preview-mode" style="background: rgba(234, 179, 8, 0.2); border-color: #eab308; color: #fef08a;">4-BAR BUILD</span>
+      </div>
+      <span class="style-preview-name" id="buildup-preview-name">4-BAR STROBE ARMED</span>
+      <span class="style-preview-desc" id="buildup-preview-desc">Exponential strobe accelerating to drop. Click pad again for Pre-Drop Blackout!</span>
+    </div>
+  </div>
+
+  <!-- Layer 4f: On-Screen Framing Mode Preview Card (Toggled via Key M) -->
+  <div id="framing-preview-card" class="hidden">
+    <div class="style-preview-icon" id="framing-preview-icon" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4);">🖼️</div>
+    <div class="style-preview-meta">
+      <div class="style-preview-header">
+        <span class="style-preview-tag" id="framing-preview-tag" style="color: #10b981;">FRAMING MODE</span>
+        <span class="style-preview-mode" id="framing-preview-mode" style="background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #6ee7b7;">WORLD FIELD</span>
+      </div>
+      <span class="style-preview-name" id="framing-preview-name">World-Field [16:9 Screen Fill]</span>
+      <span class="style-preview-desc" id="framing-preview-desc">Artwork mirrors seamlessly edge-to-edge; frame locked forward with zero visible edges</span>
+    </div>
+  </div>
+
   <!-- Layer 5: Live Diagnostic & Hardware Telemetry HUD (Press 'D' to toggle) -->
   <div id="hud-overlay">
     <div class="hud-header">
       <span class="hud-title">SYSTEM TELEMETRY</span>
-      <div>
-        <span id="hud-bpm" style="color: #00f0ff; font-weight: 700; margin-right: 8px;">128 BPM</span>
+      <div style="display: flex; align-items: center; gap: 4px;">
+        <span id="hud-bpm" style="color: #00f0ff; font-weight: 700; margin-right: 2px;">128.0 BPM</span>
+        <span id="hud-bpm-lock-badge" class="hud-drop-badge" style="padding: 2px 5px; font-size: 9px; margin-right: 2px; cursor: pointer;" title="BPM Lock Status (Click to Toggle Lock)">AUTO</span>
+        <span id="hud-beat-pulse" style="font-size: 10px; color: #c084fc; margin-right: 4px; letter-spacing: 2px;" title="4/4 Beat Cadence Clock">● ○ ○ ○</span>
+        <button id="hud-bpm-down" class="audio-btn" style="padding: 1px 6px; font-size: 10px;" title="BPM -1 (Key: [ or -)">-</button>
+        <button id="hud-bpm-up" class="audio-btn" style="padding: 1px 6px; font-size: 10px;" title="BPM +1 (Key: ] or =)">+</button>
+        <button id="hud-bpm-tap" class="audio-btn" style="padding: 1px 6px; font-size: 10px; margin-right: 6px;" title="Tap Tempo (Key: \)">TAP</button>
         <span class="hud-fps" id="hud-fps">60 FPS</span>
       </div>
     </div>
@@ -110,6 +141,19 @@
       <div class="hud-row">
         <span>Raw Message:</span>
         <span id="hud-midi-raw" style="color: #94a3b8;">None</span>
+      </div>
+    </div>
+
+    <!-- Buildup Sequencer Status -->
+    <div class="hud-section">
+      <div class="hud-section-title">One-Shot Buildup Sequencer</div>
+      <div class="hud-row">
+        <span>Status:</span>
+        <span id="hud-buildup-status" style="color: #64748b; font-weight: 700;">IDLE</span>
+      </div>
+      <div class="hud-row">
+        <span>Progress:</span>
+        <div class="hud-meter"><div class="hud-meter-bar" id="hud-bar-buildup" style="width: 0%; background: linear-gradient(90deg, #eab308, #ef4444);"></div></div>
       </div>
     </div>
 
@@ -153,24 +197,69 @@
       </div>
     </div>
 
-    <!-- Performance Pads Matrix -->
+    <!-- Performance Pads Matrix (AKAI MPK Mini 3 - 8 Pads: Top 5-8, Bottom 1-4) -->
+    <!-- Dual-Bank 16-Pad Performance Matrix (AKAI MPK Mini 3) -->
     <div class="hud-section">
-      <div class="hud-section-title">Pads (1: Riser | 2: Hue | 3: Asset | 4: SLAM | 5: Preset | 6: Drop)</div>
+      <div class="hud-section-title">BANK A: HOTCUE KEYS (Keys: 1-8)</div>
       <div class="hud-pads-grid">
-        <div class="hud-pad" id="hud-pad-1">PAD 1<br>RISER</div>
-        <div class="hud-pad" id="hud-pad-2">PAD 2<br>HUE</div>
+        <!-- Top Row: Pads 5 - 8 -->
+        <div class="hud-pad style" id="hud-pad-5">PAD 5<br>PRESET</div>
+        <div class="hud-pad hue" id="hud-pad-6">PAD 6<br>HUE FLOW</div>
+        <div class="hud-pad repeat" id="hud-pad-7">PAD 7<br>REPEAT</div>
+        <div class="hud-pad invert" id="hud-pad-8">PAD 8<br>INVERT</div>
+        <!-- Bottom Row: Pads 1 - 4 -->
+        <div class="hud-pad buildup" id="hud-pad-1">PAD 1<br>4-BAR</div>
+        <div class="hud-pad buildup" id="hud-pad-2">PAD 2<br>8-BAR</div>
         <div class="hud-pad" id="hud-pad-3">PAD 3<br>ASSET</div>
         <div class="hud-pad slam" id="hud-pad-4">PAD 4<br>SLAM</div>
-        <div class="hud-pad style" id="hud-pad-5">PAD 5<br>PRESET</div>
-        <div class="hud-pad drop" id="hud-pad-6">PAD 6<br>DROP</div>
       </div>
       <div class="hud-row" style="margin-top: 8px;">
         <span>3D Motion Preset:</span>
-        <span id="hud-visual-style" style="color: #c084fc; font-weight: 700;">Smooth Liquid Ripple</span>
+        <span id="hud-visual-style" style="color: #c084fc; font-weight: 700;">Beat-Synced Liquid Ripple</span>
       </div>
       <div class="hud-row" style="margin-top: 4px;">
         <span>Hue Mode:</span>
         <span id="hud-hue-status" style="color: #fbbf24; font-weight: 700;">Original Palette</span>
+      </div>
+      <div class="hud-row" style="margin-top: 4px;">
+        <span>Beat Repeat:</span>
+        <span id="hud-repeat-status" style="color: #22d3ee; font-weight: 700;">OFF</span>
+      </div>
+      <div class="hud-row" style="margin-top: 4px;">
+        <span>Framing Mode:</span>
+        <span id="hud-framing-status" style="color: #10b981; font-weight: 700;">WORLD FIELD</span>
+      </div>
+      <div class="hud-row" style="margin-top: 4px; margin-bottom: 4px;">
+        <button id="hud-framing-btn" class="audio-btn" style="width: 100%; padding: 4px; font-size: 10px; background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.35); color: #6ee7b7;">Toggle Framing Mode (Key: M)</button>
+      </div>
+    </div>
+
+    <!-- BANK B: ARMING & CONFIG MATRIX -->
+    <div class="hud-section">
+      <div class="hud-section-title">BANK B: ARMING & CONFIG (Shift + 1-8)</div>
+      <div class="hud-pads-grid">
+        <!-- Top Row: 4 Riser Archetypes -->
+        <div class="hud-pad riser-arm" id="hud-pad-b5">PAD B5<br>BLITZ</div>
+        <div class="hud-pad riser-arm" id="hud-pad-b6">PAD B6<br>IMPLOSION</div>
+        <div class="hud-pad riser-arm" id="hud-pad-b7">PAD B7<br>CHROMATIC</div>
+        <div class="hud-pad riser-arm" id="hud-pad-b8">PAD B8<br>SOLAR</div>
+        <!-- Bottom Row: Repeat Rate, Auto-Cycle, Drop Mode, Panic Slam -->
+        <div class="hud-pad repeat-cfg" id="hud-pad-b1">PAD B1<br>RATE</div>
+        <div class="hud-pad framing-cfg" id="hud-pad-b2">PAD B2<br>FRAMING</div>
+        <div class="hud-pad drop" id="hud-pad-b3">PAD B3<br>DROP MODE</div>
+        <div class="hud-pad slam" id="hud-pad-b4">PAD B4<br>SLAM</div>
+      </div>
+      <div class="hud-row" style="margin-top: 8px;">
+        <span>Armed Riser:</span>
+        <span id="hud-armed-riser" style="color: #facc15; font-weight: 700;">Kinetic Blitz</span>
+      </div>
+      <div class="hud-row" style="margin-top: 4px;">
+        <span>Repeat Rate:</span>
+        <span id="hud-loaded-repeat" style="color: #22d3ee; font-weight: 700;">[2/4] 1/8 Beat Stutter</span>
+      </div>
+      <div class="hud-row" style="margin-top: 4px;">
+        <span>Framing Mode:</span>
+        <span id="hud-framing-status-b" style="color: #10b981; font-weight: 700;">WORLD FIELD</span>
       </div>
     </div>
 
@@ -213,7 +302,7 @@
       </div>
     </div>
     <div style="font-size: 9px; color: #64748b; text-align: center; margin-top: 8px;">
-      Press [D] to Toggle HUD | Keys 1-6 for Pads | 'B' Drop | 'V' Style | 'H' Hue
+      Press [D] to Toggle HUD | Keys 1-8 Hotcues | Shift+1-8 Bank B | 'M' Framing | 'B' Drop | 'V' Style | 'P' Repeat | 'N' Invert
     </div>
   </div>
 

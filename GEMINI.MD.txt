@@ -20,9 +20,22 @@
 - Knob 3 (CC 72): Smooth wave spread / wavelength (1.8 to 3.6, no concentric bullseyes).
 - Knob 4 (CC 73): Wave depth / audio sensitivity multiplier.
 - Knob 5 (CC 74): 4-on-the-Floor Kick Cadence Drop Threshold (50% center = sweet spot requiring 3 regular kicks; higher = 4-5 kicks; lower = 2 kicks).
-- Pad 1: Accelerating Snare Riser Strobe.
-- Pad 2: Horizontal Shutter Blinder.
+### Bank A: "Hotcue Keys" (Live Performance & Action Hits)
+- Pad 1: 4-Bar Quantized Accelerating Buildup Trigger (Executes armed archetype).
+- Pad 2: 8-Bar Quantized Accelerating Buildup Trigger (Executes armed archetype).
 - Pad 3: Cycle to next artwork asset in `/assets/`.
-- Pad 4: DROP SLAM (instant blackout across all visuals and strobes).
+- Pad 4: DROP SLAM (instant blackout across all visuals / master cutoff / resets beat repeat & slicer).
 - Pad 5: Cycle 3D Motion Preset (Smooth Ripple, Subwoofer Shockwave, Melody Harmonics, Snare/Kick Interlock).
-- Pad 6: Toggle Drop Dynamics Override (Auto vs Forced Drop / Chorus Mode).
+- Pad 6: Toggle Auto-Hue Flow (seamless chromatic palette drift).
+- Pad 7: Temporal Beat Repeat Hotcue Key (quantized frame stutter / hold on 1/4, 1/8, 1/16, 1/32 beat divisions).
+- Pad 8: Negative X-Ray Color Inversion Toggle.
+
+### Bank B: Arming & Utility Configuration Matrix
+- Pad B1: Cycle Armed Beat Repeat Rate (1/4 Beat Freeze, 1/8 Beat Stutter, 1/16 Beat Roll, 1/32 Beat Hyper).
+- Pad B2: Toggle Riser Auto-Cycle (Manual Locked vs Round-Robin Auto-Rotate on each drop).
+- Pad B3: Toggle Drop Dynamics Override (Auto Dynamic vs Forced Drop / Chorus Mode).
+- Pad B4: DROP SLAM (instant panic blackout across all visuals / sample-accurate cutoff).
+- Pad B5: Arm Riser Archetype 1: Kinetic Blitz (accelerating strobe, icy blue shift, whiteout climax).
+- Pad B6: Arm Riser Archetype 2: Dark Implosion (reverse starfield vacuum suction, cobalt chill, pre-drop void silence).
+- Pad B7: Arm Riser Archetype 3: Chromatic Tear (RGB channel split, acid cyan/magenta, scanline glitch).
+- Pad B8: Arm Riser Archetype 4: Solar Bloom (corona eruption across 1080p canvas, molten amber -> plasma magenta -> solar white).

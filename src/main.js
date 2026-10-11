@@ -3,11 +3,12 @@
  * Integrates Web MIDI, Web Audio, and Three.js 3D Displacement Engine.
  */
 
-import { CONFIG } from './config.js';
+import { CONFIG, autoDiscoverAssets } from './config.js';
 import { MidiController } from './midi.js';
 import { AudioEngine } from './audio.js';
 import { DiagnosticHud } from './hud.js';
 import { ThreeDisplacementEngine } from './three-engine.js';
+import { BuildupSequencer } from './buildup-sequencer.js';
 
 console.log('[Engine] Initializing DJ Performance Engine Core...');
 
@@ -19,6 +20,14 @@ const assetPreviewCard = document.getElementById('asset-preview-card');
 const assetPreviewThumb = document.getElementById('asset-preview-thumb');
 const assetPreviewTag = document.getElementById('asset-preview-tag');
 const assetPreviewName = document.getElementById('asset-preview-name');
+
+// Buildup Preview Card DOM References
+const buildupPreviewCard = document.getElementById('buildup-preview-card');
+const buildupPreviewIcon = document.getElementById('buildup-preview-icon');
+const buildupPreviewTag = document.getElementById('buildup-preview-tag');
+const buildupPreviewMode = document.getElementById('buildup-preview-mode');
+const buildupPreviewName = document.getElementById('buildup-preview-name');
+const buildupPreviewDesc = document.getElementById('buildup-preview-desc');
 
 // Visual Style Preview Card DOM References
 const stylePreviewCard = document.getElementById('style-preview-card');
@@ -40,6 +49,14 @@ const dropPreviewMode = document.getElementById('drop-preview-mode');
 const dropPreviewName = document.getElementById('drop-preview-name');
 const dropPreviewDesc = document.getElementById('drop-preview-desc');
 
+// Framing Mode Preview Card DOM References
+const framingPreviewCard = document.getElementById('framing-preview-card');
+const framingPreviewIcon = document.getElementById('framing-preview-icon');
+const framingPreviewTag = document.getElementById('framing-preview-tag');
+const framingPreviewMode = document.getElementById('framing-preview-mode');
+const framingPreviewName = document.getElementById('framing-preview-name');
+const framingPreviewDesc = document.getElementById('framing-preview-desc');
+
 // Audio Modal DOM References
 const audioSourcePill = document.getElementById('audio-source-pill');
 const audioPillLabel = document.getElementById('audio-pill-label');
@@ -57,6 +74,8 @@ let previewTimeout = null;
 let stylePreviewTimeout = null;
 let huePreviewTimeout = null;
 let dropPreviewTimeout = null;
+let buildupPreviewTimeout = null;
+let framingPreviewTimeout = null;
 let threeEngine = null;
 
 // Synchronized Resize Handler for Three.js Engine
@@ -190,6 +209,99 @@ export function showDropPreview(dropDetail) {
   }, 2200);
 }
 
+// Show on-screen Buildup Sequence Preview card (smooth fade)
+export function showBuildupPreview(detail) {
+  if (!buildupPreviewCard || !detail) return;
+
+  if (detail.state === 'building') {
+    const arch = detail.archetype || { name: 'Kinetic Blitz', desc: 'Accelerating strobe to drop', color: '#facc15' };
+    if (buildupPreviewIcon) buildupPreviewIcon.textContent = '⚡';
+    if (buildupPreviewTag) {
+      buildupPreviewTag.textContent = `BUILDUP: ${arch.name.toUpperCase()}`;
+      buildupPreviewTag.style.color = arch.color || '#eab308';
+    }
+    if (buildupPreviewMode) {
+      buildupPreviewMode.textContent = `${detail.totalBars || 4}-BAR BUILD`;
+      buildupPreviewMode.style.borderColor = arch.color || '#eab308';
+      buildupPreviewMode.style.color = arch.color || '#fef08a';
+    }
+    if (buildupPreviewName) buildupPreviewName.textContent = `${detail.totalBars || 4}-BAR [${arch.name.toUpperCase()}] @ ${(detail.lockedBpm || 128).toFixed(0)} BPM`;
+    if (buildupPreviewDesc) buildupPreviewDesc.textContent = `${arch.desc} Hit Pad 4 (SLAM) to drop!`;
+  } else if (detail.state === 'holding_climax') {
+    const arch = detail.archetype || { name: 'Kinetic Blitz', color: '#ef4444' };
+    if (buildupPreviewIcon) buildupPreviewIcon.textContent = '🔥';
+    if (buildupPreviewTag) buildupPreviewTag.textContent = 'PEAK CLIMAX';
+    if (buildupPreviewMode) {
+      buildupPreviewMode.textContent = arch.mode === 'implosion' ? 'OBSIDIAN VOID' : '100% WHITEOUT';
+      buildupPreviewMode.style.borderColor = '#ef4444';
+      buildupPreviewMode.style.color = '#fef08a';
+    }
+    if (buildupPreviewName) buildupPreviewName.textContent = 'MAXIMUM CLIMAX REACHED';
+    if (buildupPreviewDesc) buildupPreviewDesc.textContent = 'Holding peak climax tension. Hit Pad 4 (SLAM) to drop!';
+  } else {
+    if (buildupPreviewIcon) buildupPreviewIcon.textContent = '⏹️';
+    if (buildupPreviewTag) buildupPreviewTag.textContent = 'BUILDUP IDLE';
+    if (buildupPreviewMode) {
+      buildupPreviewMode.textContent = 'READY';
+      buildupPreviewMode.style.borderColor = '#64748b';
+      buildupPreviewMode.style.color = '#cbd5e1';
+    }
+    if (buildupPreviewName) buildupPreviewName.textContent = 'BUILDUP STOPPED / CUTOFF';
+    if (buildupPreviewDesc) buildupPreviewDesc.textContent = 'Returned to standard 3D visual dynamics.';
+  }
+
+  buildupPreviewCard.classList.remove('hidden');
+  buildupPreviewCard.classList.add('visible');
+
+  if (buildupPreviewTimeout) clearTimeout(buildupPreviewTimeout);
+  buildupPreviewTimeout = setTimeout(() => {
+    buildupPreviewCard.classList.remove('visible');
+    buildupPreviewCard.classList.add('hidden');
+  }, 2400);
+}
+
+// Show on-screen Framing Mode Preview card (smooth fade)
+export function showFramingPreview(framingInfo) {
+  if (!framingPreviewCard || !framingInfo) return;
+
+  if (framingPreviewTag) framingPreviewTag.textContent = 'FRAMING MODE';
+  if (framingPreviewMode) {
+    framingPreviewMode.textContent = framingInfo.badge || framingInfo.name.toUpperCase();
+    framingPreviewMode.style.borderColor = framingInfo.id === 0 ? '#10b981' : (framingInfo.id === 1 ? '#06b6d4' : '#a855f7');
+    framingPreviewMode.style.color = framingInfo.id === 0 ? '#6ee7b7' : (framingInfo.id === 1 ? '#67e8f9' : '#d8b4fe');
+  }
+  if (framingPreviewName) framingPreviewName.textContent = framingInfo.name;
+  if (framingPreviewDesc) framingPreviewDesc.textContent = framingInfo.desc;
+
+  framingPreviewCard.classList.remove('hidden');
+  framingPreviewCard.classList.add('visible');
+
+  if (framingPreviewTimeout) clearTimeout(framingPreviewTimeout);
+  framingPreviewTimeout = setTimeout(() => {
+    framingPreviewCard.classList.remove('visible');
+    framingPreviewCard.classList.add('hidden');
+  }, CONFIG.assets.previewDurationMs || 2200);
+}
+
+// Show generic FX notification using Hue Preview Card
+export function showEffectPreview(title, desc, color = '#00f0ff') {
+  if (!huePreviewCard) return;
+  if (huePreviewName) {
+    huePreviewName.textContent = title;
+    huePreviewName.style.color = color;
+  }
+  if (huePreviewDesc) {
+    huePreviewDesc.textContent = desc;
+  }
+  huePreviewCard.classList.remove('hidden');
+  huePreviewCard.classList.add('visible');
+  if (huePreviewTimeout) clearTimeout(huePreviewTimeout);
+  huePreviewTimeout = setTimeout(() => {
+    huePreviewCard.classList.remove('visible');
+    huePreviewCard.classList.add('hidden');
+  }, 2000);
+}
+
 // Toggle Drop Dynamics Mode (Pad 6 / Key B)
 export function toggleDrop() {
   if (audio) {
@@ -213,7 +325,12 @@ export function cycleAsset() {
   showAssetPreview(currentAssetIndex);
   // Dispatch asset change event for visual pipeline
   window.dispatchEvent(new CustomEvent('engine:assetChange', { detail: { index: currentAssetIndex, asset: CONFIG.assets.list[currentAssetIndex] } }));
+  // Silently check if new assets have been placed in the folder
+  autoDiscoverAssets();
 }
+
+// Background auto-discovery polling every 15 seconds
+setInterval(autoDiscoverAssets, 15000);
 
 // Cycle to next 3D motion preset (Pad 5 / Key 5 / V)
 export function cycleStyle() {
@@ -238,6 +355,9 @@ const hud = new DiagnosticHud();
 // 2. Initialize Web Audio Engine
 const audio = new AudioEngine();
 
+// 2b. Initialize One-Shot Buildup Sequencer
+const buildup = new BuildupSequencer();
+
 // Auto-engage engine function
 async function engageEngine() {
   if (startOverlay) {
@@ -258,26 +378,140 @@ if (startOverlay) {
   startOverlay.addEventListener('click', engageEngine);
 }
 
-// 3. Initialize Web MIDI Controller
+// 3. Initialize Web MIDI Controller (AKAI MPK Mini 3 - Clean 8-Pad Layout)
 const midi = new MidiController({
   onAnyInput: () => {
     // Zero-click auto resume on first MIDI touch
     engageEngine();
   },
+  onBpmAdjust: (delta) => {
+    if (audio) {
+      const newBpm = audio.adjustBpm(delta);
+      showEffectPreview('TEMPO ADJUST', `${newBpm.toFixed(1)} BPM`, '#00f0ff');
+    }
+  },
+  onTapTempo: () => {
+    if (audio) {
+      const newBpm = audio.tapTempo();
+      showEffectPreview('TAP TEMPO', `${newBpm.toFixed(1)} BPM`, '#00f0ff');
+    }
+  },
   onPadTrigger: (padId, velocity) => {
-    if (padId === 'pad2') {
-      toggleHue();
+    const currentBpm = audio ? audio.state.bpm : 128.0;
+
+    // --- BANK A: LIVE PERFORMANCE & ACTION HITS ---
+    if (padId === 'pad1') {
+      // Pad 1: 4-Bar Buildup Trigger (Armed Archetype)
+      const summary = buildup.toggle(4, currentBpm);
+      showBuildupPreview(summary);
+    } else if (padId === 'pad2') {
+      // Pad 2: 8-Bar Buildup Trigger (Armed Archetype)
+      const summary = buildup.toggle(8, currentBpm);
+      showBuildupPreview(summary);
     } else if (padId === 'pad3') {
+      // Pad 3: Cycle Artwork Asset
       cycleAsset();
+    } else if (padId === 'pad4') {
+      // Pad 4: DROP SLAM Blackout & Buildup Cutoff & Beat-Repeat/Slicer Reset
+      if (buildup && buildup.state !== 'idle') {
+        buildup.cancel();
+        showBuildupPreview({ state: 'cancelled' });
+      }
+      if (threeEngine) {
+        threeEngine.resetSlicer();
+        threeEngine.resetBeatRepeat();
+      }
+      showEffectPreview('DROP SLAM', 'Master Blackout & FX Cleared', '#f43f5e');
     } else if (padId === 'pad5') {
+      // Pad 5: Cycle 3D Motion Preset
       cycleStyle();
     } else if (padId === 'pad6') {
+      // Pad 6: Toggle Auto-Hue Flow
+      toggleHue();
+    } else if (padId === 'pad7') {
+      // Pad 7: Temporal Beat Repeat Hotcue Key (Quantized stutter/freeze)
+      if (threeEngine) {
+        const res = threeEngine.toggleBeatRepeat();
+        showEffectPreview('BEAT REPEAT', res.active ? `${res.style.name.toUpperCase()} ACTIVE` : 'REPEAT BYPASSED', res.active ? '#00f0ff' : '#94a3b8');
+      }
+    } else if (padId === 'pad8') {
+      // Pad 8: Negative X-Ray Invert
+      if (threeEngine) {
+        const active = threeEngine.toggleNegative();
+        showEffectPreview('NEGATIVE INVERT', active ? 'X-Ray Color Inversion Active' : 'Negative Invert Bypassed', active ? '#ec4899' : '#94a3b8');
+      }
+    }
+
+    // --- BANK B: ARMING & UTILITY CONFIGURATION ---
+    else if (padId === 'padB1') {
+      // Pad B1: Cycle Armed Beat Repeat Subdivision Rate
+      if (threeEngine) {
+        const res = threeEngine.cycleBeatRepeatRate();
+        showEffectPreview(`REPEAT RATE [${res.index + 1}/4]`, `${res.style.name}: ${res.style.desc}`, '#00f0ff');
+      }
+    } else if (padId === 'padB2') {
+      // Pad B2: Cycle Framing Mode (World-Field / Radial Portal / Classic)
+      if (threeEngine) {
+        const mode = threeEngine.cycleFramingMode();
+        showFramingPreview(mode);
+      }
+    } else if (padId === 'padB3') {
+      // Pad B3: Toggle Drop Dynamics Override (Moved to Bank B per request)
       toggleDrop();
+    } else if (padId === 'padB4') {
+      // Pad B4: DROP SLAM (Panic Blackout available on Bank B too!)
+      if (buildup && buildup.state !== 'idle') {
+        buildup.cancel();
+        showBuildupPreview({ state: 'cancelled' });
+      }
+      if (threeEngine) {
+        threeEngine.resetSlicer();
+        threeEngine.resetBeatRepeat();
+      }
+      showEffectPreview('DROP SLAM', 'Master Blackout & FX Cleared', '#f43f5e');
+    } else if (padId === 'padB5') {
+      // Pad B5: Arm Riser Archetype 0 (Kinetic Blitz)
+      if (buildup) {
+        const arch = buildup.setArchetype(0);
+        showEffectPreview('ARMED RISER [1/4]', `${arch.name}: ${arch.desc}`, arch.color);
+      }
+    } else if (padId === 'padB6') {
+      // Pad B6: Arm Riser Archetype 1 (Dark Implosion)
+      if (buildup) {
+        const arch = buildup.setArchetype(1);
+        showEffectPreview('ARMED RISER [2/4]', `${arch.name}: ${arch.desc}`, arch.color);
+      }
+    } else if (padId === 'padB7') {
+      // Pad B7: Arm Riser Archetype 2 (Chromatic Tear)
+      if (buildup) {
+        const arch = buildup.setArchetype(2);
+        showEffectPreview('ARMED RISER [3/4]', `${arch.name}: ${arch.desc}`, arch.color);
+      }
+    } else if (padId === 'padB8') {
+      // Pad B8: Arm Riser Archetype 3 (Solar Bloom)
+      if (buildup) {
+        const arch = buildup.setArchetype(3);
+        showEffectPreview('ARMED RISER [4/4]', `${arch.name}: ${arch.desc}`, arch.color);
+      }
     }
   },
   onStateChange: (rawState, computed) => {
     // State is read continuously in rAF loop
   }
+});
+
+// Listen for buildup sequencer state transitions
+window.addEventListener('engine:buildupStarted', (e) => {
+  showBuildupPreview({ state: 'building', totalBars: e.detail.bars, lockedBpm: e.detail.bpm });
+});
+window.addEventListener('engine:buildupCancelled', (e) => {
+  showBuildupPreview({ state: 'cancelled' });
+});
+window.addEventListener('engine:buildupShut', (e) => {
+  showBuildupPreview({ state: 'blackout_shut' });
+});
+window.addEventListener('engine:buildupReleased', (e) => {
+  showBuildupPreview({ state: 'idle' });
 });
 
 // Key bindings for HUD, Drop Mode, and Direct Asset Switching
@@ -288,8 +522,22 @@ window.addEventListener('keydown', (e) => {
   if (e.code === CONFIG.midi.keyboardFallback.toggleDropKey) {
     toggleDrop();
   }
-  // Direct asset selection via Shift + 1..9
-  if (e.shiftKey && e.code.startsWith('Digit')) {
+  // Toggle BPM Lock (Key L)
+  if (e.code === 'KeyL') {
+    if (audio) {
+      const isLocked = audio.toggleBpmLock();
+      showEffectPreview(isLocked ? 'BPM LOCKED' : 'BPM AUTO TRACK', `${audio.state.bpm.toFixed(1)} BPM`, isLocked ? '#22c55e' : '#00f0ff');
+    }
+  }
+  // Toggle Framing Mode (Key M: World-Field / Radial Portal / Classic)
+  if (e.code === CONFIG.midi.keyboardFallback.toggleFramingKey || e.code === 'KeyM') {
+    if (threeEngine) {
+      const mode = threeEngine.cycleFramingMode();
+      showFramingPreview(mode);
+    }
+  }
+  // Direct asset selection via Alt + 1..9 (reserving Shift + 1-8 for Bank B pads)
+  if (e.altKey && e.code.startsWith('Digit')) {
     const digit = parseInt(e.code.replace('Digit', ''), 10);
     if (!isNaN(digit) && digit >= 1 && digit <= CONFIG.assets.list.length) {
       selectAsset(digit - 1);
@@ -303,6 +551,11 @@ window.addEventListener('keydown', (e) => {
 // Listen for drop mode change events from audio or UI
 window.addEventListener('engine:dropModeChanged', (e) => {
   showDropPreview(e.detail);
+});
+
+// Listen for framing mode change events from engine or UI
+window.addEventListener('engine:framingChanged', (e) => {
+  showFramingPreview(e.detail.info);
 });
 
 // Audio Source Modal Management
@@ -424,17 +677,25 @@ window.addEventListener('engine:assetLoaded', (e) => {
 });
 
 // Main Animation & Update Loop
+let lastLoopTime = performance.now();
 function loop() {
+  const now = performance.now();
+  const dt = Math.min(0.1, (now - lastLoopTime) / 1000);
+  lastLoopTime = now;
+
   const computedMidi = midi.getComputedValues();
   const audioState = audio.update(computedMidi.audioSensitivity, computedMidi.dropThresholdNorm);
 
-  // 1. Render Three.js 3D Mesh Displacement Engine (Pure visual, zero overlay light)
+  // 1. Update One-Shot Buildup Sequencer (4Hz -> 60Hz Strobe, Blinder Climax, Pre-Drop Silence)
+  const buildupState = buildup.update(dt, audioState ? audioState.bpm : 128.0, audioState);
+
+  // 2. Render Three.js 3D Mesh Displacement Engine with In-Shader Physical Cuts & Invert
   if (threeEngine) {
-    threeEngine.update(computedMidi, audioState);
+    threeEngine.update(computedMidi, audioState, buildupState);
   }
 
-  // Update diagnostic HUD
-  hud.update(midi.state, computedMidi, audioState);
+  // 3. Update diagnostic telemetry HUD
+  hud.update(midi.state, computedMidi, audioState, buildupState);
 
   requestAnimationFrame(loop);
 }
@@ -450,6 +711,8 @@ window.audio = audio;
 window.threeEngine = threeEngine;
 window.midi = midi;
 window.hud = hud;
+window.buildup = buildup;
+window.CONFIG = CONFIG;
 
-export { midi, audio, threeEngine, hud, currentAssetIndex };
+export { midi, audio, threeEngine, hud, buildup, currentAssetIndex, CONFIG };
 console.log('[Engine] High-Performance Three.js Audiovisual Rig Online & Ready for OBS.');

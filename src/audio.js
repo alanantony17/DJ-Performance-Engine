@@ -4,6 +4,7 @@
  */
 
 import { CONFIG } from './config.js';
+import { BpmDetector } from './bpm-detector.js';
 
 export class AudioEngine {
   constructor() {
@@ -15,6 +16,13 @@ export class AudioEngine {
     this.demoInterval = null;
     this.monitorGain = null;
     this.isInitialized = false;
+
+    // Multi-Band Harmonic BPM Detector & Beat Clock
+    this.bpmDetector = new BpmDetector({
+      defaultBpm: CONFIG.buildup?.defaultBpm || 128.0,
+      minBpm: 85.0,
+      maxBpm: 175.0,
+    });
 
     this.currentSourceName = 'Default Microphone';
     this.currentSourceType = 'device'; // 'device' | 'tab' | 'demo' | 'file'
@@ -33,7 +41,12 @@ export class AudioEngine {
       highLevel: 0.0,      // Continuous high frequency envelope
       highTrigger: false,
       bpm: 128.0,          // Dynamic detected BPM
+      bpmConfidence: 0.0,  // Detection confidence (0.0 to 1.0)
+      isBpmLocked: false,  // Stable tempo locked
+      isBpmCoasting: false,// Holding locked tempo across kick-less breakdowns
+      isBpmManual: false,  // Force-locked by DJ
       beatPhase: 0.0,      // 0.0 to 1.0 phase within beat
+      beatIndex: 0,        // 0, 1, 2, 3 in 4/4 measure
       dropIntensity: 0.0,  // 0.0 (quiet/breakdown) to 1.0 (peak drop slam)
       dropMode: 'auto',    // 'auto' | 'forced' | 'chill'
       isDrop: false,       // true when dropIntensity >= 0.50
@@ -83,6 +96,15 @@ export class AudioEngine {
       this.monitorGain.gain.value = 0.0; // Default muted to prevent mic howling
       this.analyser.connect(this.monitorGain);
       this.monitorGain.connect(this.audioCtx.destination);
+
+      // Initialize Multi-Band Zero-Lag Transient BPM Detector
+      if (this.bpmDetector) {
+        this.bpmDetector.init(this.audioCtx);
+        if (this.bpmDetector.kickFilter && this.bpmDetector.snareFilter) {
+          this.analyser.connect(this.bpmDetector.kickFilter);
+          this.analyser.connect(this.bpmDetector.snareFilter);
+        }
+      }
 
       this.isInitialized = true;
     }
@@ -402,6 +424,65 @@ export class AudioEngine {
     return { mode: this.state.dropMode, text: modeText };
   }
 
+  setBpm(newBpm, lock = true) {
+    if (this.bpmDetector) {
+      const clamped = this.bpmDetector.setBpm(newBpm, lock);
+      this.state.bpm = clamped;
+      this.state.isBpmManual = this.bpmDetector.isManual;
+      this.lastKickInterval = 60000 / clamped;
+      return clamped;
+    }
+    const clamped = Math.max(60.0, Math.min(220.0, Math.round(newBpm * 10) / 10));
+    this.state.bpm = clamped;
+    this.lastKickInterval = 60000 / clamped;
+    window.dispatchEvent(new CustomEvent('engine:bpmChanged', { detail: { bpm: clamped } }));
+    return clamped;
+  }
+
+  adjustBpm(delta) {
+    if (this.bpmDetector) {
+      const clamped = this.bpmDetector.adjustBpm(delta);
+      this.state.bpm = clamped;
+      this.state.isBpmManual = this.bpmDetector.isManual;
+      return clamped;
+    }
+    return this.setBpm((this.state.bpm || 128.0) + delta);
+  }
+
+  tapTempo() {
+    if (this.bpmDetector) {
+      const clamped = this.bpmDetector.tapTempo();
+      this.state.bpm = clamped;
+      this.state.isBpmManual = this.bpmDetector.isManual;
+      return clamped;
+    }
+    const now = performance.now();
+    this.tapTimes = (this.tapTimes || []).filter(t => (now - t) < 3000);
+    this.tapTimes.push(now);
+
+    if (this.tapTimes.length >= 2) {
+      const intervals = [];
+      for (let i = 1; i < this.tapTimes.length; i++) {
+        intervals.push(this.tapTimes[i] - this.tapTimes[i - 1]);
+      }
+      const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+      const bpm = Math.round((60000 / avgInterval) * 10) / 10;
+      if (bpm >= 60 && bpm <= 220) {
+        return this.setBpm(bpm);
+      }
+    }
+    return this.state.bpm;
+  }
+
+  toggleBpmLock() {
+    if (this.bpmDetector) {
+      const isLocked = this.bpmDetector.toggleLock();
+      this.state.isBpmManual = isLocked;
+      return isLocked;
+    }
+    return false;
+  }
+
   // Called once per animation frame (rAF)
   // Called once per animation frame (rAF)
   update(sensitivityMultiplier = 1.0, dropThresholdSetting = 0.50) {
@@ -468,43 +549,34 @@ export class AudioEngine {
 
     if (isKickOnset) {
       this.state.kickTrigger = true;
-      const intervalMs = timeSinceLastKick;
       this.lastKickTime = now;
       this.recentKickTimes.push(now);
-
-      // Sync beat phase right on kick strike for razor-sharp visual pulse
       this.state.beatPhase = 0.0;
-
-      // House & Techno 4/4 Kick Cadence Tracking:
-      // Dance quarter-note tempo window: 320ms (187 BPM) to 650ms (92 BPM)
-      if (intervalMs >= cadenceCfg.minIntervalMs && intervalMs <= cadenceCfg.maxIntervalMs) {
-        const refInterval = (this.lastKickInterval > 0) ? this.lastKickInterval : (60000 / cadenceCfg.defaultBpm);
-        const jitter = Math.abs(intervalMs - refInterval) / refInterval;
-
-        // In quantized electronic dance music, jitter between 4/4 kicks is tight
-        if (jitter <= cadenceCfg.jitterTolerance || this.cadenceConfidence < 0.25) {
-          this.consecutiveOnTempoKicks++;
-          this.cadenceConfidence = Math.min(1.0, this.cadenceConfidence + 0.35);
-          this.lastKickInterval = refInterval * 0.70 + intervalMs * 0.30;
-          this.state.kickIntervalMs = this.lastKickInterval;
-          const detectedBpm = 60000 / this.lastKickInterval;
-          this.state.bpm = this.state.bpm * 0.82 + detectedBpm * 0.18;
-        } else {
-          // Off-beat syncopation / stutter: step down slightly
-          this.consecutiveOnTempoKicks = Math.max(1, this.consecutiveOnTempoKicks - 1);
-          this.cadenceConfidence = Math.max(0.20, this.cadenceConfidence - 0.15);
-          this.lastKickInterval = intervalMs;
-        }
-      } else if (intervalMs < cadenceCfg.minIntervalMs) {
-        // Fast syncopation (1/8th or 1/16th tap): keep confidence
-      } else {
-        // First kick after long gap: start cadence
-        this.consecutiveOnTempoKicks = 1;
-        this.cadenceConfidence = 0.30;
-        this.lastKickInterval = (60000 / cadenceCfg.defaultBpm);
-      }
     } else {
       this.state.kickTrigger = false;
+    }
+
+    // High-Precision Multi-Band Harmonic BPM Detector & Beat Clock
+    if (this.bpmDetector) {
+      const bpmRes = this.bpmDetector.update(sensitivityMultiplier);
+      if (bpmRes) {
+        this.state.bpm = bpmRes.bpm;
+        this.state.beatPhase = bpmRes.beatPhase;
+        this.state.beatIndex = bpmRes.beatIndex;
+        this.state.bpmConfidence = bpmRes.confidence;
+        this.state.isBpmLocked = bpmRes.isLocked;
+        this.state.isBpmCoasting = bpmRes.isCoasting;
+        this.state.isBpmManual = bpmRes.isManual;
+
+        if (bpmRes.isKickOnset) {
+          this.state.kickTrigger = true;
+          this.lastKickTime = now;
+        }
+
+        // Harmonize cadence confidence with BPM detector confidence
+        this.cadenceConfidence = Math.max(this.cadenceConfidence, bpmRes.confidence);
+        this.state.kickCadenceLock = this.cadenceConfidence;
+      }
     }
 
     // Purge kick timestamps older than 2500ms
@@ -628,13 +700,13 @@ export class AudioEngine {
       this.state.highTrigger = false;
     }
 
-    // 3. Dynamic BPM Phase Accumulator
-    const dt = Math.min(0.1, (now - this.lastUpdateTime) / 1000);
-    this.lastUpdateTime = now;
-
-    // Advance continuous beat phase (0.0 to 1.0 ramp per beat)
-    const bps = this.state.bpm / 60;
-    this.state.beatPhase = (this.state.beatPhase + bps * dt) % 1.0;
+    // 3. Dynamic BPM Phase Accumulator (fallback if bpmDetector not active)
+    if (!this.bpmDetector) {
+      const dt = Math.min(0.1, (now - this.lastUpdateTime) / 1000);
+      this.lastUpdateTime = now;
+      const bps = this.state.bpm / 60;
+      this.state.beatPhase = (this.state.beatPhase + bps * dt) % 1.0;
+    }
 
     return this.state;
   }

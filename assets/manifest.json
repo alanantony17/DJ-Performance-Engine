@@ -1,0 +1,289 @@
+[
+  {
+    "id": 0,
+    "name": "Jalebi",
+    "filename": "Jalebi.png",
+    "path": "assets/Jalebi.png",
+    "framing": "totem"
+  },
+  {
+    "id": 1,
+    "name": "Aerogel",
+    "filename": "aerogel.jpg",
+    "path": "assets/aerogel.jpg",
+    "framing": "world"
+  },
+  {
+    "id": 2,
+    "name": "Amul Girl",
+    "filename": "amul.png",
+    "path": "assets/amul.png",
+    "framing": "totem"
+  },
+  {
+    "id": 3,
+    "name": "Art1",
+    "filename": "art1.png",
+    "path": "assets/art1.png",
+    "framing": "world"
+  },
+  {
+    "id": 4,
+    "name": "Art2",
+    "filename": "art2.png",
+    "path": "assets/art2.png",
+    "framing": "world"
+  },
+  {
+    "id": 5,
+    "name": "Art3",
+    "filename": "art3.png",
+    "path": "assets/art3.png",
+    "framing": "world"
+  },
+  {
+    "id": 6,
+    "name": "Art4",
+    "filename": "art4.png",
+    "path": "assets/art4.png",
+    "framing": "world"
+  },
+  {
+    "id": 7,
+    "name": "Beauty",
+    "filename": "beauty.png",
+    "path": "assets/beauty.png",
+    "framing": "totem"
+  },
+  {
+    "id": 8,
+    "name": "Blackhole",
+    "filename": "blackhole.png",
+    "path": "assets/blackhole.png",
+    "framing": "totem"
+  },
+  {
+    "id": 9,
+    "name": "Carbon Ink",
+    "filename": "carbon ink.jpg",
+    "path": "assets/carbon%20ink.jpg",
+    "framing": "world"
+  },
+  {
+    "id": 10,
+    "name": "Comics",
+    "filename": "comics.png",
+    "path": "assets/comics.png",
+    "framing": "world"
+  },
+  {
+    "id": 11,
+    "name": "Crystaline Structures",
+    "filename": "crystaline structures.jpg",
+    "path": "assets/crystaline%20structures.jpg",
+    "framing": "world"
+  },
+  {
+    "id": 12,
+    "name": "Diya 2",
+    "filename": "diya 2.png",
+    "path": "assets/diya%202.png",
+    "framing": "totem"
+  },
+  {
+    "id": 13,
+    "name": "Diya",
+    "filename": "diya.png",
+    "path": "assets/diya.png",
+    "framing": "totem"
+  },
+  {
+    "id": 14,
+    "name": "Ferro Fluid",
+    "filename": "ferro fluid.png",
+    "path": "assets/ferro%20fluid.png",
+    "framing": "world"
+  },
+  {
+    "id": 15,
+    "name": "Fluid Ink",
+    "filename": "fluid ink.jpg",
+    "path": "assets/fluid%20ink.jpg",
+    "framing": "world"
+  },
+  {
+    "id": 16,
+    "name": "Fractal Network",
+    "filename": "fractal network.png",
+    "path": "assets/fractal%20network.png",
+    "framing": "world"
+  },
+  {
+    "id": 17,
+    "name": "Gypsum",
+    "filename": "gypsum.jpg",
+    "path": "assets/gypsum.jpg",
+    "framing": "world"
+  },
+  {
+    "id": 18,
+    "name": "Ice",
+    "filename": "ice.png",
+    "path": "assets/ice.png",
+    "framing": "world"
+  },
+  {
+    "id": 19,
+    "name": "Lady",
+    "filename": "lady.png",
+    "path": "assets/lady.png",
+    "framing": "totem"
+  },
+  {
+    "id": 20,
+    "name": "Tiger Mandala",
+    "filename": "mandala.jpg",
+    "path": "assets/mandala.jpg",
+    "framing": "totem"
+  },
+  {
+    "id": 21,
+    "name": "Molten Grays",
+    "filename": "molten grays.jpg",
+    "path": "assets/molten%20grays.jpg",
+    "framing": "world"
+  },
+  {
+    "id": 22,
+    "name": "Oil Honeycomb",
+    "filename": "oil honeycomb.jpg",
+    "path": "assets/oil%20honeycomb.jpg",
+    "framing": "world"
+  },
+  {
+    "id": 23,
+    "name": "Paper Art",
+    "filename": "paper.png",
+    "path": "assets/paper.png",
+    "framing": "totem"
+  },
+  {
+    "id": 24,
+    "name": "Peacock",
+    "filename": "peacock.png",
+    "path": "assets/peacock.png",
+    "framing": "totem"
+  },
+  {
+    "id": 25,
+    "name": "Rangoli 1",
+    "filename": "rangoli 1.png",
+    "path": "assets/rangoli%201.png",
+    "framing": "totem"
+  },
+  {
+    "id": 26,
+    "name": "Rangoli 2",
+    "filename": "rangoli 2.png",
+    "path": "assets/rangoli%202.png",
+    "framing": "totem"
+  },
+  {
+    "id": 27,
+    "name": "Rangoli 3",
+    "filename": "rangoli 3.png",
+    "path": "assets/rangoli%203.png",
+    "framing": "totem"
+  },
+  {
+    "id": 28,
+    "name": "Red Eye",
+    "filename": "red eye.png",
+    "path": "assets/red%20eye.png",
+    "framing": "totem"
+  },
+  {
+    "id": 29,
+    "name": "Skyline",
+    "filename": "skyline.png",
+    "path": "assets/skyline.png",
+    "framing": "world"
+  },
+  {
+    "id": 30,
+    "name": "Slate",
+    "filename": "slate.jpg",
+    "path": "assets/slate.jpg",
+    "framing": "world"
+  },
+  {
+    "id": 31,
+    "name": "Slime",
+    "filename": "slime.png",
+    "path": "assets/slime.png",
+    "framing": "world"
+  },
+  {
+    "id": 32,
+    "name": "Spacey",
+    "filename": "spacey.png",
+    "path": "assets/spacey.png",
+    "framing": "totem"
+  },
+  {
+    "id": 33,
+    "name": "Supernova",
+    "filename": "supernova.png",
+    "path": "assets/supernova.png",
+    "framing": "totem"
+  },
+  {
+    "id": 34,
+    "name": "Taj Mahal",
+    "filename": "taj mahal.png",
+    "path": "assets/taj%20mahal.png",
+    "framing": "world"
+  },
+  {
+    "id": 35,
+    "name": "Truck Art",
+    "filename": "truck art.png",
+    "path": "assets/truck%20art.png",
+    "framing": "totem"
+  },
+  {
+    "id": 36,
+    "name": "Tubes",
+    "filename": "tubes.png",
+    "path": "assets/tubes.png",
+    "framing": "totem"
+  },
+  {
+    "id": 37,
+    "name": "Virus Crystals",
+    "filename": "virus crystals.png",
+    "path": "assets/virus%20crystals.png",
+    "framing": "world"
+  },
+  {
+    "id": 38,
+    "name": "Dharma Wheel",
+    "filename": "wheel.png",
+    "path": "assets/wheel.png",
+    "framing": "totem"
+  },
+  {
+    "id": 39,
+    "name": "White Virus",
+    "filename": "white virus.jpg",
+    "path": "assets/white%20virus.jpg",
+    "framing": "world"
+  },
+  {
+    "id": 40,
+    "name": "Woven Fabric",
+    "filename": "woven fabric.jpg",
+    "path": "assets/woven%20fabric.jpg",
+    "framing": "world"
+  }
+]

@@ -197,7 +197,9 @@ html, body {
 /* Layer 4d: Drop Mode Preview Card (On-Screen Preview on Pad 6 / Key B) */
 #style-preview-card,
 #hue-preview-card,
-#drop-preview-card {
+#drop-preview-card,
+#buildup-preview-card,
+#framing-preview-card {
   position: absolute;
   bottom: 30px;
   left: 30px;
@@ -228,16 +230,32 @@ html, body {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 26px rgba(244, 63, 94, 0.35);
 }
 
+#buildup-preview-card {
+  background: rgba(26, 20, 8, 0.94);
+  border-color: rgba(234, 179, 8, 0.75);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 26px rgba(234, 179, 8, 0.35);
+}
+
+#framing-preview-card {
+  background: rgba(8, 22, 16, 0.92);
+  border-color: rgba(16, 185, 129, 0.75);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 26px rgba(16, 185, 129, 0.35);
+}
+
 #style-preview-card.visible,
 #hue-preview-card.visible,
-#drop-preview-card.visible {
+#drop-preview-card.visible,
+#buildup-preview-card.visible,
+#framing-preview-card.visible {
   opacity: 1;
   transform: translateY(0);
 }
 
 #style-preview-card.hidden,
 #hue-preview-card.hidden,
-#drop-preview-card.hidden {
+#drop-preview-card.hidden,
+#buildup-preview-card.hidden,
+#framing-preview-card.hidden {
   opacity: 0;
   transform: translateY(12px);
 }
@@ -384,18 +402,18 @@ html, body {
 
 .hud-pads-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 4px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
   margin-top: 6px;
 }
 
 .hud-pad {
-  padding: 8px 2px;
+  padding: 8px 4px;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.15);
   text-align: center;
-  font-size: 8px;
+  font-size: 8.5px;
   font-weight: 600;
   color: #64748b;
   transition: all 0.08s ease;
@@ -406,6 +424,13 @@ html, body {
   border-color: #00f0ff;
   color: #000;
   box-shadow: 0 0 12px #00f0ff;
+}
+
+.hud-pad.active.buildup {
+  background: #eab308;
+  border-color: #eab308;
+  color: #000;
+  box-shadow: 0 0 12px #eab308;
 }
 
 .hud-pad.active.slam {
@@ -427,6 +452,69 @@ html, body {
   border-color: #f43f5e;
   color: #fff;
   box-shadow: 0 0 12px #f43f5e;
+}
+
+.hud-pad.active.slicer,
+.hud-pad.active.repeat {
+  background: #00f0ff;
+  border-color: #00f0ff;
+  color: #000;
+  box-shadow: 0 0 12px #00f0ff;
+}
+
+.hud-pad.active.invert {
+  background: #ec4899;
+  border-color: #ec4899;
+  color: #fff;
+  box-shadow: 0 0 12px #ec4899;
+}
+
+.hud-pad.active.hue {
+  background: #fbbf24;
+  border-color: #fbbf24;
+  color: #000;
+  box-shadow: 0 0 12px #fbbf24;
+}
+
+.hud-pad.active.riser-arm,
+.hud-pad.armed.riser-arm {
+  background: #facc15;
+  border-color: #facc15;
+  color: #000;
+  box-shadow: 0 0 12px #facc15;
+}
+
+.hud-pad.active.auto-cfg,
+.hud-pad.armed.auto-cfg {
+  background: #22c55e;
+  border-color: #22c55e;
+  color: #000;
+  box-shadow: 0 0 12px #22c55e;
+}
+
+.hud-pad.active.framing-cfg,
+.hud-pad.armed.framing-cfg {
+  background: #10b981;
+  border-color: #10b981;
+  color: #000;
+  box-shadow: 0 0 12px #10b981;
+}
+
+.hud-pad.active.slicer-cfg,
+.hud-pad.armed.slicer-cfg,
+.hud-pad.active.repeat-cfg,
+.hud-pad.armed.repeat-cfg {
+  background: #00f0ff;
+  border-color: #00f0ff;
+  color: #000;
+  box-shadow: 0 0 12px #00f0ff;
+}
+
+.hud-pad.armed {
+  border-color: #facc15;
+  color: #fef08a;
+  background: rgba(234, 179, 8, 0.20);
+  box-shadow: 0 0 8px rgba(234, 179, 8, 0.35);
 }
 
 /* Dynamic Drop / Chorus Status Badges */

@@ -30,15 +30,83 @@ export class DiagnosticHud {
     this.barK5 = document.getElementById('hud-bar-k5');
     this.valK5 = document.getElementById('hud-val-k5');
 
-    // Pads
+    // Bank A Pads
     this.pad1 = document.getElementById('hud-pad-1');
     this.pad2 = document.getElementById('hud-pad-2');
     this.pad3 = document.getElementById('hud-pad-3');
     this.pad4 = document.getElementById('hud-pad-4');
     this.pad5 = document.getElementById('hud-pad-5');
     this.pad6 = document.getElementById('hud-pad-6');
+    this.pad7 = document.getElementById('hud-pad-7');
+    this.pad8 = document.getElementById('hud-pad-8');
+    // Bank B Pads
+    this.padB1 = document.getElementById('hud-pad-b1');
+    this.padB2 = document.getElementById('hud-pad-b2');
+    this.padB3 = document.getElementById('hud-pad-b3');
+    this.padB4 = document.getElementById('hud-pad-b4');
+    this.padB5 = document.getElementById('hud-pad-b5');
+    this.padB6 = document.getElementById('hud-pad-b6');
+    this.padB7 = document.getElementById('hud-pad-b7');
+    this.padB8 = document.getElementById('hud-pad-b8');
     this.visualStyleEl = document.getElementById('hud-visual-style');
     this.hueStatusEl = document.getElementById('hud-hue-status');
+    this.repeatStatusEl = document.getElementById('hud-repeat-status') || document.getElementById('hud-slicer-status');
+    this.slicerStatusEl = this.repeatStatusEl;
+    this.armedRiserEl = document.getElementById('hud-armed-riser');
+    this.loadedRepeatEl = document.getElementById('hud-loaded-repeat') || document.getElementById('hud-loaded-slicer');
+    this.loadedSlicerEl = this.loadedRepeatEl;
+    this.riserRotationEl = document.getElementById('hud-riser-rotation');
+    this.framingStatusEl = document.getElementById('hud-framing-status');
+    this.framingBtn = document.getElementById('hud-framing-btn');
+    this.framingPadB2 = document.getElementById('hud-pad-b2');
+
+    const triggerFramingCycle = (e) => {
+      e.stopPropagation();
+      if (window.threeEngine && window.threeEngine.cycleFramingMode) {
+        window.threeEngine.cycleFramingMode();
+      }
+    };
+    if (this.framingBtn) this.framingBtn.addEventListener('click', triggerFramingCycle);
+    if (this.framingPadB2) this.framingPadB2.addEventListener('click', triggerFramingCycle);
+
+    // BPM Header Controls
+    this.bpmLockBadge = document.getElementById('hud-bpm-lock-badge');
+    this.beatPulseEl = document.getElementById('hud-beat-pulse');
+    this.bpmDownBtn = document.getElementById('hud-bpm-down');
+    this.bpmUpBtn = document.getElementById('hud-bpm-up');
+    this.bpmTapBtn = document.getElementById('hud-bpm-tap');
+
+    if (this.bpmLockBadge) {
+      this.bpmLockBadge.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (window.audio && window.audio.toggleBpmLock) {
+          window.audio.toggleBpmLock();
+        }
+      });
+    }
+
+    if (this.bpmDownBtn) {
+      this.bpmDownBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (window.audio && window.audio.adjustBpm) window.audio.adjustBpm(-1);
+      });
+    }
+    if (this.bpmUpBtn) {
+      this.bpmUpBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (window.audio && window.audio.adjustBpm) window.audio.adjustBpm(1);
+      });
+    }
+    if (this.bpmTapBtn) {
+      this.bpmTapBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (window.audio && window.audio.tapTempo) window.audio.tapTempo();
+      });
+    }
+
+    // Buildup Sequencer Telemetry
+    this.buildupStatusEl = document.getElementById('hud-buildup-status');
+    this.buildupBarEl = document.getElementById('hud-bar-buildup');
 
     // Drop Dynamics Controls
     this.dropBadge = document.getElementById('hud-drop-badge');
@@ -64,6 +132,50 @@ export class DiagnosticHud {
       if (this.hueStatusEl && e.detail) {
         this.hueStatusEl.textContent = e.detail.name;
         this.hueStatusEl.style.color = e.detail.active ? '#22d3ee' : '#fbbf24';
+      }
+    });
+
+    // Listen for dynamic beat repeat change events
+    window.addEventListener('engine:beatRepeatChanged', (e) => {
+      if (this.repeatStatusEl && e.detail) {
+        if (e.detail.active && e.detail.style) {
+          this.repeatStatusEl.textContent = `${e.detail.style.name.toUpperCase()} [${e.detail.index + 1}/4]`;
+          this.repeatStatusEl.style.color = '#22d3ee';
+        } else {
+          this.repeatStatusEl.textContent = 'BYPASSED';
+          this.repeatStatusEl.style.color = '#64748b';
+        }
+      }
+      if (this.loadedRepeatEl && e.detail && e.detail.style) {
+        this.loadedRepeatEl.textContent = `[${e.detail.index + 1}/4] ${e.detail.style.name}`;
+      }
+    });
+
+    // Listen for dynamic slicer change events
+    window.addEventListener('engine:slicerChanged', (e) => {
+      if (this.slicerStatusEl && e.detail) {
+        if (e.detail.active && e.detail.style) {
+          this.slicerStatusEl.textContent = `${e.detail.style.name.toUpperCase()} [${e.detail.index + 1}/4]`;
+          this.slicerStatusEl.style.color = '#22d3ee';
+        } else {
+          this.slicerStatusEl.textContent = 'OFF';
+          this.slicerStatusEl.style.color = '#64748b';
+        }
+      }
+    });
+
+    // Listen for dynamic framing mode change events
+    window.addEventListener('engine:framingChanged', (e) => {
+      const label = e.detail && e.detail.info ? (e.detail.info.badge || e.detail.info.name.toUpperCase()) : 'WORLD FIELD';
+      const color = e.detail.mode === 0 ? '#10b981' : (e.detail.mode === 1 ? '#06b6d4' : '#a855f7');
+      if (this.framingStatusEl) {
+        this.framingStatusEl.textContent = label;
+        this.framingStatusEl.style.color = color;
+      }
+      const bEl = document.getElementById('hud-framing-status-b');
+      if (bEl) {
+        bEl.textContent = label;
+        bEl.style.color = color;
       }
     });
 
@@ -98,7 +210,7 @@ export class DiagnosticHud {
     if (this.overlay) this.overlay.classList.add('hidden');
   }
 
-  update(midiState, computedMidi, audioState) {
+  update(midiState, computedMidi, audioState, buildupState = null) {
     if (!this.overlay || this.overlay.classList.contains('hidden')) return;
 
     // 1. Calculate FPS & Update BPM
@@ -112,7 +224,39 @@ export class DiagnosticHud {
       if (this.fpsEl) this.fpsEl.textContent = `${this.currentFps} FPS`;
     }
     if (this.bpmEl && audioState && audioState.bpm) {
-      this.bpmEl.textContent = `${Math.round(audioState.bpm)} BPM`;
+      this.bpmEl.textContent = `${audioState.bpm.toFixed(1)} BPM`;
+
+      if (this.bpmLockBadge) {
+        if (audioState.isBpmManual) {
+          this.bpmLockBadge.textContent = '🔒 MANUAL';
+          this.bpmLockBadge.style.background = 'rgba(59, 130, 246, 0.25)';
+          this.bpmLockBadge.style.color = '#60a5fa';
+          this.bpmLockBadge.style.borderColor = '#3b82f6';
+        } else if (audioState.isBpmCoasting) {
+          this.bpmLockBadge.textContent = '⚓ COAST';
+          this.bpmLockBadge.style.background = 'rgba(6, 182, 212, 0.25)';
+          this.bpmLockBadge.style.color = '#22d3ee';
+          this.bpmLockBadge.style.borderColor = '#06b6d4';
+        } else if (audioState.isBpmLocked) {
+          const conf = Math.round((audioState.bpmConfidence || 1.0) * 100);
+          this.bpmLockBadge.textContent = `🔒 LOCKED ${conf}%`;
+          this.bpmLockBadge.style.background = 'rgba(34, 197, 94, 0.25)';
+          this.bpmLockBadge.style.color = '#4ade80';
+          this.bpmLockBadge.style.borderColor = '#22c55e';
+        } else {
+          const conf = Math.round((audioState.bpmConfidence || 0.0) * 100);
+          this.bpmLockBadge.textContent = `⚡ SYNC ${conf}%`;
+          this.bpmLockBadge.style.background = 'rgba(234, 179, 8, 0.25)';
+          this.bpmLockBadge.style.color = '#fde047';
+          this.bpmLockBadge.style.borderColor = '#eab308';
+        }
+      }
+
+      if (this.beatPulseEl && audioState.beatIndex !== undefined) {
+        const dots = ['○', '○', '○', '○'];
+        dots[audioState.beatIndex % 4] = '●';
+        this.beatPulseEl.textContent = dots.join(' ');
+      }
     }
 
     // 2. MIDI Device Status
@@ -150,13 +294,91 @@ export class DiagnosticHud {
     else if (k5Norm > 0.65) threshDesc = 'Strict';
     if (this.valK5) this.valK5.textContent = `${Math.round(k5Norm * 100)}% (${threshDesc})`;
 
-    // 4. Performance Pads Active States
-    if (this.pad1) this.pad1.classList.toggle('active', midiState.pads.pad1);
-    if (this.pad2) this.pad2.classList.toggle('active', midiState.pads.pad2 || (window.threeEngine && window.threeEngine.hueFlowActive));
+    // 4. Buildup Sequencer Telemetry
+    if (this.buildupStatusEl) {
+      if (buildupState && buildupState.state === 'building') {
+        const pct = Math.round(buildupState.progress * 100);
+        this.buildupStatusEl.textContent = `BAR ${buildupState.currentBar}/${buildupState.totalBars} [${pct}%] (${buildupState.strobeFreq.toFixed(0)}Hz)`;
+        this.buildupStatusEl.style.color = '#eab308';
+        if (this.buildupBarEl) this.buildupBarEl.style.width = `${pct}%`;
+      } else if (buildupState && buildupState.state === 'holding_climax') {
+        this.buildupStatusEl.textContent = '🔥 PEAK CLIMAX [100% WHITEOUT] - HIT SLAM!';
+        this.buildupStatusEl.style.color = '#ef4444';
+        if (this.buildupBarEl) this.buildupBarEl.style.width = '100%';
+      } else if (buildupState && (buildupState.state === 'blackout_shut' || buildupState.isBlackout)) {
+        this.buildupStatusEl.textContent = '🛑 PRE-DROP SHUT [BLACKOUT]';
+        this.buildupStatusEl.style.color = '#ef4444';
+        if (this.buildupBarEl) this.buildupBarEl.style.width = '100%';
+      } else {
+        this.buildupStatusEl.textContent = 'IDLE';
+        this.buildupStatusEl.style.color = '#64748b';
+        if (this.buildupBarEl) this.buildupBarEl.style.width = '0%';
+      }
+    }
+
+    // 5. Performance Pads Active States (16-Pad Matrix across Bank A & Bank B)
+    const isBuildActive = buildupState && (buildupState.state === 'building' || buildupState.state === 'holding_climax');
+    const isBuild4 = isBuildActive && buildupState.totalBars === 4;
+    const isBuild8 = isBuildActive && buildupState.totalBars === 8;
+    const isShut = buildupState && (buildupState.state === 'blackout_shut' || buildupState.isBlackout);
+    const slamActive = midiState.pads.pad4 || midiState.pads.padB4 || isShut;
+
+    // --- BANK A: LIVE ACTION ---
+    if (this.pad1) this.pad1.classList.toggle('active', midiState.pads.pad1 || isBuild4);
+    if (this.pad2) this.pad2.classList.toggle('active', midiState.pads.pad2 || isBuild8);
     if (this.pad3) this.pad3.classList.toggle('active', midiState.pads.pad3);
-    if (this.pad4) this.pad4.classList.toggle('active', midiState.pads.pad4);
+    if (this.pad4) this.pad4.classList.toggle('active', slamActive);
     if (this.pad5) this.pad5.classList.toggle('active', midiState.pads.pad5);
-    if (this.pad6) this.pad6.classList.toggle('active', midiState.pads.pad6 || (audioState && audioState.dropMode === 'forced'));
+    if (this.pad6) this.pad6.classList.toggle('active', midiState.pads.pad6 || (window.threeEngine && window.threeEngine.hueFlowActive));
+    if (this.pad7) this.pad7.classList.toggle('active', midiState.pads.pad7 || (window.threeEngine && (window.threeEngine.beatRepeatActive || window.threeEngine.slicerActive)));
+    if (this.pad8) this.pad8.classList.toggle('active', midiState.pads.pad8 || (window.threeEngine && window.threeEngine.negativeActive));
+
+    // --- BANK B: ARMING & CONFIG ---
+    if (this.padB1) this.padB1.classList.toggle('active', midiState.pads.padB1);
+    if (this.padB2) this.padB2.classList.toggle('active', midiState.pads.padB2);
+    if (this.padB3) this.padB3.classList.toggle('active', midiState.pads.padB3 || (audioState && audioState.dropMode === 'forced'));
+    if (this.padB4) this.padB4.classList.toggle('active', slamActive);
+    if (this.padB5) this.padB5.classList.toggle('active', midiState.pads.padB5 || (buildupState && buildupState.archetypeIndex === 0));
+    if (this.padB6) this.padB6.classList.toggle('active', midiState.pads.padB6 || (buildupState && buildupState.archetypeIndex === 1));
+    if (this.padB7) this.padB7.classList.toggle('active', midiState.pads.padB7 || (buildupState && buildupState.archetypeIndex === 2));
+    if (this.padB8) this.padB8.classList.toggle('active', midiState.pads.padB8 || (buildupState && buildupState.archetypeIndex === 3));
+
+    // Telemetry indicators
+    if (this.repeatStatusEl && window.threeEngine) {
+      if (window.threeEngine.beatRepeatActive) {
+        const curStyle = window.threeEngine.beatRepeatStyles[window.threeEngine.beatRepeatIndex];
+        this.repeatStatusEl.textContent = curStyle ? `${curStyle.name.toUpperCase()} [${window.threeEngine.beatRepeatIndex + 1}/4]` : 'ACTIVE';
+        this.repeatStatusEl.style.color = '#22d3ee';
+      } else if (window.threeEngine.slicerActive) {
+        const styles = ['VENETIAN SLATS', 'RADIAL IRIS', 'CONCENTRIC DISCS', 'PRISM SHARDS'];
+        const styleName = styles[window.threeEngine.slicerStyle] || 'ACTIVE';
+        this.repeatStatusEl.textContent = `${styleName} [${window.threeEngine.slicerStyle + 1}/4]`;
+        this.repeatStatusEl.style.color = '#22d3ee';
+      } else {
+        this.repeatStatusEl.textContent = 'BYPASSED';
+        this.repeatStatusEl.style.color = '#64748b';
+      }
+    }
+
+    if (this.armedRiserEl && buildupState) {
+      const arch = buildupState.archetype;
+      if (arch) {
+        this.armedRiserEl.textContent = `[${buildupState.archetypeIndex + 1}/4] ${arch.name}`;
+        this.armedRiserEl.style.color = arch.color || '#facc15';
+      }
+    }
+
+    if (this.loadedRepeatEl && window.threeEngine) {
+      const curStyle = window.threeEngine.beatRepeatStyles[window.threeEngine.beatRepeatIndex];
+      if (curStyle) {
+        this.loadedRepeatEl.textContent = `[${window.threeEngine.beatRepeatIndex + 1}/4] ${curStyle.name}`;
+      }
+    }
+
+    if (this.riserRotationEl && buildupState) {
+      this.riserRotationEl.textContent = buildupState.autoCycle ? 'Auto-Cycle (Round-Robin)' : 'Manual Locked';
+      this.riserRotationEl.style.color = buildupState.autoCycle ? '#22c55e' : '#94a3b8';
+    }
 
     // 5. Audio Transient Followers & Source
     if (audioState) {

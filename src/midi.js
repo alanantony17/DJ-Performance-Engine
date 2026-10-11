@@ -10,6 +10,8 @@ export class MidiController {
     this.onStateChange = options.onStateChange || (() => {});
     this.onPadTrigger = options.onPadTrigger || (() => {});
     this.onAnyInput = options.onAnyInput || (() => {});
+    this.onBpmAdjust = options.onBpmAdjust || (() => {});
+    this.onTapTempo = options.onTapTempo || (() => {});
 
     // Live Controller State (Normalized 0.0 - 1.0 where applicable)
     this.state = {
@@ -28,20 +30,16 @@ export class MidiController {
         knob5: CONFIG.midi.knobs.knob5 ? (CONFIG.midi.knobs.knob5.default - CONFIG.midi.knobs.knob5.min) / (CONFIG.midi.knobs.knob5.max - CONFIG.midi.knobs.knob5.min) : 0.5,
       },
       pads: {
-        pad1: false, // Snare Riser
-        pad2: false, // Shutter Blinders
-        pad3: false, // Asset Cycle
-        pad4: false, // DROP SLAM
-        pad5: false, // Visual Style Cycle
-        pad6: false, // Toggle Drop Mode
+        // Bank A: Live Performance
+        pad1: false, pad2: false, pad3: false, pad4: false,
+        pad5: false, pad6: false, pad7: false, pad8: false,
+        // Bank B: Configuration & Arming
+        padB1: false, padB2: false, padB3: false, padB4: false,
+        padB5: false, padB6: false, padB7: false, padB8: false,
       },
       padVelocities: {
-        pad1: 0,
-        pad2: 0,
-        pad3: 0,
-        pad4: 0,
-        pad5: 0,
-        pad6: 0,
+        pad1: 0, pad2: 0, pad3: 0, pad4: 0, pad5: 0, pad6: 0, pad7: 0, pad8: 0,
+        padB1: 0, padB2: 0, padB3: 0, padB4: 0, padB5: 0, padB6: 0, padB7: 0, padB8: 0,
       }
     };
 
@@ -137,6 +135,15 @@ export class MidiController {
         this.handlePitchBend(d1, d2);
         break;
 
+      // Program Change (0xC0) - often sent by octave/prog buttons on AKAI
+      case 0xC0:
+        if (d1 === 0 || d1 === 127) {
+          this.onBpmAdjust(d1 === 0 ? -1 : 1);
+        } else {
+          this.onBpmAdjust(1);
+        }
+        break;
+
       default:
         break;
     }
@@ -181,19 +188,29 @@ export class MidiController {
       this.state.knobs.knob5 = normalized;
     }
 
-    // CC Pad Triggers (in case AKAI is in CC pad bank mode)
-    if (cc === CONFIG.midi.pads.pad1.cc) {
-      this.triggerPad('pad1', value > 0, normalized);
-    } else if (cc === CONFIG.midi.pads.pad2.cc) {
-      this.triggerPad('pad2', value > 0, normalized);
-    } else if (cc === CONFIG.midi.pads.pad3.cc && value > 0) {
-      this.triggerPad('pad3', true, normalized);
-    } else if (cc === CONFIG.midi.pads.pad4.cc) {
-      this.triggerPad('pad4', value > 0, normalized);
-    } else if (cc === CONFIG.midi.pads.pad5.cc && value > 0) {
-      this.triggerPad('pad5', true, normalized);
-    } else if (CONFIG.midi.pads.pad6 && cc === CONFIG.midi.pads.pad6.cc && value > 0) {
-      this.triggerPad('pad6', true, normalized);
+    // Octave / Program / BPM CC mappings (CC 14/15)
+    if (cc === 14) {
+      if (value > 0) this.onBpmAdjust(-1);
+      return;
+    }
+    if (cc === 15) {
+      if (value > 0) this.onBpmAdjust(1);
+      return;
+    }
+    if (cc === 64) {
+      // Tap Tempo via Sustain Pedal
+      if (value > 64) this.onTapTempo();
+      return;
+    }
+
+    // CC Pad Triggers (all 16 pads supported across Bank A and B)
+    const pads = CONFIG.midi.pads;
+    for (const padKey of Object.keys(pads)) {
+      const padCfg = pads[padKey];
+      if (padCfg && padCfg.cc === cc) {
+        this.triggerPad(padKey, value > 0, normalized);
+        break;
+      }
     }
   }
 
@@ -201,21 +218,12 @@ export class MidiController {
     const normVel = velocity / 127;
     const pads = CONFIG.midi.pads;
 
-    if (pads.pad1.notes.includes(note)) {
-      this.triggerPad('pad1', isDown, normVel);
-    } else if (pads.pad2.notes.includes(note)) {
-      this.triggerPad('pad2', isDown, normVel);
-    } else if (pads.pad3.notes.includes(note)) {
-      if (isDown) this.triggerPad('pad3', true, normVel);
-      else this.triggerPad('pad3', false, 0);
-    } else if (pads.pad4.notes.includes(note)) {
-      this.triggerPad('pad4', isDown, normVel);
-    } else if (pads.pad5.notes.includes(note)) {
-      if (isDown) this.triggerPad('pad5', true, normVel);
-      else this.triggerPad('pad5', false, 0);
-    } else if (pads.pad6 && pads.pad6.notes && pads.pad6.notes.includes(note)) {
-      if (isDown) this.triggerPad('pad6', true, normVel);
-      else this.triggerPad('pad6', false, 0);
+    for (const padKey of Object.keys(pads)) {
+      const padCfg = pads[padKey];
+      if (padCfg && padCfg.notes && padCfg.notes.includes(note)) {
+        this.triggerPad(padKey, isDown, normVel);
+        break;
+      }
     }
   }
 
@@ -236,12 +244,20 @@ export class MidiController {
       if (e.repeat) return;
       const kb = CONFIG.midi.keyboardFallback;
 
-      if (e.code === kb.pad1) this.triggerPad('pad1', true, 1.0);
-      else if (e.code === kb.pad2 || e.code === kb.toggleHueKey) this.triggerPad('pad2', true, 1.0);
-      else if (e.code === kb.pad3) this.triggerPad('pad3', true, 1.0);
-      else if (e.code === kb.pad4) this.triggerPad('pad4', true, 1.0);
-      else if (e.code === kb.pad5 || e.code === kb.cycleStyleKey) this.triggerPad('pad5', true, 1.0);
-      else if (e.code === kb.pad6 || e.code === kb.toggleDropKey) this.triggerPad('pad6', true, 1.0);
+      // Digits 1-8: Bank A normally, Bank B with Shift
+      if (e.code.startsWith('Digit')) {
+        const digit = parseInt(e.code.replace('Digit', ''), 10);
+        if (digit >= 1 && digit <= 8) {
+          const padKey = e.shiftKey ? `padB${digit}` : `pad${digit}`;
+          this.triggerPad(padKey, true, 1.0);
+          return;
+        }
+      }
+
+      if (e.code === kb.cycleStyleKey) this.triggerPad('pad5', true, 1.0);
+      else if (e.code === kb.toggleDropKey) this.triggerPad('padB3', true, 1.0);
+      else if (e.code === kb.toggleSlicerKey) this.triggerPad('pad7', true, 1.0);
+      else if (e.code === kb.toggleNegativeKey) this.triggerPad('pad8', true, 1.0);
       else if (e.code === kb.resetPan) {
         this.state.joystick.pan = 0.5;
         this.notify();
@@ -300,16 +316,32 @@ export class MidiController {
         this.state.knobs.knob5 = Math.max(0, (this.state.knobs.knob5 !== undefined ? this.state.knobs.knob5 : 0.5) - 0.05);
         this.notify();
       }
+      // BPM Tempo Adjust: [ and ] or - and =
+      else if (e.code === kb.bpmDown || e.code === 'Minus' || e.code === 'BracketLeft') {
+        const delta = e.shiftKey ? -5 : -1;
+        this.onBpmAdjust(delta);
+      } else if (e.code === kb.bpmUp || e.code === 'Equal' || e.code === 'BracketRight') {
+        const delta = e.shiftKey ? 5 : 1;
+        this.onBpmAdjust(delta);
+      } else if (e.code === kb.tapTempo || e.code === 'Backslash') {
+        this.onTapTempo();
+      }
     });
 
     window.addEventListener('keyup', (e) => {
+      if (e.code.startsWith('Digit')) {
+        const digit = parseInt(e.code.replace('Digit', ''), 10);
+        if (digit >= 1 && digit <= 8) {
+          this.triggerPad(`pad${digit}`, false, 0);
+          this.triggerPad(`padB${digit}`, false, 0);
+          return;
+        }
+      }
       const kb = CONFIG.midi.keyboardFallback;
-      if (e.code === kb.pad1) this.triggerPad('pad1', false, 0);
-      else if (e.code === kb.pad2 || e.code === kb.toggleHueKey) this.triggerPad('pad2', false, 0);
-      else if (e.code === kb.pad3) this.triggerPad('pad3', false, 0);
-      else if (e.code === kb.pad4) this.triggerPad('pad4', false, 0);
-      else if (e.code === kb.pad5 || e.code === kb.cycleStyleKey) this.triggerPad('pad5', false, 0);
-      else if (e.code === kb.pad6 || e.code === kb.toggleDropKey) this.triggerPad('pad6', false, 0);
+      if (e.code === kb.cycleStyleKey) this.triggerPad('pad5', false, 0);
+      else if (e.code === kb.toggleDropKey) this.triggerPad('padB3', false, 0);
+      else if (e.code === kb.toggleSlicerKey) this.triggerPad('pad7', false, 0);
+      else if (e.code === kb.toggleNegativeKey) this.triggerPad('pad8', false, 0);
     });
 
     // Optional mouse drag for Joystick testing
@@ -336,12 +368,29 @@ export class MidiController {
       audioSensitivity: k.knob4.min + this.state.knobs.knob4 * (k.knob4.max - k.knob4.min),
       dropThreshold: k.knob5 ? (k.knob5.min + k5Norm * (k.knob5.max - k.knob5.min)) : 0.50,
       dropThresholdNorm: k5Norm,
+      // BANK A: Live Performance
+      padBuildup4: this.state.pads.pad1,
+      padBuildup8: this.state.pads.pad2,
+      padAssetCycle: this.state.pads.pad3,
+      padSlam: this.state.pads.pad4 || this.state.pads.padB4, // SLAM ON BOTH BANKS!
+      padStyle: this.state.pads.pad5,
+      padHueFlow: this.state.pads.pad6,
+      padSlicer: this.state.pads.pad7,
+      padNegative: this.state.pads.pad8,
+      // BANK B: Arming & Configuration
+      padBSlicerCycle: this.state.pads.padB1,
+      padBRiserAutoCycle: this.state.pads.padB2,
+      padBDrop: this.state.pads.padB3,
+      padBSlam: this.state.pads.padB4,
+      padBArmRiser0: this.state.pads.padB5,
+      padBArmRiser1: this.state.pads.padB6,
+      padBArmRiser2: this.state.pads.padB7,
+      padBArmRiser3: this.state.pads.padB8,
+      // Legacy aliases for backward compatibility:
       padRiser: this.state.pads.pad1,
       padShutter: this.state.pads.pad2,
       padAsset: this.state.pads.pad3,
-      padSlam: this.state.pads.pad4,
-      padStyle: this.state.pads.pad5,
-      padDrop: this.state.pads.pad6,
+      padDrop: this.state.pads.padB3,
     };
   }
 

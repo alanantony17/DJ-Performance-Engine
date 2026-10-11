@@ -1,0 +1,1677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>DJ Performance Engine - Harmonic Totem & Silhouette Atmosphere</title>
+  <!-- Three.js & OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    :root {
+      --bg-dark: #030408;
+      --panel-bg: rgba(10, 13, 22, 0.94);
+      --border-color: rgba(255, 255, 255, 0.12);
+      --accent-gold: #facc15;
+      --accent-cyan: #00f0ff;
+      --accent-rose: #f43f5e;
+      --accent-amber: #f59e0b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body, html {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--bg-dark);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+      color: var(--text-main);
+    }
+
+    #canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+    }
+
+    /* Top Left Header (Compact Desktop) */
+    #top-bar {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      padding: 8px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+      transition: opacity 0.3s ease;
+    }
+
+    .badge-totem {
+      background: linear-gradient(135deg, rgba(250, 204, 21, 0.25), rgba(245, 158, 11, 0.25));
+      border: 1px solid var(--accent-gold);
+      color: var(--accent-gold);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1.2px;
+      padding: 3px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .title-group h1 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .title-group p {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* Top Right Floating Controls Toggle Button */
+    #hud-toggle-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 40;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(250, 204, 21, 0.4);
+      color: var(--accent-gold);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+      transition: all 0.2s ease;
+    }
+
+    #hud-toggle-btn:hover {
+      background: rgba(250, 204, 21, 0.15);
+      border-color: var(--accent-gold);
+      transform: translateY(-1px);
+    }
+    #hud-toggle-btn:active {
+      transform: scale(0.96);
+    }
+
+    /* Floating Quick Asset Navigator (Bottom Center) */
+    #quick-asset-bar {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 25;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(10, 13, 22, 0.85);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: 40px;
+      padding: 6px 14px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.8), 0 0 16px rgba(250, 204, 21, 0.1);
+      transition: all 0.25s ease;
+    }
+
+    .quick-nav-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #fff;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.15s ease;
+    }
+    .quick-nav-btn:hover {
+      background: rgba(250, 204, 21, 0.2);
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+    }
+    .quick-nav-btn:active {
+      transform: scale(0.9);
+    }
+
+    #quick-title-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 150px;
+      cursor: pointer;
+    }
+
+    #quick-tag {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--accent-gold);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    #quick-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    /* Right Control Dock */
+    #control-dock {
+      position: absolute;
+      top: 60px;
+      right: 16px;
+      width: 410px;
+      max-height: calc(100vh - 80px);
+      overflow-y: auto;
+      background: var(--panel-bg);
+      backdrop-filter: blur(24px);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      padding: 18px;
+      z-index: 35;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.95), 0 0 24px rgba(250, 204, 21, 0.08);
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+    }
+
+    #control-dock.collapsed {
+      transform: translateX(450px);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #control-dock::-webkit-scrollbar {
+      width: 4px;
+    }
+    #control-dock::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+    }
+
+    .dock-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .dock-header-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent-gold);
+    }
+    .dock-close-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-color);
+      color: #cbd5e1;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .section-header {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--accent-gold);
+      font-weight: 800;
+      margin: 16px 0 8px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .section-header:first-of-type {
+      margin-top: 0;
+    }
+
+    /* Asset Selector Card */
+    .asset-select-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .asset-dropdown {
+      width: 100%;
+      background: #0b0f1a;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .asset-info {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    /* Dual Palette Swatches */
+    .palette-swatches-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .palette-swatch-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 6px 10px;
+    }
+    .swatch-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      flex-shrink: 0;
+    }
+    .swatch-meta {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .swatch-role {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--accent-gold);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .swatch-hex {
+      font-size: 10px;
+      font-family: monospace;
+      color: #cbd5e1;
+    }
+
+    /* Harmony Modes Grid */
+    .harmony-mode-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    /* Feature Highlight Card */
+    .feature-card {
+      background: linear-gradient(135deg, rgba(250, 204, 21, 0.08), rgba(255, 255, 255, 0.03));
+      border: 1px solid rgba(250, 204, 21, 0.3);
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 10px;
+      font-size: 11px;
+      color: #cbd5e1;
+      line-height: 1.4;
+    }
+    .feature-card strong {
+      color: var(--accent-gold);
+    }
+
+    /* Sliders */
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 8px;
+    }
+    .slider-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .slider-val {
+      font-family: monospace;
+      color: #fff;
+      font-weight: 700;
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 3px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent-gold);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--accent-gold);
+    }
+
+    /* Beat Simulator Section */
+    .beat-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .beat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .beat-bpm {
+      font-family: monospace;
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--accent-cyan);
+    }
+
+    .beat-indicators {
+      display: flex;
+      gap: 8px;
+    }
+
+    .beat-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      transition: all 0.05s ease;
+    }
+    .beat-dot.active {
+      background: var(--accent-rose);
+      box-shadow: 0 0 10px var(--accent-rose);
+      transform: scale(1.25);
+    }
+
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+    }
+
+    .beat-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      padding: 7px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.1s ease;
+    }
+    .beat-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+    }
+    .beat-btn:active {
+      transform: scale(0.96);
+    }
+    .beat-btn.active-toggle {
+      background: rgba(250, 204, 21, 0.25);
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    .shortcut-pill {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .shortcut-pill kbd {
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+
+    /* Bottom Telemetry */
+    #bottom-telemetry {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 20;
+      display: flex;
+      gap: 14px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      font-size: 10px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    #bottom-telemetry span strong {
+      color: #fff;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      #top-bar { display: none; }
+      #bottom-telemetry { display: none; }
+      #control-dock {
+        width: calc(100vw - 32px);
+        max-height: 75vh;
+        right: 16px;
+        top: 60px;
+        left: 16px;
+      }
+      #control-dock.collapsed {
+        transform: translateY(-130%);
+      }
+      #quick-asset-bar {
+        bottom: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Fullscreen WebGL Output -->
+  <div id="canvas-container"></div>
+
+  <!-- Top Bar (Desktop) -->
+  <div id="top-bar">
+    <span class="badge-totem">HARMONIC ATMOSPHERE</span>
+    <div class="title-group">
+      <h1>Subtle Silhouette & Palette Blend</h1>
+      <p>True Colors • Fluid Edge Advection • Harmonic Asset-Matched Atmosphere</p>
+    </div>
+  </div>
+
+  <!-- Floating Toggle Button -->
+  <button id="hud-toggle-btn" title="Toggle Control Panel (Press 'H')">
+    <span id="hud-toggle-icon">⚙️</span>
+    <span id="hud-toggle-label">Controls</span>
+  </button>
+
+  <!-- Bottom Quick Asset Navigator -->
+  <div id="quick-asset-bar">
+    <button id="quick-prev" class="quick-nav-btn" title="Previous Asset (Left Arrow)">◀</button>
+    <div id="quick-title-info" title="Click to Toggle Full Controls (H)">
+      <div id="quick-tag">Totem [1/29]</div>
+      <div id="quick-name">Taj Mahal</div>
+    </div>
+    <button id="quick-next" class="quick-nav-btn" title="Next Asset (Right Arrow)">▶</button>
+  </div>
+
+  <!-- Bottom Telemetry (Desktop) -->
+  <div id="bottom-telemetry">
+    <span>FPS: <strong id="telemetry-fps">60</strong></span>
+    <span>Totem: <strong id="telemetry-asset" style="color: var(--accent-gold);">Taj Mahal</strong></span>
+    <span>Mode: <strong id="telemetry-mode" style="color: var(--accent-cyan);">Harmonic Bi-Tone</strong></span>
+    <span>Dominant: <strong id="telemetry-palette">#B8C2E0</strong></span>
+  </div>
+
+  <!-- Right Control Dock (Collapsible Drawer) -->
+  <div id="control-dock">
+
+    <div class="dock-header-row">
+      <span class="dock-header-title">Atmosphere Controls</span>
+      <button id="dock-close-btn" class="dock-close-btn">✕ Close HUD (H)</button>
+    </div>
+
+    <!-- 1. The Sacred Totem Asset -->
+    <div class="section-header">
+      <span>1. Active Totem Asset</span>
+      <span style="font-size: 9px; color: var(--accent-gold);">100% True Colors</span>
+    </div>
+    <div class="asset-select-card">
+      <select id="asset-picker" class="asset-dropdown">
+        <optgroup label="Sacred Architecture & Cultural">
+          <option value="assets/taj mahal.png" selected>Taj Mahal (Monumental Totem)</option>
+          <option value="assets/diya.png">Diya (Sacred Earthen Flame)</option>
+          <option value="assets/diya 2.png">Diya 2 (Brass Twin Flame)</option>
+          <option value="assets/truck art.png">Truck Art (Folk Typography & Crest)</option>
+          <option value="assets/peacock.png">Peacock (Royal Sapphire Emblem)</option>
+          <option value="assets/lady.png">Lady (Celestial Silhouette)</option>
+          <option value="assets/amul.png">Amul Girl (Retro Pop Totem)</option>
+          <option value="assets/mandala.jpg">Tiger Mandala (Cosmic Dial)</option>
+          <option value="assets/wheel.png">Dharma Wheel (Spiritual Totem)</option>
+        </optgroup>
+        <optgroup label="Sacred Geometric & Organic Patterns">
+          <option value="assets/paper.png">Paper Art (Intricate Filigree)</option>
+          <option value="assets/fractal network.png">Fractal Network (Cyber Nexus)</option>
+          <option value="assets/virus crystals.png">Virus Crystals (Geometric Relic)</option>
+          <option value="assets/rangoli 1.png">Rangoli 1 (Diwali Floor Art)</option>
+          <option value="assets/rangoli 2.png">Rangoli 2 (Floral Concentric)</option>
+          <option value="assets/rangoli 3.png">Rangoli 3 (Hexagonal Sacred Geometry)</option>
+          <option value="assets/Jalebi.png">Jalebi (Sacred Spiral)</option>
+          <option value="assets/beauty.png">Beauty (Portrait Silhouette)</option>
+        </optgroup>
+        <optgroup label="Cosmic & Astral Elements">
+          <option value="assets/blackhole.png">Blackhole (Gravitational Singularity)</option>
+          <option value="assets/red eye.png">Red Eye (Hypnotic Solar Core)</option>
+          <option value="assets/spacey.png">Spacey</option>
+          <option value="assets/supernova.png">Supernova</option>
+          <option value="assets/tubes.png">Tubes</option>
+          <option value="assets/art1.png">Solar Art 1</option>
+          <option value="assets/art2.png">Solar Art 2</option>
+          <option value="assets/art3.png">Solar Art 3</option>
+          <option value="assets/art4.png">Solar Art 4</option>
+        </optgroup>
+      </select>
+      
+      <!-- Real-time Extracted Harmonic Palette Swatches -->
+      <div class="palette-swatches-grid">
+        <div class="palette-swatch-box">
+          <div id="swatch-primary" class="swatch-dot" style="background: #a5b4fc;"></div>
+          <div class="swatch-meta">
+            <span class="swatch-role">Primary Hue</span>
+            <span class="swatch-hex" id="swatch-primary-hex">#A5B4FC</span>
+          </div>
+        </div>
+        <div class="palette-swatch-box">
+          <div id="swatch-secondary" class="swatch-dot" style="background: #6366f1;"></div>
+          <div class="swatch-meta">
+            <span class="swatch-role">Ambient Tone</span>
+            <span class="swatch-hex" id="swatch-secondary-hex">#6366F1</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="asset-info" id="asset-narrative">
+        The monument stands proud in the center with 100% true marble colors. Background atmosphere and fluid silhouette trails automatically harmonize with its lapis and ivory palette.
+      </div>
+    </div>
+
+    <!-- 2. Refined Philosophy -->
+    <div class="section-header">
+      <span>2. Refined Aesthetic Principles</span>
+    </div>
+    <div class="feature-card">
+      🚫 <strong>Zero Sunbeams / Harsh Glare:</strong> No piercing god rays or backlights burning through the center. Soft, subtle atmospheric depth.<br>
+      🌊 <strong>Fluid Silhouette Dissolve:</strong> The outer contour breathes organic fluid smoke/ink that carries the asset's pigments outward.<br>
+      🎨 <strong>Harmonic Background Wash:</strong> The surrounding space gently warms and cools with the asset's own chromatic DNA, fading into deep obsidian.
+    </div>
+
+    <!-- 3. Background Color Harmonization Modes -->
+    <div class="section-header">
+      <span>3. Atmosphere Harmonization Modes</span>
+      <span style="font-size: 9px; color: var(--accent-cyan);">Palette Blend</span>
+    </div>
+    <div class="harmony-mode-grid">
+      <button class="beat-btn active-toggle" id="btn-mode-bitone" title="Harmonic Bi-Tone (Primary & Secondary tones)">Harmonic Bi-Tone</button>
+      <button class="beat-btn" id="btn-mode-mono" title="Velvet Monochromatic (Deep dominant tone)">Velvet Mono</button>
+      <button class="beat-btn" id="btn-mode-midnight" title="Deep Midnight (Ultra-subtle 4% wash)">Deep Midnight</button>
+      <button class="beat-btn" id="btn-mode-obsidian" title="Obsidian Void (Pure dark black void)">Obsidian Void</button>
+    </div>
+
+    <div class="slider-row">
+      <div class="slider-labels">
+        <span>Atmosphere Blend Depth (Tint Strength)</span>
+        <span class="slider-val" id="val-bg-blend">0.75</span>
+      </div>
+      <input type="range" id="slider-bg-blend" min="0.0" max="1.5" step="0.05" value="0.75">
+    </div>
+
+    <div class="slider-row">
+      <div class="slider-labels">
+        <span>Vignette Atmosphere Radius</span>
+        <span class="slider-val" id="val-bg-radius">1.10</span>
+      </div>
+      <input type="range" id="slider-bg-radius" min="0.5" max="2.0" step="0.05" value="1.10">
+    </div>
+
+    <!-- 4. Silhouette Fluid Corona Controls -->
+    <div class="section-header">
+      <span>4. Fluid Silhouette Corona</span>
+      <span style="font-size: 9px; color: var(--accent-gold);">Edge Advection</span>
+    </div>
+
+    <div class="slider-row">
+      <div class="slider-labels">
+        <span>Silhouette Fluid Flare Intensity</span>
+        <span class="slider-val" id="val-corona">1.2</span>
+      </div>
+      <input type="range" id="slider-corona" min="0.2" max="2.6" step="0.1" value="1.2">
+    </div>
+
+    <div class="slider-row">
+      <div class="slider-labels">
+        <span>Fluid Outward Reach (Zoom Spread)</span>
+        <span class="slider-val" id="val-spread">1.3</span>
+      </div>
+      <input type="range" id="slider-spread" min="0.5" max="2.8" step="0.1" value="1.3">
+    </div>
+
+    <div class="slider-row">
+      <div class="slider-labels">
+        <span>Fluid Curl / Turbulence</span>
+        <span class="slider-val" id="val-curl">1.0</span>
+      </div>
+      <input type="range" id="slider-curl" min="0.0" max="2.5" step="0.1" value="1.0">
+    </div>
+
+    <div class="slider-row">
+      <div class="slider-labels">
+        <span>Fluid Persistence (Trail Decay)</span>
+        <span class="slider-val" id="val-decay">0.93</span>
+      </div>
+      <input type="range" id="slider-decay" min="0.80" max="0.98" step="0.01" value="0.93">
+    </div>
+
+    <!-- 5. 3D Stardust & Heartbeat -->
+    <div class="section-header">
+      <span>5. Stardust & Heartbeat</span>
+    </div>
+
+    <div class="slider-row">
+      <div class="slider-labels">
+        <span>3D Harmonized Stardust Density</span>
+        <span class="slider-val" id="val-stars">1,800 Motes</span>
+      </div>
+      <input type="range" id="slider-stars" min="400" max="2800" step="200" value="1800">
+    </div>
+
+    <div class="slider-row">
+      <div class="slider-labels">
+        <span>Sub-bass Totem Heartbeat (Scale Pump)</span>
+        <span class="slider-val" id="val-heartbeat">0.04</span>
+      </div>
+      <input type="range" id="slider-heartbeat" min="0.0" max="0.12" step="0.01" value="0.04">
+    </div>
+
+    <!-- 6. Audio Reactivity Engine -->
+    <div class="section-header">
+      <span>6. Audio Reactivity Engine</span>
+    </div>
+    <div class="beat-card">
+      <div class="beat-header">
+        <span class="beat-bpm" id="display-bpm">128 BPM</span>
+        <div class="beat-indicators">
+          <div class="beat-dot" id="dot-1"></div>
+          <div class="beat-dot" id="dot-2"></div>
+          <div class="beat-dot" id="dot-3"></div>
+          <div class="beat-dot" id="dot-4"></div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="beat-btn active-toggle" id="btn-auto-beat">Auto Beat [ON]</button>
+        <button class="beat-btn" id="btn-manual-kick">Kick (Pulse)</button>
+        <button class="beat-btn" id="btn-manual-snare">Snare (Motes)</button>
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-labels">
+          <span>Tempo Slider</span>
+          <span class="slider-val" id="bpm-val">128</span>
+        </div>
+        <input type="range" id="slider-bpm" min="80" max="150" value="128">
+      </div>
+    </div>
+
+    <!-- 7. Keyboard Shortcuts Help -->
+    <div class="shortcut-pill">
+      <span><kbd>H</kbd> Toggle HUD</span>
+      <span><kbd>Space</kbd> Kick Pulse</span>
+      <span><kbd>◀</kbd><kbd>▶</kbd> Assets</span>
+      <span><kbd>1-4</kbd> Modes</span>
+    </div>
+
+  </div>
+
+  <script>
+    // --- Application State ---
+    const State = {
+      assetIndex: 0,
+      assetPath: 'assets/taj mahal.png',
+      assetName: 'Taj Mahal',
+      
+      // Dual-tone harmonic palette
+      colorPrimary: [0.72, 0.76, 0.88],    // Dominant tone
+      colorSecondary: [0.45, 0.55, 0.78],  // Ambient counterpoint
+      harmonyMode: 0,                      // 0=Bi-Tone, 1=Mono, 2=Midnight, 3=Obsidian
+
+      // Reactivity
+      autoBeat: true,
+      bpm: 128,
+      kickLevel: 0.0,
+      snareLevel: 0.0,
+      beatIndex: 0,
+      lastBeatTime: performance.now(),
+
+      // Corona & Fluid Edge Advection (Organic & Subtle)
+      coronaIntensity: 1.2,
+      spreadReach: 1.3,
+      curl: 1.0,
+      decay: 0.93,
+
+      // Background Color Harmony
+      bgBlendDepth: 0.75,
+      bgRadius: 1.10,
+      stardustCount: 1800,
+      totemHeartbeat: 0.04,
+
+      // Physics
+      totemFloatPhase: 0.0,
+      totemRotZ: 0.0,
+
+      // UI State
+      isHudOpen: window.innerWidth > 768,
+    };
+
+    const ASSET_DESCS = {
+      'assets/taj mahal.png': 'The monument stands proud in the center with 100% true marble colors. Background atmosphere softly bathes in cool twilight lapis and pearl ivory.',
+      'assets/diya.png': 'A sacred earthen lamp floating in a velvety temple void. Warm terracotta and golden amber smoke softly dissolves into the deep space.',
+      'assets/diya 2.png': 'Ornate brass diya with twin flames. Sits sharp and majestic as bronze and saffron fluid pulses through the dark atmosphere.',
+      'assets/truck art.png': 'High-energy folk crest commanding center stage. Background subtly washes with peacock teal and golden ochre matching the floral border.',
+      'assets/amul.png': 'Iconic Indian pop culture mascot centered with punchy crimson, sapphire, and retro polka tones softly blending into an obsidian studio wash.',
+      'assets/mandala.jpg': 'Sacred lotus dial floating in deep space. Water shockwaves burst from the perimeter into crimson and gold stardust.',
+      'assets/wheel.png': 'Dharma wheel centered like a cosmic clockwork totem, breathing soft amber and gold into the surrounding void.',
+      'assets/rangoli 1.png': 'Traditional floor art elevated into a floating sacred medallion with gentle beat breathing and floral color harmony.',
+      'assets/rangoli 2.png': 'Concentric floral pattern framed by delicate fluid corona trails in magenta and emerald hues.',
+      'assets/rangoli 3.png': 'Hexagonal sacred geometry floating with rock-solid stability and cool turquoise tones.',
+      'assets/Jalebi.png': 'Concentric golden spiral totem pulsing to the rhythm with warm honey amber tones.',
+      'assets/beauty.png': 'Classical portrait silhouette preserved in pristine clarity with soft rose-tinted atmospheric depth.',
+      'assets/spacey.png': 'Deep celestial void totem with subtle ultraviolet edge bleed.',
+      'assets/supernova.png': 'High-energy stellar core centered in a warm cosmic dust haze.',
+      'assets/tubes.png': 'Futuristic cylindrical totem surrounded by deep cyan stardust.',
+      'assets/art1.png': 'Solar Art 1',
+      'assets/art2.png': 'Solar Art 2',
+      'assets/art3.png': 'Solar Art 3',
+      'assets/art4.png': 'Solar Art 4',
+      'assets/peacock.png': 'Opulent royal peacock emblem. Iridescent sapphire and emerald plumage bleeding fluid turquoise and golden aura trails into the void.',
+      'assets/lady.png': 'Mystical feminine silhouette framed by glowing celestial motifs and delicate velvet rose advection.',
+      'assets/red eye.png': 'Intense hypnotic ocular core. Fiery crimson and solar amber shockwaves radiating outward on bass transients.',
+      'assets/blackhole.png': 'Gravitational singularity bending spacetime. Deep violet and ultraviolet accretion disk radiating into obsidian void.',
+      'assets/paper.png': 'Intricate cut-paper folk filigree with crisp organic contours and warm parchment amber glow.',
+      'assets/fractal network.png': 'Complex cybernetic neural nexus pulsing with electric cyan and neon azure data streams.',
+      'assets/virus crystals.png': 'Geometric crystalline virus structure floating like an alien artifact with prismatic emerald and gold facet trails.',
+      'assets/skyline.png': 'Urban neon skyline totem towering with moody twilight purple and radiant golden skyscraper windows.',
+      'assets/comics.png': 'Vibrant pop-art comic panel bursting with halftone magenta, solar yellow, and dynamic graphic outlines.',
+      'assets/slime.png': 'Radioactive bio-luminescent slime crest dripping with electric toxic lime and neon chartreuse tendrils.',
+    };
+
+    let ASSET_LIST = [
+      { path: 'assets/taj mahal.png', name: 'Taj Mahal' },
+      { path: 'assets/diya.png', name: 'Diya' },
+      { path: 'assets/diya 2.png', name: 'Diya 2' },
+      { path: 'assets/truck art.png', name: 'Truck Art' },
+      { path: 'assets/amul.png', name: 'Amul Girl' },
+      { path: 'assets/peacock.png', name: 'Peacock' },
+      { path: 'assets/lady.png', name: 'Lady' },
+      { path: 'assets/mandala.jpg', name: 'Tiger Mandala' },
+      { path: 'assets/wheel.png', name: 'Dharma Wheel' },
+      { path: 'assets/paper.png', name: 'Paper Art' },
+      { path: 'assets/fractal network.png', name: 'Fractal Network' },
+      { path: 'assets/virus crystals.png', name: 'Virus Crystals' },
+      { path: 'assets/blackhole.png', name: 'Blackhole' },
+      { path: 'assets/red eye.png', name: 'Red Eye' },
+      { path: 'assets/skyline.png', name: 'Skyline' },
+      { path: 'assets/comics.png', name: 'Comics' },
+      { path: 'assets/slime.png', name: 'Slime' },
+      { path: 'assets/rangoli 1.png', name: 'Rangoli 1' },
+      { path: 'assets/rangoli 2.png', name: 'Rangoli 2' },
+      { path: 'assets/rangoli 3.png', name: 'Rangoli 3' },
+      { path: 'assets/Jalebi.png', name: 'Jalebi' },
+      { path: 'assets/beauty.png', name: 'Beauty' },
+      { path: 'assets/spacey.png', name: 'Spacey' },
+      { path: 'assets/supernova.png', name: 'Supernova' },
+      { path: 'assets/tubes.png', name: 'Tubes' },
+      { path: 'assets/art1.png', name: 'Solar Art 1' },
+      { path: 'assets/art2.png', name: 'Solar Art 2' },
+      { path: 'assets/art3.png', name: 'Solar Art 3' },
+      { path: 'assets/art4.png', name: 'Solar Art 4' },
+    ];
+
+    // --- Dynamic Asset Auto-Discovery Engine for Preview Lab ---
+    async function autoDiscoverLabAssets() {
+      try {
+        const res = await fetch('/api/assets?t=' + Date.now());
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.assets) && data.assets.length > 0) {
+            updateLabAssetRoster(data.assets);
+            return;
+          }
+        }
+      } catch (e) {
+        try {
+          const mRes = await fetch('assets/manifest.json?t=' + Date.now());
+          if (mRes.ok) {
+            const mData = await mRes.json();
+            if (Array.isArray(mData) && mData.length > 0) {
+              updateLabAssetRoster(mData);
+              return;
+            }
+          }
+        } catch (e2) {}
+      }
+    }
+
+    function updateLabAssetRoster(newList) {
+      ASSET_LIST = newList;
+      const picker = document.getElementById('asset-picker');
+      if (picker) {
+        const currentVal = picker.value;
+        picker.innerHTML = '';
+        newList.forEach((item, idx) => {
+          const opt = document.createElement('option');
+          opt.value = item.path;
+          opt.textContent = `${item.name} [${idx + 1}/${newList.length}]`;
+          if (item.path === currentVal || idx === State.assetIndex) opt.selected = true;
+          picker.appendChild(opt);
+        });
+      }
+      const quickTag = document.getElementById('quick-tag');
+      if (quickTag) quickTag.textContent = `Totem [${State.assetIndex + 1}/${newList.length}]`;
+      console.log(`[PreviewLab] Live asset roster updated: ${newList.length} assets.`);
+    }
+
+    // Auto-discover dynamically on startup and every 15s
+    autoDiscoverLabAssets();
+    setInterval(autoDiscoverLabAssets, 15000);
+
+    // --- Dynamic Harmonic Palette Extraction (Primary & Secondary Tones) ---
+    function extractHarmonicPalette(img) {
+      try {
+        const canvas = document.createElement('canvas');
+        const size = 64;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, size, size);
+        const data = ctx.getImageData(0, 0, size, size).data;
+
+        // 8 Hue Bins covering full spectrum:
+        // 0: Red, 1: Orange/Gold, 2: Yellow, 3: Green, 4: Cyan/Teal, 5: Blue/Lapis, 6: Purple, 7: Magenta
+        const bins = Array.from({ length: 8 }, () => ({ r: 0, g: 0, b: 0, weight: 0, count: 0 }));
+        let totalR = 0, totalG = 0, totalB = 0, totalCount = 0;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const a = data[i + 3];
+          if (a < 50) continue; // Skip transparent
+          const r = data[i] / 255;
+          const g = data[i + 1] / 255;
+          const b = data[i + 2] / 255;
+
+          const max = Math.max(r, g, b);
+          const min = Math.min(r, g, b);
+          const lum = (max + min) * 0.5;
+          const d = max - min;
+          const sat = lum > 0.5 ? d / (2 - max - min + 1e-4) : d / (max + min + 1e-4);
+
+          // Skip flat black or near-black
+          if (lum < 0.08) continue;
+          // Skip pure flat white border
+          if (lum > 0.95 && sat < 0.05) continue;
+
+          totalR += r; totalG += g; totalB += b;
+          totalCount++;
+
+          let h = 0;
+          if (d > 0.01) {
+            if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+            else if (max === g) h = (b - r) / d + 2;
+            else h = (r - g) / d + 4;
+            h *= 60; // 0..360
+          }
+
+          // Weight chromatic & vibrant pixels higher than washed-out grays
+          const weight = (sat * 0.75 + 0.25) * (1.0 - Math.abs(lum - 0.5) * 0.8);
+          let binIdx = 0;
+          if (h >= 15 && h < 45) binIdx = 1;
+          else if (h >= 45 && h < 75) binIdx = 2;
+          else if (h >= 75 && h < 165) binIdx = 3;
+          else if (h >= 165 && h < 205) binIdx = 4;
+          else if (h >= 205 && h < 255) binIdx = 5;
+          else if (h >= 255 && h < 290) binIdx = 6;
+          else if (h >= 290 && h < 345) binIdx = 7;
+          else binIdx = 0;
+
+          bins[binIdx].r += r * weight;
+          bins[binIdx].g += g * weight;
+          bins[binIdx].b += b * weight;
+          bins[binIdx].weight += weight;
+          bins[binIdx].count++;
+        }
+
+        // Sort bins by total chromatic weight
+        const sortedBins = bins
+          .filter(b => b.count > 10)
+          .sort((a, b) => b.weight - a.weight);
+
+        let primary = [0.72, 0.76, 0.88];
+        let secondary = [0.45, 0.55, 0.78];
+
+        if (sortedBins.length > 0) {
+          primary = [
+            sortedBins[0].r / sortedBins[0].weight,
+            sortedBins[0].g / sortedBins[0].weight,
+            sortedBins[0].b / sortedBins[0].weight
+          ];
+        } else if (totalCount > 0) {
+          primary = [totalR / totalCount, totalG / totalCount, totalB / totalCount];
+        }
+
+        if (sortedBins.length > 1) {
+          secondary = [
+            sortedBins[1].r / sortedBins[1].weight,
+            sortedBins[1].g / sortedBins[1].weight,
+            sortedBins[1].b / sortedBins[1].weight
+          ];
+        } else {
+          // Derive an elegant harmonic complementary/analogous tone
+          secondary = [
+            Math.min(1.0, primary[2] * 0.8 + 0.1),
+            Math.min(1.0, primary[0] * 0.7 + 0.1),
+            Math.min(1.0, primary[1] * 0.9 + 0.1)
+          ];
+        }
+
+        return { primary, secondary };
+      } catch (e) {
+        console.warn('[PaletteExtraction] Fallback:', e);
+        return {
+          primary: [0.72, 0.76, 0.88],
+          secondary: [0.45, 0.55, 0.78]
+        };
+      }
+    }
+
+    // Convert [r, g, b] (0..1) to hex string
+    function rgbToHex(rgb) {
+      const r = Math.round(rgb[0] * 255).toString(16).padStart(2, '0');
+      const g = Math.round(rgb[1] * 255).toString(16).padStart(2, '0');
+      const b = Math.round(rgb[2] * 255).toString(16).padStart(2, '0');
+      return `#${r}${g}${b}`.toUpperCase();
+    }
+
+    // --- Three.js Setup ---
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x030408, 0.04);
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 0, 6.2);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.maxDistance = 12;
+    controls.minDistance = 3;
+
+    // --- 1. HARMONIC STARDUST PARTICLE FIELD (TINTED BY ASSET PALETTE) ---
+    const MAX_STARS = 2800;
+    const starGeometry = new THREE.BufferGeometry();
+    const starPositions = new Float32Array(MAX_STARS * 3);
+    const starVelocities = new Float32Array(MAX_STARS);
+    const starColors = new Float32Array(MAX_STARS * 3);
+
+    for (let i = 0; i < MAX_STARS; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 1.0 + Math.random() * 8.5;
+      starPositions[i * 3 + 0] = Math.cos(angle) * radius;
+      starPositions[i * 3 + 1] = Math.sin(angle) * radius;
+      starPositions[i * 3 + 2] = (Math.random() - 0.5) * 22.0;
+
+      starVelocities[i] = 0.8 + Math.random() * 2.2;
+
+      // Base initialization
+      starColors[i * 3 + 0] = 0.8;
+      starColors[i * 3 + 1] = 0.8;
+      starColors[i * 3 + 2] = 0.9;
+    }
+
+    starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+    starGeometry.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
+    starGeometry.setDrawRange(0, State.stardustCount);
+
+    const starMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0.0 },
+        uKick: { value: 0.0 },
+      },
+      vertexShader: `
+        attribute vec3 color;
+        uniform float uKick;
+        varying vec3 vColor;
+        varying float vAlpha;
+
+        void main() {
+          vColor = color;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          
+          float pSize = (12.0 / -mvPosition.z) * (1.0 + uKick * 0.4);
+          gl_PointSize = clamp(pSize, 2.0, 24.0);
+
+          vAlpha = smoothstep(0.4, 2.2, -mvPosition.z) * smoothstep(18.0, 7.0, -mvPosition.z);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vColor;
+        varying float vAlpha;
+
+        void main() {
+          vec2 coord = gl_PointCoord - vec2(0.5);
+          float dist = length(coord);
+          if (dist > 0.5) discard;
+
+          float glow = exp(-dist * dist * 12.0);
+          gl_FragColor = vec4(vColor, glow * vAlpha * 0.75);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+
+    const starParticles = new THREE.Points(starGeometry, starMaterial);
+    scene.add(starParticles);
+
+    // --- 2. THE SACRED TOTEM MESH (CENTER HERO) ---
+    const totemGeometry = new THREE.PlaneGeometry(6.5, 6.5, 64, 64);
+    const textureLoader = new THREE.TextureLoader();
+
+    const totemMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTexture: { value: null },
+        uTime: { value: 0.0 },
+        uKick: { value: 0.0 },
+      },
+      vertexShader: `
+        uniform float uTime;
+        uniform float uKick;
+        varying vec2 vUv;
+
+        void main() {
+          vUv = uv;
+          vec3 pos = position;
+
+          // Gentle organic breathing on kick (sub-bass heartbeat)
+          float r = length(pos.xy);
+          pos.z += sin(r * 3.5 - uTime * 3.5) * exp(-r * 0.5) * uKick * 0.15;
+
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D uTexture;
+        varying vec2 vUv;
+
+        void main() {
+          vec4 tex = texture2D(uTexture, vUv);
+          // 100% PURE, AUTHENTIC ARTWORK COLORS (Zero harsh glare, zero sunbeams, zero artificial sheen)
+          gl_FragColor = vec4(tex.rgb, tex.a);
+        }
+      `,
+      transparent: true,
+      side: THREE.DoubleSide,
+    });
+
+    const totemMesh = new THREE.Mesh(totemGeometry, totemMaterial);
+    scene.add(totemMesh);
+
+    // --- 3. HARMONIC SILHOUETTE CORONA & ATMOSPHERE (PING-PONG PASS) ---
+    let renderTargetA = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+      format: THREE.RGBAFormat,
+    });
+    let renderTargetB = renderTargetA.clone();
+
+    const feedbackScene = new THREE.Scene();
+    const feedbackCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    const feedbackQuadGeo = new THREE.PlaneGeometry(2, 2);
+
+    const feedbackMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uCurrentScene: { value: null },
+        uPrevFeedback: { value: null },
+        uTime: { value: 0.0 },
+        uKick: { value: 0.0 },
+        uSnare: { value: 0.0 },
+        uCoronaIntensity: { value: 1.2 },
+        uSpreadReach: { value: 1.3 },
+        uCurl: { value: 1.0 },
+        uDecay: { value: 0.93 },
+        uColorPrimary: { value: new THREE.Vector3(0.72, 0.76, 0.88) },
+        uColorSecondary: { value: new THREE.Vector3(0.45, 0.55, 0.78) },
+        uBgBlend: { value: 0.75 },
+        uBgRadius: { value: 1.10 },
+        uHarmonyMode: { value: 0 },
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D uCurrentScene;
+        uniform sampler2D uPrevFeedback;
+        uniform float uTime;
+        uniform float uKick;
+        uniform float uSnare;
+        uniform float uCoronaIntensity;
+        uniform float uSpreadReach;
+        uniform float uCurl;
+        uniform float uDecay;
+        uniform vec3 uColorPrimary;
+        uniform vec3 uColorSecondary;
+        uniform float uBgBlend;
+        uniform float uBgRadius;
+        uniform int uHarmonyMode;
+        varying vec2 vUv;
+
+        void main() {
+          vec2 center = vec2(0.5);
+          vec2 p = vUv - center;
+          float r = length(p);
+          float angle = atan(p.y, p.x);
+
+          // -------------------------------------------------------------
+          // 1. SUBTLE HARMONIC BACKGROUND ATMOSPHERE (NO SUNBEAMS, NO RAYS)
+          // -------------------------------------------------------------
+          // Deep velvety base void with microscopic color temperature from primary
+          vec3 deepBase = vec3(0.008, 0.010, 0.014) + uColorPrimary * 0.015;
+
+          // Soft radial vignette falloff
+          float vignette = exp(-pow(r / max(0.2, uBgRadius), 1.8));
+
+          vec3 atmosphericTone = vec3(0.0);
+          if (uHarmonyMode == 0) {
+            // Harmonic Bi-Tone: Center subtle primary, dissolving into secondary
+            vec3 innerAtmosphere = uColorPrimary * 0.13;
+            vec3 midAtmosphere = uColorSecondary * 0.08;
+            atmosphericTone = mix(innerAtmosphere, midAtmosphere, clamp(r * 1.5, 0.0, 1.0));
+          } else if (uHarmonyMode == 1) {
+            // Velvet Monochromatic: Deep, single-hue atmospheric bath
+            atmosphericTone = uColorPrimary * 0.11;
+          } else if (uHarmonyMode == 2) {
+            // Deep Midnight: Ultra-subtle whisper wash (4% luminance)
+            atmosphericTone = (uColorPrimary * 0.6 + uColorSecondary * 0.4) * 0.045;
+          } else {
+            // Pure Obsidian Void: completely black void, 0% background wash
+            atmosphericTone = vec3(0.0);
+          }
+
+          // Gentle ambient breathing on beats (subtle warmth pulsation, NO blinding light)
+          float ambientBreath = 1.0 + uKick * 0.15;
+          vec3 bgAtmosphere = deepBase + atmosphericTone * uBgBlend * vignette * ambientBreath;
+
+          // -------------------------------------------------------------
+          // 2. FLUID SILHOUETTE CORONA (ORGANIC EDGE ADVECTION)
+          // -------------------------------------------------------------
+          // Smooth outward advection from the silhouette
+          float zoom = 1.0 + (0.010 * uSpreadReach) + (uKick * 0.030);
+          vec2 warpedUv = p / zoom + center;
+
+          // Liquid curl for organic smoke/silk fluid movement
+          float curlOffset = sin(r * 14.0 - uTime * 2.0) * (0.0022 * uCurl) * (1.0 + uKick * 1.2);
+          warpedUv += vec2(cos(angle), sin(angle)) * curlOffset;
+
+          // Multi-tap soft diffusion so edge fluid disperses like watercolor pigment in water
+          vec4 prev1 = texture2D(uPrevFeedback, warpedUv);
+          vec4 prev2 = texture2D(uPrevFeedback, warpedUv + vec2(0.0018, 0.0018));
+          vec4 prev3 = texture2D(uPrevFeedback, warpedUv - vec2(0.0018, 0.0018));
+          vec4 prev = (prev1 * 0.50 + prev2 * 0.25 + prev3 * 0.25) * uDecay;
+
+          // -------------------------------------------------------------
+          // 3. SAMPLE CURRENT FOREGROUND FRAME (TOTEM + STARDUST)
+          // -------------------------------------------------------------
+          vec4 curr = texture2D(uCurrentScene, vUv);
+
+          // Subtle fluid silhouette trails (carrying the true colors of the asset edges)
+          vec3 corona = prev.rgb * (uCoronaIntensity * 0.90);
+
+          // -------------------------------------------------------------
+          // 4. COMPOSITE
+          // -------------------------------------------------------------
+          // Ambient environment is background atmosphere + silhouette fluid trails
+          vec3 environment = bgAtmosphere + corona;
+
+          // Composite foreground Totem over environment:
+          // The center hero asset maintains 100% true, crisp, untouched colors.
+          vec3 finalRgb = mix(environment, curr.rgb, curr.a);
+
+          gl_FragColor = vec4(finalRgb, 1.0);
+        }
+      `,
+    });
+
+    const feedbackQuad = new THREE.Mesh(feedbackQuadGeo, feedbackMaterial);
+    feedbackScene.add(feedbackQuad);
+
+    // --- Update Palette Harmony Across System ---
+    function applyHarmonicPalette(palette, name) {
+      State.colorPrimary = palette.primary;
+      State.colorSecondary = palette.secondary;
+
+      feedbackMaterial.uniforms.uColorPrimary.value.set(palette.primary[0], palette.primary[1], palette.primary[2]);
+      feedbackMaterial.uniforms.uColorSecondary.value.set(palette.secondary[0], palette.secondary[1], palette.secondary[2]);
+
+      const hexPrimary = rgbToHex(palette.primary);
+      const hexSecondary = rgbToHex(palette.secondary);
+
+      // Update swatch UI
+      document.getElementById('swatch-primary').style.background = hexPrimary;
+      document.getElementById('swatch-primary-hex').textContent = hexPrimary;
+
+      document.getElementById('swatch-secondary').style.background = hexSecondary;
+      document.getElementById('swatch-secondary-hex').textContent = hexSecondary;
+
+      document.getElementById('telemetry-palette').textContent = `${hexPrimary} / ${hexSecondary}`;
+
+      // Tint stardust particles naturally: half primary, half secondary with organic variance
+      const colors = starGeometry.attributes.color.array;
+      for (let i = 0; i < MAX_STARS; i++) {
+        const baseColor = (i % 2 === 0) ? palette.primary : palette.secondary;
+        const vary = 0.70 + Math.random() * 0.50;
+        colors[i * 3 + 0] = Math.min(1.0, baseColor[0] * vary + 0.12);
+        colors[i * 3 + 1] = Math.min(1.0, baseColor[1] * vary + 0.12);
+        colors[i * 3 + 2] = Math.min(1.0, baseColor[2] * vary + 0.12);
+      }
+      starGeometry.attributes.color.needsUpdate = true;
+    }
+
+    // --- Load Totem Asset ---
+    function loadAsset(path, name, index = 0) {
+      textureLoader.load(path, (tex) => {
+        tex.wrapS = THREE.MirroredRepeatWrapping;
+        tex.wrapT = THREE.MirroredRepeatWrapping;
+        tex.needsUpdate = true;
+        totemMaterial.uniforms.uTexture.value = tex;
+
+        State.assetPath = path;
+        State.assetName = name;
+        State.assetIndex = index;
+
+        // Extract dual-tone palette from image element
+        const palette = extractHarmonicPalette(tex.image);
+        applyHarmonicPalette(palette, name);
+
+        // Update UI
+        document.getElementById('telemetry-asset').textContent = name;
+        document.getElementById('quick-name').textContent = name;
+        document.getElementById('quick-tag').textContent = `Totem [${index + 1}/${ASSET_LIST.length}]`;
+        document.getElementById('asset-picker').value = path;
+        document.getElementById('asset-narrative').textContent = ASSET_DESCS[path] || 'High-resolution performance totem asset.';
+        console.log('[HarmonicRig] Loaded:', name, 'Primary:', palette.primary, 'Secondary:', palette.secondary);
+      });
+    }
+
+    loadAsset(State.assetPath, State.assetName, 0);
+
+    // --- UI Controls & HUD Logic ---
+    const controlDock = document.getElementById('control-dock');
+    const hudToggleBtn = document.getElementById('hud-toggle-btn');
+    const hudToggleLabel = document.getElementById('hud-toggle-label');
+    const dockCloseBtn = document.getElementById('dock-close-btn');
+
+    function setHudState(isOpen) {
+      State.isHudOpen = isOpen;
+      controlDock.classList.toggle('collapsed', !isOpen);
+      hudToggleLabel.textContent = isOpen ? 'Hide' : 'Controls';
+      hudToggleBtn.style.borderColor = isOpen ? 'var(--accent-gold)' : 'rgba(250, 204, 21, 0.4)';
+    }
+
+    setHudState(State.isHudOpen);
+
+    hudToggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setHudState(!State.isHudOpen);
+    });
+
+    dockCloseBtn.addEventListener('click', () => {
+      setHudState(false);
+    });
+
+    // Quick Asset Bar Navigation (◀ / ▶)
+    const quickPrev = document.getElementById('quick-prev');
+    const quickNext = document.getElementById('quick-next');
+    const quickTitleInfo = document.getElementById('quick-title-info');
+
+    function cycleAsset(direction) {
+      let newIdx = State.assetIndex + direction;
+      if (newIdx < 0) newIdx = ASSET_LIST.length - 1;
+      if (newIdx >= ASSET_LIST.length) newIdx = 0;
+      const asset = ASSET_LIST[newIdx];
+      loadAsset(asset.path, asset.name, newIdx);
+    }
+
+    quickPrev.addEventListener('click', (e) => {
+      e.stopPropagation();
+      cycleAsset(-1);
+    });
+
+    quickNext.addEventListener('click', (e) => {
+      e.stopPropagation();
+      cycleAsset(1);
+    });
+
+    quickTitleInfo.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setHudState(!State.isHudOpen);
+    });
+
+    // Asset Picker Dropdown
+    const assetPicker = document.getElementById('asset-picker');
+    assetPicker.addEventListener('change', () => {
+      const idx = ASSET_LIST.findIndex(a => a.path === assetPicker.value);
+      const selAsset = ASSET_LIST[idx >= 0 ? idx : 0];
+      loadAsset(selAsset.path, selAsset.name, idx >= 0 ? idx : 0);
+    });
+
+    // Harmony Mode Switcher
+    const harmonyButtons = [
+      { id: 'btn-mode-bitone', mode: 0, label: 'Harmonic Bi-Tone' },
+      { id: 'btn-mode-mono', mode: 1, label: 'Velvet Mono' },
+      { id: 'btn-mode-midnight', mode: 2, label: 'Deep Midnight' },
+      { id: 'btn-mode-obsidian', mode: 3, label: 'Obsidian Void' }
+    ];
+
+    function setHarmonyMode(mode) {
+      State.harmonyMode = mode;
+      feedbackMaterial.uniforms.uHarmonyMode.value = mode;
+
+      harmonyButtons.forEach(btn => {
+        const el = document.getElementById(btn.id);
+        if (el) el.classList.toggle('active-toggle', btn.mode === mode);
+      });
+
+      const activeBtn = harmonyButtons.find(b => b.mode === mode);
+      if (activeBtn) {
+        document.getElementById('telemetry-mode').textContent = activeBtn.label;
+      }
+    }
+
+    harmonyButtons.forEach(btn => {
+      const el = document.getElementById(btn.id);
+      if (el) {
+        el.addEventListener('click', () => setHarmonyMode(btn.mode));
+      }
+    });
+
+    // Sliders
+    const sliderCorona = document.getElementById('slider-corona');
+    sliderCorona.addEventListener('input', (e) => {
+      State.coronaIntensity = parseFloat(e.target.value);
+      feedbackMaterial.uniforms.uCoronaIntensity.value = State.coronaIntensity;
+      document.getElementById('val-corona').textContent = State.coronaIntensity.toFixed(1);
+    });
+
+    const sliderSpread = document.getElementById('slider-spread');
+    sliderSpread.addEventListener('input', (e) => {
+      State.spreadReach = parseFloat(e.target.value);
+      feedbackMaterial.uniforms.uSpreadReach.value = State.spreadReach;
+      document.getElementById('val-spread').textContent = State.spreadReach.toFixed(1);
+    });
+
+    const sliderCurl = document.getElementById('slider-curl');
+    sliderCurl.addEventListener('input', (e) => {
+      State.curl = parseFloat(e.target.value);
+      feedbackMaterial.uniforms.uCurl.value = State.curl;
+      document.getElementById('val-curl').textContent = State.curl.toFixed(1);
+    });
+
+    const sliderDecay = document.getElementById('slider-decay');
+    sliderDecay.addEventListener('input', (e) => {
+      State.decay = parseFloat(e.target.value);
+      feedbackMaterial.uniforms.uDecay.value = State.decay;
+      document.getElementById('val-decay').textContent = State.decay.toFixed(2);
+    });
+
+    const sliderBgBlend = document.getElementById('slider-bg-blend');
+    sliderBgBlend.addEventListener('input', (e) => {
+      State.bgBlendDepth = parseFloat(e.target.value);
+      feedbackMaterial.uniforms.uBgBlend.value = State.bgBlendDepth;
+      document.getElementById('val-bg-blend').textContent = State.bgBlendDepth.toFixed(2);
+    });
+
+    const sliderBgRadius = document.getElementById('slider-bg-radius');
+    sliderBgRadius.addEventListener('input', (e) => {
+      State.bgRadius = parseFloat(e.target.value);
+      feedbackMaterial.uniforms.uBgRadius.value = State.bgRadius;
+      document.getElementById('val-bg-radius').textContent = State.bgRadius.toFixed(2);
+    });
+
+    const sliderStars = document.getElementById('slider-stars');
+    sliderStars.addEventListener('input', (e) => {
+      State.stardustCount = parseInt(e.target.value);
+      document.getElementById('val-stars').textContent = `${State.stardustCount} Motes`;
+      starGeometry.setDrawRange(0, State.stardustCount);
+    });
+
+    const sliderHeartbeat = document.getElementById('slider-heartbeat');
+    sliderHeartbeat.addEventListener('input', (e) => {
+      State.totemHeartbeat = parseFloat(e.target.value);
+      document.getElementById('val-heartbeat').textContent = State.totemHeartbeat.toFixed(2);
+    });
+
+    const sliderBpm = document.getElementById('slider-bpm');
+    sliderBpm.addEventListener('input', (e) => {
+      State.bpm = parseInt(e.target.value);
+      document.getElementById('display-bpm').textContent = `${State.bpm} BPM`;
+      document.getElementById('bpm-val').textContent = State.bpm;
+    });
+
+    // Beat Buttons
+    const btnAutoBeat = document.getElementById('btn-auto-beat');
+    btnAutoBeat.addEventListener('click', () => {
+      State.autoBeat = !State.autoBeat;
+      btnAutoBeat.textContent = State.autoBeat ? 'Auto Beat [ON]' : 'Auto Beat [OFF]';
+      btnAutoBeat.classList.toggle('active-toggle', State.autoBeat);
+    });
+
+    const btnManualKick = document.getElementById('btn-manual-kick');
+    btnManualKick.addEventListener('click', () => {
+      State.kickLevel = 1.0;
+    });
+
+    const btnManualSnare = document.getElementById('btn-manual-snare');
+    btnManualSnare.addEventListener('click', () => {
+      State.snareLevel = 1.0;
+    });
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+      if (e.key === 'h' || e.key === 'H') {
+        setHudState(!State.isHudOpen);
+      } else if (e.code === 'Space') {
+        e.preventDefault();
+        State.kickLevel = 1.0;
+      } else if (e.key === 'ArrowLeft') {
+        cycleAsset(-1);
+      } else if (e.key === 'ArrowRight') {
+        cycleAsset(1);
+      } else if (e.key === '1') {
+        setHarmonyMode(0);
+      } else if (e.key === '2') {
+        setHarmonyMode(1);
+      } else if (e.key === '3') {
+        setHarmonyMode(2);
+      } else if (e.key === '4') {
+        setHarmonyMode(3);
+      }
+    });
+
+    // Resize
+    window.addEventListener('resize', () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+      renderTargetA.setSize(w, h);
+      renderTargetB.setSize(w, h);
+    });
+
+    // --- Render Loop ---
+    let lastTime = performance.now();
+    let frameCount = 0;
+    let lastFpsUpdate = performance.now();
+    const dots = [
+      document.getElementById('dot-1'),
+      document.getElementById('dot-2'),
+      document.getElementById('dot-3'),
+      document.getElementById('dot-4')
+    ];
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const now = performance.now();
+      const dt = Math.min(0.1, (now - lastTime) / 1000);
+      lastTime = now;
+
+      // FPS Telemetry
+      frameCount++;
+      if (now - lastFpsUpdate > 500) {
+        const fps = Math.round((frameCount * 1000) / (now - lastFpsUpdate));
+        document.getElementById('telemetry-fps').textContent = fps;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
+      // --- 4/4 Beat Metronome ---
+      const beatInterval = 60000 / State.bpm;
+      if (State.autoBeat && now - State.lastBeatTime >= beatInterval) {
+        State.lastBeatTime = now;
+        State.beatIndex = (State.beatIndex + 1) % 4;
+
+        dots.forEach((dot, idx) => {
+          dot.classList.toggle('active', idx === State.beatIndex);
+        });
+
+        // 4-on-the-Floor Kick
+        State.kickLevel = 1.0;
+
+        // Snare on 2 and 4
+        if (State.beatIndex === 1 || State.beatIndex === 3) {
+          State.snareLevel = 0.85;
+        }
+      }
+
+      // Exponential Audio Decay
+      State.kickLevel *= Math.exp(-6.5 * dt);
+      State.snareLevel *= Math.exp(-8.0 * dt);
+
+      // --- 1. Advance Subtle Stardust Particle Stream ---
+      const positions = starGeometry.attributes.position.array;
+      const forwardVelocity = (1.0 * 3.5 + State.kickLevel * 4.0) * dt;
+
+      for (let i = 0; i < State.stardustCount; i++) {
+        positions[i * 3 + 2] += forwardVelocity * starVelocities[i];
+
+        if (positions[i * 3 + 2] > 6.5) {
+          positions[i * 3 + 2] = -12.0;
+          const angle = Math.random() * Math.PI * 2;
+          const radius = 1.0 + Math.random() * 8.5;
+          positions[i * 3 + 0] = Math.cos(angle) * radius;
+          positions[i * 3 + 1] = Math.sin(angle) * radius;
+        }
+      }
+      starGeometry.attributes.position.needsUpdate = true;
+      starMaterial.uniforms.uTime.value = now * 0.001;
+      starMaterial.uniforms.uKick.value = State.kickLevel;
+
+      // --- 2. Sacred Totem Motion (Subtle Floating & Heartbeat Thump) ---
+      State.totemFloatPhase += dt * 0.7;
+      const floatY = Math.sin(State.totemFloatPhase) * 0.06;
+      const scalePump = 1.0 + (State.kickLevel * State.totemHeartbeat);
+      
+      totemMesh.position.y = floatY;
+      totemMesh.scale.set(scalePump, scalePump, 1.0);
+      
+      State.totemRotZ += dt * 0.015;
+      totemMesh.rotation.z = Math.sin(State.totemRotZ) * 0.025;
+
+      totemMaterial.uniforms.uTime.value = now * 0.001;
+      totemMaterial.uniforms.uKick.value = State.kickLevel;
+
+      // --- 3. Liquid Corona Feedback Pass ---
+      feedbackMaterial.uniforms.uTime.value = now * 0.001;
+      feedbackMaterial.uniforms.uKick.value = State.kickLevel;
+      feedbackMaterial.uniforms.uSnare.value = State.snareLevel;
+
+      controls.update();
+
+      // --- 2-Pass Ping-Pong Render Pipeline ---
+      // Pass 1: Render Crisp Totem & Stardust to RenderTarget A
+      renderer.setRenderTarget(renderTargetA);
+      renderer.clear();
+      renderer.render(scene, camera);
+
+      // Pass 2: Generate Harmonic Background Wash + Fluid Silhouette Trails
+      feedbackMaterial.uniforms.uCurrentScene.value = renderTargetA.texture;
+      feedbackMaterial.uniforms.uPrevFeedback.value = renderTargetB.texture;
+
+      renderer.setRenderTarget(null);
+      renderer.render(feedbackScene, feedbackCamera);
+
+      // Ping-pong Buffer Swap
+      let temp = renderTargetA;
+      renderTargetA = renderTargetB;
+      renderTargetB = temp;
+    }
+
+    animate();
+  </script>
+</body>
+</html>

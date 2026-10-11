@@ -11,89 +11,86 @@ export const CONFIG = {
     targetFps: 60,
   },
 
-  // Asset Pipeline
+  // Asset Pipeline (All 29 assets registered with clean URL encoding & framing category)
   assets: {
     list: [
-      { id: 0, name: 'Wheel', path: 'assets/wheel.png' },
-      { id: 1, name: 'Beauty', path: 'assets/beauty.png' },
-      { id: 2, name: 'Diya', path: 'assets/diya.png' },
-      { id: 3, name: 'Jalebi', path: 'assets/Jalebi.png' },
-      { id: 4, name: 'Taj Mahal', path: 'assets/taj%20mahal.png' },
-      { id: 5, name: 'Truck Art', path: 'assets/truck%20art.png' },
-      { id: 6, name: 'Tiger Mandala', path: 'assets/mandala.jpg' },
+      { id: 0, name: 'Wheel', path: 'assets/wheel.png', framing: 'totem' },
+      { id: 1, name: 'Beauty', path: 'assets/beauty.png', framing: 'totem' },
+      { id: 2, name: 'Diya', path: 'assets/diya.png', framing: 'totem' },
+      { id: 3, name: 'Diya 2', path: 'assets/diya%202.png', framing: 'totem' },
+      { id: 4, name: 'Jalebi', path: 'assets/Jalebi.png', framing: 'totem' },
+      { id: 5, name: 'Taj Mahal', path: 'assets/taj%20mahal.png', framing: 'world' },
+      { id: 6, name: 'Truck Art', path: 'assets/truck%20art.png', framing: 'totem' },
+      { id: 7, name: 'Tiger Mandala', path: 'assets/mandala.jpg', framing: 'totem' },
+      { id: 8, name: 'Rangoli 1', path: 'assets/rangoli%201.png', framing: 'totem' },
+      { id: 9, name: 'Rangoli 2', path: 'assets/rangoli%202.png', framing: 'totem' },
+      { id: 10, name: 'Rangoli 3', path: 'assets/rangoli%203.png', framing: 'totem' },
+      { id: 11, name: 'Spacey', path: 'assets/spacey.png', framing: 'totem' },
+      { id: 12, name: 'Supernova', path: 'assets/supernova.png', framing: 'totem' },
+      { id: 13, name: 'Tubes', path: 'assets/tubes.png', framing: 'totem' },
+      { id: 14, name: 'Solar Art 1', path: 'assets/art1.png', framing: 'world' },
+      { id: 15, name: 'Solar Art 2', path: 'assets/art2.png', framing: 'world' },
+      { id: 16, name: 'Solar Art 3', path: 'assets/art3.png', framing: 'world' },
+      { id: 17, name: 'Solar Art 4', path: 'assets/art4.png', framing: 'world' },
+      { id: 18, name: 'Amul Girl', path: 'assets/amul.png', framing: 'totem' },
+      { id: 19, name: 'Peacock', path: 'assets/peacock.png', framing: 'totem' },
+      { id: 20, name: 'Lady', path: 'assets/lady.png', framing: 'totem' },
+      { id: 21, name: 'Red Eye', path: 'assets/red%20eye.png', framing: 'totem' },
+      { id: 22, name: 'Blackhole', path: 'assets/blackhole.png', framing: 'totem' },
+      { id: 23, name: 'Paper Art', path: 'assets/paper.png', framing: 'totem' },
+      { id: 24, name: 'Fractal Network', path: 'assets/fractal%20network.png', framing: 'world' },
+      { id: 25, name: 'Virus Crystals', path: 'assets/virus%20crystals.png', framing: 'world' },
+      { id: 26, name: 'Skyline', path: 'assets/skyline.png', framing: 'world' },
+      { id: 27, name: 'Comics', path: 'assets/comics.png', framing: 'world' },
+      { id: 28, name: 'Slime', path: 'assets/slime.png', framing: 'world' },
     ],
-    previewDurationMs: 2500, // On-screen preview display duration when asset is switched
+    previewDurationMs: 2200,
   },
 
   // AKAI MPK Mini 3 Hardware Mappings
   midi: {
     // Joystick Controls
     joystick: {
-      // Horizontal Pan: default listens to Pitch Bend (0xE0) or fallback CC 16
       panPitchBend: true,
       panCC: 16,
-      panDefault: 0.5, // Center (0.0 = Left, 1.0 = Right)
+      panDefault: 0.5,
 
-      // Vertical Iris/Aperture: CC 1 (Modulation Wheel)
       apertureCC: 1,
-      apertureMin: 0.03, // Razor-thin laser slit
-      apertureMax: 1.0,  // Full 180-degree room wash
-      apertureDefault: 0.35,
+      apertureMin: 0.03,
+      apertureMax: 1.0,
+      apertureDefault: 0.5,
     },
 
     // Rotary Knobs (CC 70 - 74 on MPK Mini 3 Prog 1)
     knobs: {
-      knob1: { cc: 70, name: 'Rotation Speed', min: 2.0, max: 50.0, default: 8.0 },   // 2Hz - 50Hz
-      knob2: { cc: 71, name: 'Palette Hue', min: 0.0, max: 1.0, default: 0.0 },        // 0.0 - 1.0
-      knob3: { cc: 72, name: 'Wave Spread', min: 1.8, max: 3.6, default: 2.5 },        // 1.8 - 3.6 smooth wavelength
-      knob4: { cc: 73, name: 'Wave Depth', min: 0.2, max: 3.5, default: 1.5 },         // Multiplier
-      knob5: { cc: 74, name: 'Drop Cadence Threshold', min: 0.05, max: 0.95, default: 0.50 },  // 4/4 Kick Cadence Lock sensitivity (50% = natural sweet spot: 3 kicks)
+      knob1: { cc: 70, name: 'Rotation Speed', min: 2.0, max: 50.0, default: 8.0 },
+      knob2: { cc: 71, name: 'Palette Hue', min: 0.0, max: 1.0, default: 0.0 },
+      knob3: { cc: 72, name: 'Wave Spread / Slicer Spacing', min: 1.8, max: 3.6, default: 2.5 },
+      knob4: { cc: 73, name: 'Wave Depth / Sensitivity', min: 0.2, max: 3.5, default: 1.5 },
+      knob5: { cc: 74, name: 'Drop Cadence Threshold', min: 0.05, max: 0.95, default: 0.50 },
     },
 
-    // Performance Pads (Prog 1 Note On / Off or CC mode fallback)
+    // Dual-Bank 16-Pad Performance Matrix (AKAI MPK Mini 3 Prog 1)
     pads: {
-      // Pad 1: Accelerating Snare Riser Strobe
-      pad1: {
-        notes: [36, 48], // C1 or C2
-        cc: 20,
-        name: 'Snare Riser Strobe',
-        type: 'riser',
-      },
-      // Pad 2: Toggle Seamless Hue Flow
-      pad2: {
-        notes: [37, 49], // C#1 or C#2
-        cc: 21,
-        name: 'Toggle Hue Flow',
-        type: 'hue_flow_toggle',
-      },
-      // Pad 3: Cycle Artwork Asset
-      pad3: {
-        notes: [38, 50], // D1 or D2
-        cc: 22,
-        name: 'Cycle Artwork Asset',
-        type: 'asset_cycle',
-      },
-      // Pad 4: DROP SLAM (Sample-accurate Blackout)
-      pad4: {
-        notes: [39, 51], // D#1 or D#2
-        cc: 23,
-        name: 'DROP SLAM Blackout',
-        type: 'drop_slam',
-      },
-      // Pad 5: Cycle 3D Motion Preset
-      pad5: {
-        notes: [40, 52], // E1 or E2
-        cc: 24,
-        name: 'Cycle 3D Motion Preset',
-        type: 'style_cycle',
-      },
-      // Pad 6: Toggle Drop / Chorus Mode Override (Auto vs Forced Drop)
-      pad6: {
-        notes: [41, 53], // F1 or F2
-        cc: 25,
-        name: 'Toggle Drop Mode',
-        type: 'drop_toggle',
-      },
+      // BANK A: Live Action Hits
+      pad1: { notes: [36], cc: 20, name: '4-Bar Buildup', type: 'buildup_4_toggle' },
+      pad2: { notes: [37], cc: 21, name: '8-Bar Buildup', type: 'buildup_8_toggle' },
+      pad3: { notes: [38], cc: 22, name: 'Cycle Artwork', type: 'asset_cycle' },
+      pad4: { notes: [39], cc: 23, name: 'DROP SLAM Blackout', type: 'drop_slam' },
+      pad5: { notes: [40], cc: 24, name: 'Cycle 3D Motion Preset', type: 'style_cycle' },
+      pad6: { notes: [41], cc: 25, name: 'Toggle Auto-Hue Flow', type: 'hue_flow_toggle' },
+      pad7: { notes: [42], cc: 26, name: 'Temporal Beat Repeat', type: 'beat_repeat_toggle' },
+      pad8: { notes: [43], cc: 27, name: 'Negative X-Ray Flash', type: 'negative_toggle' },
+
+      // BANK B: Arming & Configuration Matrix
+      padB1: { notes: [44], cc: 28, name: 'Cycle Repeat Rate', type: 'repeat_rate_cycle' },
+      padB2: { notes: [45], cc: 29, name: 'Cycle Framing Mode', type: 'framing_mode_cycle' },
+      padB3: { notes: [46], cc: 30, name: 'Toggle Drop Mode', type: 'drop_toggle' },
+      padB4: { notes: [47], cc: 31, name: 'DROP SLAM Blackout (Panic)', type: 'drop_slam' },
+      padB5: { notes: [48], cc: 32, name: 'Arm Kinetic Blitz', type: 'arm_riser_0' },
+      padB6: { notes: [49], cc: 33, name: 'Arm Dark Implosion', type: 'arm_riser_1' },
+      padB7: { notes: [50], cc: 34, name: 'Arm Chromatic Tear', type: 'arm_riser_2' },
+      padB8: { notes: [51], cc: 35, name: 'Arm Solar Bloom', type: 'arm_riser_3' },
     },
 
     // Fallback Keyboard Shortcuts for Headless / Offline Testing
@@ -104,14 +101,36 @@ export const CONFIG = {
       pad4: 'Digit4',
       pad5: 'Digit5',
       pad6: 'Digit6',
+      pad7: 'Digit7',
+      pad8: 'Digit8',
       cycleStyleKey: 'KeyV',
-      toggleHueKey: 'KeyH',
       toggleDropKey: 'KeyB',
       toggleHud: 'KeyD',
+      toggleSlicerKey: 'KeyP',
+      toggleNegativeKey: 'KeyN',
+      toggleFramingKey: 'KeyM',
       resetPan: 'KeyC',
       knob5Up: 'KeyT',
       knob5Down: 'KeyG',
+      bpmDown: 'BracketLeft',
+      bpmUp: 'BracketRight',
+      tapTempo: 'Backslash',
     },
+  },
+
+  // One-Shot Buildup Sequencer Parameters & 4 Distinct Riser Archetypes
+  buildup: {
+    defaultBpm: 128.0,
+    startFreqHz: 4.0,
+    maxFreqHz: 60.0,
+    blinderStartProgress: 0.70, // Whiteout blinder begins ramping at 70% of build to 100% climax
+    autoPreDropSilenceBeats: 0.0, // Handled manually by Pad 4 DROP SLAM master cutoff
+    archetypes: [
+      { id: 0, name: 'Kinetic Blitz', desc: 'Accelerating high-frequency strobe + blinding whiteout wash', color: '#facc15', mode: 'blitz' },
+      { id: 1, name: 'Dark Implosion', desc: 'Obsidian color drain, singularity vortex pinch, drop silence', color: '#06b6d4', mode: 'implosion' },
+      { id: 2, name: 'Chromatic Tear', desc: 'RGB channel separation, scanline glitch, micro-inversions', color: '#ec4899', mode: 'chromatic' },
+      { id: 3, name: 'Solar Bloom', desc: 'Luminescent golden feedback aurora, boiling fluid wave surge', color: '#f97316', mode: 'solar' },
+    ],
   },
 
   // 3D Motion Presets Matrix (Toggled via Pad 5 / Key 5 / V)
@@ -185,3 +204,50 @@ export const CONFIG = {
     },
   },
 };
+
+/**
+ * Dynamic Asset Discovery Engine:
+ * Fetches the live list of all image assets from the backend server (/api/assets)
+ * or static manifest fallback (assets/manifest.json).
+ * Automatically updates CONFIG.assets.list so newly added files are picked up dynamically!
+ */
+export async function autoDiscoverAssets() {
+  try {
+    const res = await fetch('/api/assets?t=' + Date.now());
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.assets) && data.assets.length > 0) {
+        CONFIG.assets.list = data.assets;
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('engine:assetsDiscovered', { detail: { assets: data.assets } }));
+        }
+        console.log(`[AutoDiscover] Discovered ${data.assets.length} performance assets dynamically.`);
+        return data.assets;
+      }
+    }
+  } catch (err) {
+    try {
+      const mRes = await fetch('assets/manifest.json?t=' + Date.now());
+      if (mRes.ok) {
+        const mList = await mRes.json();
+        if (Array.isArray(mList) && mList.length > 0) {
+          CONFIG.assets.list = mList;
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('engine:assetsDiscovered', { detail: { assets: mList } }));
+          }
+          console.log(`[AutoDiscover] Loaded ${mList.length} assets from manifest fallback.`);
+          return mList;
+        }
+      }
+    } catch (e2) {
+      console.warn('[AutoDiscover] Using bundled asset list.');
+    }
+  }
+  return CONFIG.assets.list;
+}
+
+// Auto-run on startup if running in browser
+if (typeof window !== 'undefined') {
+  autoDiscoverAssets();
+}
+
