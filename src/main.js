@@ -391,6 +391,11 @@ if (window.location.search.includes('autostart=1') || window.location.search.inc
   engageEngine();
 }
 
+// Open audio modal if ?modal=audio
+if (window.location.search.includes('modal=audio')) {
+  setTimeout(() => openAudioModal(), 200);
+}
+
 // 3. Initialize Web MIDI Controller (AKAI MPK Mini 3 - Clean 8-Pad Layout)
 const midi = new MidiController({
   onAnyInput: () => {

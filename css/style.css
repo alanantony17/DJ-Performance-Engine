@@ -343,8 +343,9 @@ html, body {
 #drop-preview-card,
 #buildup-preview-card,
 #framing-preview-card {
-  bottom: 24px;
-  left: 24px;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(12px);
 }
 
 #style-preview-card { border-color: rgba(168, 85, 247, 0.5); }
@@ -353,24 +354,32 @@ html, body {
 #buildup-preview-card { border-color: rgba(245, 158, 11, 0.6); }
 #framing-preview-card { border-color: rgba(16, 185, 129, 0.6); }
 
-#asset-preview-card.visible,
+#asset-preview-card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 #style-preview-card.visible,
 #hue-preview-card.visible,
 #drop-preview-card.visible,
 #buildup-preview-card.visible,
 #framing-preview-card.visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateX(-50%) translateY(0);
 }
 
-#asset-preview-card.hidden,
+#asset-preview-card.hidden {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
 #style-preview-card.hidden,
 #hue-preview-card.hidden,
 #drop-preview-card.hidden,
 #buildup-preview-card.hidden,
 #framing-preview-card.hidden {
   opacity: 0;
-  transform: translateY(12px);
+  transform: translateX(-50%) translateY(12px);
 }
 
 #asset-preview-thumb {
