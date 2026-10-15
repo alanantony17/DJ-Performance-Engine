@@ -18,6 +18,10 @@
     });
   </script>
   <link rel="stylesheet" href="css/style.css">
+  <!-- Google Fonts: Geist & Geist Mono for Swiss hardware precision -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&family=Geist:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- Three.js WebGL 3D Engine CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -32,13 +36,47 @@
 
   <!-- Layer 3: Interactive Start Overlay (Auto-resumes AudioContext & triggers Engine) -->
   <div id="start-overlay">
-    <div class="start-badge">OBS Browser Source / Live Rig</div>
-    <h1 class="start-title">DJ Performance Engine</h1>
-    <p class="start-desc">
-      Hardware-accelerated audiovisual engine for AKAI MPK Mini 3 and OBS Studio.<br>
-      Tap any <strong>MIDI Pad</strong> or click below to engage the audio & lighting engine.
-    </p>
-    <button id="start-btn" class="start-button">ENGAGE ENGINE</button>
+    <div class="start-panel">
+      <div class="start-panel-header">
+        <div class="start-status-pill">
+          <span class="status-indicator-dot"></span>
+          <span class="status-indicator-text">SYSTEM STANDBY // 60 FPS RIG READY</span>
+        </div>
+        <span class="start-source-tag">OBS SOURCE / 1080P</span>
+      </div>
+
+      <div class="start-hero">
+        <div class="start-headings">
+          <h1 class="start-title">DJ Performance Engine</h1>
+          <p class="start-desc">Hardware-accelerated visual synthesizer for live concerts and OBS Studio.</p>
+        </div>
+      </div>
+
+      <div class="start-specs-grid">
+        <div class="start-spec-item">
+          <span class="start-spec-k">HARDWARE INPUT</span>
+          <span class="start-spec-v">AKAI MPK Mini 3</span>
+        </div>
+        <div class="start-spec-item">
+          <span class="start-spec-k">AUDIO CORE</span>
+          <span class="start-spec-v">FFT Transient Follower</span>
+        </div>
+        <div class="start-spec-item">
+          <span class="start-spec-k">DISPLAY RIG</span>
+          <span class="start-spec-v">128x128 3D Mesh</span>
+        </div>
+      </div>
+
+      <div class="start-actions">
+        <button id="start-btn" class="start-button">
+          <span>ENGAGE ENGINE</span>
+          <svg class="start-btn-icon" width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+        </button>
+        <span class="start-shortcut-hint">Press <kbd>SPACE</kbd> or tap any <kbd>MIDI Pad</kbd> to launch</span>
+      </div>
+    </div>
   </div>
 
   <!-- Layer 4: On-Screen Asset Preview Card (Toggled via Pad 3 or Asset Switch) -->

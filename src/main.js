@@ -378,6 +378,19 @@ if (startOverlay) {
   startOverlay.addEventListener('click', engageEngine);
 }
 
+// Support Space key to engage engine when overlay is active
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && startOverlay && !startOverlay.classList.contains('hidden')) {
+    e.preventDefault();
+    engageEngine();
+  }
+});
+
+// Auto-engage for OBS Browser Source / Headless rigs (?autostart=1 or ?obs=1)
+if (window.location.search.includes('autostart=1') || window.location.search.includes('obs=1')) {
+  engageEngine();
+}
+
 // 3. Initialize Web MIDI Controller (AKAI MPK Mini 3 - Clean 8-Pad Layout)
 const midi = new MidiController({
   onAnyInput: () => {
