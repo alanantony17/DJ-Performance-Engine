@@ -298,11 +298,13 @@ export class DiagnosticHud {
     if (this.buildupStatusEl) {
       if (buildupState && buildupState.state === 'building') {
         const pct = Math.round(buildupState.progress * 100);
-        this.buildupStatusEl.textContent = `BAR ${buildupState.currentBar}/${buildupState.totalBars} [${pct}%] (${buildupState.strobeFreq.toFixed(0)}Hz)`;
+        const subDesc = buildupState.subdivision ? ` [1/${buildupState.subdivision}]` : '';
+        this.buildupStatusEl.textContent = `BAR ${buildupState.currentBar}/${buildupState.totalBars} (${pct}%)${subDesc} ${buildupState.strobeFreq.toFixed(0)}Hz`;
         this.buildupStatusEl.style.color = '#eab308';
         if (this.buildupBarEl) this.buildupBarEl.style.width = `${pct}%`;
       } else if (buildupState && buildupState.state === 'holding_climax') {
-        this.buildupStatusEl.textContent = '🔥 PEAK CLIMAX [100% WHITEOUT] - HIT SLAM!';
+        const archName = buildupState.archetype?.name || 'CLIMAX';
+        this.buildupStatusEl.textContent = `🔥 PEAK CLIMAX [${archName.toUpperCase()}] - HIT SLAM!`;
         this.buildupStatusEl.style.color = '#ef4444';
         if (this.buildupBarEl) this.buildupBarEl.style.width = '100%';
       } else if (buildupState && (buildupState.state === 'blackout_shut' || buildupState.isBlackout)) {

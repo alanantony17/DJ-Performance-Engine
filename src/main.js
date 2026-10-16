@@ -214,30 +214,30 @@ export function showBuildupPreview(detail) {
   if (!buildupPreviewCard || !detail) return;
 
   if (detail.state === 'building') {
-    const arch = detail.archetype || { name: 'Kinetic Blitz', desc: 'Accelerating strobe to drop', color: '#facc15' };
+    const arch = detail.archetype || { name: 'Hyperdrive Warp', desc: 'Relativistic radial zoom streak to drop', color: '#38bdf8' };
     if (buildupPreviewIcon) buildupPreviewIcon.textContent = '⚡';
     if (buildupPreviewTag) {
       buildupPreviewTag.textContent = `BUILDUP: ${arch.name.toUpperCase()}`;
-      buildupPreviewTag.style.color = arch.color || '#eab308';
+      buildupPreviewTag.style.color = arch.color || '#38bdf8';
     }
     if (buildupPreviewMode) {
       buildupPreviewMode.textContent = `${detail.totalBars || 4}-BAR BUILD`;
-      buildupPreviewMode.style.borderColor = arch.color || '#eab308';
-      buildupPreviewMode.style.color = arch.color || '#fef08a';
+      buildupPreviewMode.style.borderColor = arch.color || '#38bdf8';
+      buildupPreviewMode.style.color = arch.color || '#bae6fd';
     }
     if (buildupPreviewName) buildupPreviewName.textContent = `${detail.totalBars || 4}-BAR [${arch.name.toUpperCase()}] @ ${(detail.lockedBpm || 128).toFixed(0)} BPM`;
     if (buildupPreviewDesc) buildupPreviewDesc.textContent = `${arch.desc} Hit Pad 4 (SLAM) to drop!`;
   } else if (detail.state === 'holding_climax') {
-    const arch = detail.archetype || { name: 'Kinetic Blitz', color: '#ef4444' };
+    const arch = detail.archetype || { name: 'Hyperdrive Warp', color: '#ef4444' };
     if (buildupPreviewIcon) buildupPreviewIcon.textContent = '🔥';
     if (buildupPreviewTag) buildupPreviewTag.textContent = 'PEAK CLIMAX';
     if (buildupPreviewMode) {
-      buildupPreviewMode.textContent = arch.mode === 'implosion' ? 'OBSIDIAN VOID' : '100% WHITEOUT';
+      buildupPreviewMode.textContent = (arch.mode === 'singularity' || arch.mode === 'implosion') ? 'OBSIDIAN VOID' : '100% WHITEOUT';
       buildupPreviewMode.style.borderColor = '#ef4444';
       buildupPreviewMode.style.color = '#fef08a';
     }
-    if (buildupPreviewName) buildupPreviewName.textContent = 'MAXIMUM CLIMAX REACHED';
-    if (buildupPreviewDesc) buildupPreviewDesc.textContent = 'Holding peak climax tension. Hit Pad 4 (SLAM) to drop!';
+    if (buildupPreviewName) buildupPreviewName.textContent = `CLIMAX: ${arch.name.toUpperCase()}`;
+    if (buildupPreviewDesc) buildupPreviewDesc.textContent = 'Holding maximum climax tension. Hit Pad 4 (SLAM) on Beat 1 to drop!';
   } else {
     if (buildupPreviewIcon) buildupPreviewIcon.textContent = '⏹️';
     if (buildupPreviewTag) buildupPreviewTag.textContent = 'BUILDUP IDLE';
@@ -318,13 +318,75 @@ export function toggleHue() {
   }
 }
 
+// Remote Companion State & Synchronization
+let cuedAssetIndex = null;
+let lastRemoteUpdate = 0;
+const remoteChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('dj_engine_assets') : null;
+
+// Post local changes to backend API and BroadcastChannel
+async function postActionToServer(action, id = null) {
+  try {
+    if (remoteChannel) {
+      remoteChannel.postMessage({ action, id, source: 'engine' });
+    }
+    const res = await fetch('/api/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, id, source: 'engine' })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.lastUpdate) lastRemoteUpdate = data.lastUpdate;
+    }
+  } catch (_) {}
+}
+
+// Select direct asset by index (0-based)
+export function selectAsset(index, notifyRemote = true) {
+  if (index >= 0 && index < CONFIG.assets.list.length) {
+    currentAssetIndex = index;
+    cuedAssetIndex = null;
+    showAssetPreview(currentAssetIndex);
+    window.dispatchEvent(new CustomEvent('engine:assetChange', { detail: { index: currentAssetIndex, asset: CONFIG.assets.list[currentAssetIndex] } }));
+    if (notifyRemote) {
+      postActionToServer('select_asset', index);
+    }
+  }
+}
+
+// Cue asset for next drop without changing current projection
+export function cueAsset(index, notifyRemote = true) {
+  if (index >= 0 && index < CONFIG.assets.list.length) {
+    cuedAssetIndex = index;
+    const asset = CONFIG.assets.list[index];
+    console.log(`[Engine] Cued asset for next drop: ${asset.name} (#${index})`);
+    showEffectPreview('ARMED FOR DROP', `${asset.name} (Hit Pad 4 to drop)`, '#f59e0b');
+    if (notifyRemote) {
+      postActionToServer('cue_asset', index);
+    }
+  }
+}
+
+// Commit armed/cued asset to live projection
+export function commitCuedAsset(notifyRemote = true) {
+  if (cuedAssetIndex !== null && cuedAssetIndex >= 0 && cuedAssetIndex < CONFIG.assets.list.length) {
+    const nextIdx = cuedAssetIndex;
+    cuedAssetIndex = null;
+    selectAsset(nextIdx, notifyRemote);
+    showEffectPreview('CUED ASSET DROPPED', CONFIG.assets.list[nextIdx]?.name, '#10b981');
+    if (notifyRemote) {
+      postActionToServer('commit_cued');
+    }
+    return true;
+  }
+  return false;
+}
+
 // Cycle to next asset
 export function cycleAsset() {
-  currentAssetIndex = (currentAssetIndex + 1) % CONFIG.assets.list.length;
-  console.log(`[Engine] Switched to asset: ${CONFIG.assets.list[currentAssetIndex].name} (${CONFIG.assets.list[currentAssetIndex].path})`);
-  showAssetPreview(currentAssetIndex);
-  // Dispatch asset change event for visual pipeline
-  window.dispatchEvent(new CustomEvent('engine:assetChange', { detail: { index: currentAssetIndex, asset: CONFIG.assets.list[currentAssetIndex] } }));
+  const nextIdx = (currentAssetIndex + 1) % CONFIG.assets.list.length;
+  console.log(`[Engine] Switched to asset: ${CONFIG.assets.list[nextIdx].name} (${CONFIG.assets.list[nextIdx].path})`);
+  selectAsset(nextIdx, true);
   // Silently check if new assets have been placed in the folder
   autoDiscoverAssets();
 }
@@ -332,20 +394,53 @@ export function cycleAsset() {
 // Background auto-discovery polling every 15 seconds
 setInterval(autoDiscoverAssets, 15000);
 
+// Polling for remote companion actions over Wi-Fi
+async function syncRemoteCompanion() {
+  try {
+    const res = await fetch('/api/state?t=' + Date.now());
+    if (res.ok) {
+      const state = await res.json();
+      if (state.lastUpdate && state.lastUpdate > lastRemoteUpdate) {
+        lastRemoteUpdate = state.lastUpdate;
+        if (state.actionSource === 'remote') {
+          if (state.activeAssetId !== undefined && state.activeAssetId !== currentAssetIndex) {
+            selectAsset(state.activeAssetId, false);
+          }
+          if (state.cuedAssetId !== undefined && state.cuedAssetId !== cuedAssetIndex) {
+            cuedAssetIndex = state.cuedAssetId;
+            if (cuedAssetIndex !== null) {
+              const asset = CONFIG.assets.list[cuedAssetIndex];
+              showEffectPreview('REMOTE ARMED CUE', `${asset?.name || 'Asset'} (Hit Pad 4 to drop)`, '#f59e0b');
+            }
+          }
+        }
+      }
+    }
+  } catch (_) {}
+}
+setInterval(syncRemoteCompanion, 350);
+
+// Listen to local BroadcastChannel for multi-tab zero-latency sync
+if (remoteChannel) {
+  remoteChannel.onmessage = (e) => {
+    const { action, id, source } = e.data || {};
+    if (source === 'remote') {
+      if (action === 'select_asset' && id !== undefined) {
+        selectAsset(id, false);
+      } else if (action === 'cue_asset' && id !== undefined) {
+        cueAsset(id, false);
+      } else if (action === 'commit_cued') {
+        commitCuedAsset(false);
+      }
+    }
+  };
+}
+
 // Cycle to next 3D motion preset (Pad 5 / Key 5 / V)
 export function cycleStyle() {
   if (threeEngine) {
     const activePreset = threeEngine.cyclePreset();
     showStylePreview(activePreset);
-  }
-}
-
-// Select direct asset by index (0-based)
-export function selectAsset(index) {
-  if (index >= 0 && index < CONFIG.assets.list.length) {
-    currentAssetIndex = index;
-    showAssetPreview(currentAssetIndex);
-    window.dispatchEvent(new CustomEvent('engine:assetChange', { detail: { index: currentAssetIndex, asset: CONFIG.assets.list[currentAssetIndex] } }));
   }
 }
 
@@ -421,7 +516,11 @@ const midi = new MidiController({
         threeEngine.resetSlicer();
         threeEngine.resetBeatRepeat();
       }
-      showEffectPreview('DROP SLAM', 'Master Blackout & FX Cleared', '#f43f5e');
+      // If an asset was armed/cued via phone, immediately drop it now!
+      const didDropCued = commitCuedAsset(true);
+      if (!didDropCued) {
+        showEffectPreview('DROP SLAM', 'Master Blackout & FX Cleared', '#f43f5e');
+      }
     } else if (padId === 'pad5') {
       // Pad 5: Cycle 3D Motion Preset
       cycleStyle();
@@ -468,7 +567,11 @@ const midi = new MidiController({
         threeEngine.resetSlicer();
         threeEngine.resetBeatRepeat();
       }
-      showEffectPreview('DROP SLAM', 'Master Blackout & FX Cleared', '#f43f5e');
+      // If an asset was armed/cued via phone, immediately drop it now!
+      const didDropCued = commitCuedAsset(true);
+      if (!didDropCued) {
+        showEffectPreview('DROP SLAM', 'Master Blackout & FX Cleared', '#f43f5e');
+      }
     } else if (padId === 'padB5') {
       // Pad B5: Arm Riser Archetype 0 (Kinetic Blitz)
       if (buildup) {

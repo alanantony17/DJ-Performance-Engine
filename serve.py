@@ -11,9 +11,19 @@ import os
 import sys
 import json
 import urllib.parse
+import time
+import socket
 
 PORT = 8000
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
+
+# Global engine state shared in real-time with remote controller
+ENGINE_STATE = {
+    'activeAssetId': 0,
+    'cuedAssetId': None,
+    'lastUpdate': time.time(),
+    'actionSource': 'boot'
+}
 
 class EngineHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -29,8 +39,12 @@ class EngineHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Expires', '0')
         super().end_headers()
 
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.end_headers()
+
     def do_HEAD(self):
-        if self.path.startswith('/api/assets'):
+        if self.path.startswith('/api/assets') or self.path.startswith('/api/state'):
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
@@ -38,6 +52,16 @@ class EngineHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         return super().do_HEAD()
 
     def do_GET(self):
+        # Engine Telemetry & Active/Cued Asset State API
+        if self.path.startswith('/api/state'):
+            payload = json.dumps(ENGINE_STATE).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+            return
+
         # Dynamic Asset Auto-Discovery API: scans assets/ folder on disk in real-time
         if self.path.startswith('/api/assets'):
             try:
@@ -115,6 +139,52 @@ class EngineHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
         return super().do_GET()
 
+    def do_POST(self):
+        # Remote Cueing & Hot-Switch API
+        if self.path.startswith('/api/action'):
+            try:
+                content_length = int(self.headers.get('Content-Length', 0))
+                body = self.rfile.read(content_length)
+                data = json.loads(body.decode('utf-8'))
+                action = data.get('action')
+                src = data.get('source', 'unknown')
+
+                if action == 'select_asset':
+                    asset_id = data.get('id')
+                    if asset_id is not None:
+                        ENGINE_STATE['activeAssetId'] = int(asset_id)
+                        ENGINE_STATE['cuedAssetId'] = None
+                elif action == 'cue_asset':
+                    asset_id = data.get('id')
+                    ENGINE_STATE['cuedAssetId'] = int(asset_id) if asset_id is not None else None
+                elif action == 'clear_cue':
+                    ENGINE_STATE['cuedAssetId'] = None
+                elif action == 'commit_cued':
+                    if ENGINE_STATE['cuedAssetId'] is not None:
+                        ENGINE_STATE['activeAssetId'] = ENGINE_STATE['cuedAssetId']
+                        ENGINE_STATE['cuedAssetId'] = None
+
+                ENGINE_STATE['lastUpdate'] = time.time()
+                ENGINE_STATE['actionSource'] = src
+
+                payload = json.dumps(ENGINE_STATE).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                return
+            except Exception as e:
+                err_payload = json.dumps({'error': str(e)}).encode('utf-8')
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(err_payload)
+                return
+
+        self.send_response(404)
+        self.end_headers()
+
     def guess_type(self, path):
         # Ensure proper JS module and image MIME types
         if path.endswith('.js'):
@@ -134,27 +204,35 @@ class EngineHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         if '200' not in args[1]:
             super().log_message(format, *args)
 
+def get_local_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
 def main():
     os.chdir(DIRECTORY)
     # Enable threaded request handling for smooth concurrent asset loading
     http.server.ThreadingHTTPServer.allow_reuse_address = True
+    local_ip = get_local_ip()
     try:
         with http.server.ThreadingHTTPServer(("", PORT), EngineHTTPRequestHandler) as httpd:
-            print("=" * 65)
-            print("  DJ PERFORMANCE ENGINE - OBS STUDIO BROWSERSOURCE SERVER")
-            print("=" * 65)
-            print(f"  > Engine URL:            http://localhost:{PORT}")
-            print(f"  > Asset Discovery API:   http://localhost:{PORT}/api/assets")
-            print(f"  > Local Directory:       {DIRECTORY}")
-            print("  > OBS Browser Source Setup:")
-            print(f"      - URL:    http://localhost:{PORT}")
-            print("      - Width:  1920")
-            print("      - Height: 1080")
-            print("      - FPS:    60")
-            print("=" * 65)
-            print("  Server is running with Dynamic Asset Auto-Discovery.")
-            print("  Drop any PNG/JPG into the 'assets/' folder - it detects automatically!")
-            print("=" * 65)
+            print("=" * 68)
+            print("   DJ PERFORMANCE ENGINE - OBS STUDIO BROWSERSOURCE SERVER")
+            print("=" * 68)
+            print(f"  > Engine URL (OBS/Local):  http://localhost:{PORT}")
+            print(f"  > Mobile Companion Deck:   http://{local_ip}:{PORT}/remote.html")
+            print(f"  > Asset Discovery API:     http://localhost:{PORT}/api/assets")
+            print(f"  > Engine State API:        http://localhost:{PORT}/api/state")
+            print(f"  > Local Directory:         {DIRECTORY}")
+            print("=" * 68)
+            print("  Server is running with Dynamic Asset Discovery & Remote Cueing.")
+            print("  Connect phone/tablet on same Wi-Fi to use the Companion Deck!")
+            print("=" * 68)
             httpd.serve_forever()
     except KeyboardInterrupt:
         print("\n[Engine Server] Stopped gracefully.")

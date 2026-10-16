@@ -393,19 +393,9 @@ export class ThreeDisplacementEngine {
           return;
         }
 
-        // 2. Buildup Strobe Gate
-        // Kinetic Blitz (0) & Chromatic Tear (2) use rapid strobe gating;
-        // Dark Implosion (1) & Solar Bloom (3) rely on fluid continuous tension
-        if (uBuildupActive > 0.5) {
-          if ((uRiserType == 0 || uRiserType == 2) && uStrobePulse < 0.01) {
-            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-            return;
-          }
-        }
-
         vec2 uv = vUv;
 
-        // 3. In-Shader Glitch UV Displacement
+        // 2. In-Shader Glitch UV Displacement
         if (uGlitch > 0.001) {
           float slice = floor(uv.y * 32.0);
           float hash = fract(sin(slice * 12.9898) * 43758.5453);
@@ -414,7 +404,7 @@ export class ThreeDisplacementEngine {
           }
         }
 
-        // 4. Aspect-Corrected Isotropic Coordinates
+        // 3. Aspect-Corrected Isotropic Coordinates
         vec2 centeredUv = uv - 0.5;
         vec2 isotropicUv = vec2(centeredUv.x * uMeshAspect, centeredUv.y);
 
@@ -426,19 +416,19 @@ export class ThreeDisplacementEngine {
           rotP = vec2(cRot * isotropicUv.x - sRot * isotropicUv.y, sRot * isotropicUv.x + cRot * isotropicUv.y);
         }
 
-        // DARK IMPLOSION (Riser 1): Centered Singularity Vortex Pinch
+        // SINGULARITY VOID (Riser 1): Centered Event Horizon Gravitational Pinch
         if (uBuildupActive > 0.5 && uRiserType == 1) {
-          float pinch = 1.0 + pow(uRiserProgress, 2.2) * 1.6;
+          float pinch = 1.0 + pow(uRiserProgress, 2.4) * 2.2;
           rotP *= pinch;
         }
 
         float uvScale = 1.0 + (uMid * 0.12);
         vec2 finalUv = rotP * uvScale + 0.5;
 
-        // CHROMATIC TEAR (Riser 2): RGB Channel Split
+        // PRISM OVERDRIVE (Riser 2): Rhythmic RGB Channel Split
         vec4 texColor;
         if (uBuildupActive > 0.5 && uRiserType == 2) {
-          float chromOffset = pow(uRiserProgress, 1.5) * 0.045;
+          float chromOffset = pow(uRiserProgress, 1.4) * 0.045;
           float rVal = texture2D(uTexture, finalUv + vec2(chromOffset, 0.0)).r;
           float gVal = texture2D(uTexture, finalUv).g;
           float bVal = texture2D(uTexture, finalUv - vec2(chromOffset, 0.0)).b;
@@ -464,31 +454,30 @@ export class ThreeDisplacementEngine {
           col = hsv2rgb(hsv);
         }
 
-        // 4 RISER ARCHETYPE COLOR TEMPERATURE TRAJECTORIES
+        // 4 WORLD-CLASS CONCERT RISER ARCHETYPE COLOR TRAJECTORIES
         if (uBuildupActive > 0.5) {
-          if (uRiserType == 1) {
-            // 1. DARK IMPLOSION: Progressive Desaturation -> Arctic Cobalt Chill -> Pre-Drop Total Silence
+          if (uRiserType == 0) {
+            // 0. HYPERDRIVE WARP: Electric cyan-white laser burn & high-energy saturation
+            vec3 hyperCyan = vec3(0.65, 0.92, 1.15);
+            col = mix(col, col * hyperCyan * 1.35, clamp(pow(uRiserProgress, 1.2) * 0.85, 0.0, 1.0));
+          } else if (uRiserType == 1) {
+            // 1. SINGULARITY VOID: Progressive Desaturation -> Arctic Silver/Cobalt -> Pure Obsidian Horizon
             float gray = dot(col, vec3(0.299, 0.587, 0.114));
-            vec3 cobaltTint = vec3(gray * 0.45, gray * 0.65, gray * 1.18);
+            vec3 cobaltTint = vec3(gray * 0.60, gray * 0.75, gray * 1.15);
             col = mix(col, cobaltTint, clamp(uRiserProgress * 1.25, 0.0, 1.0));
-            if (uRiserProgress > 0.84) {
-              // Pre-Drop Silence Pocket: Complete vanishing into obsidian void before beat 1
-              col *= (1.0 - smoothstep(0.84, 0.98, uRiserProgress));
+            if (uRiserProgress > 0.90) {
+              col *= (1.0 - smoothstep(0.90, 0.99, uRiserProgress));
             }
           } else if (uRiserType == 2) {
-            // 2. CHROMATIC TEAR: Transitions artwork into acid cyan / electric magenta split
-            vec3 acidShift = mix(vec3(0.0, 1.0, 0.92), vec3(1.0, 0.15, 0.75), sin(vUv.y * 24.0 + uTime * 12.0) * 0.5 + 0.5);
+            // 2. PRISM OVERDRIVE: Acid cyan & electric magenta CRT raster split
+            vec3 acidShift = mix(vec3(0.0, 1.0, 0.92), vec3(1.0, 0.15, 0.75), sin(vUv.y * 32.0 + uTime * 16.0) * 0.5 + 0.5);
             col = mix(col, col * acidShift * 1.45, clamp(pow(uRiserProgress, 1.25) * 0.90, 0.0, 1.0));
           } else if (uRiserType == 3) {
-            // 3. SOLAR BLOOM: Dynamic thermal progression:
-            vec3 goldFlare = vec3(1.0, 0.65, 0.20) * 1.6;
+            // 3. THERMAL SUPERNOVA: Molten Bronze/Amber -> Plasma Magenta -> Solar Incandescence
+            vec3 moltenAmber = vec3(1.0, 0.62, 0.20) * 1.6;
             vec3 plasmaMagenta = vec3(1.0, 0.18, 0.78) * 2.1;
-            vec3 solarColor = mix(goldFlare, plasmaMagenta, smoothstep(0.35, 0.82, uRiserProgress));
+            vec3 solarColor = mix(moltenAmber, plasmaMagenta, smoothstep(0.30, 0.80, uRiserProgress));
             col += solarColor * pow(uRiserProgress, 1.35);
-          } else if (uRiserType == 0) {
-            // 0. KINETIC BLITZ: Electric Ice-Blue shift into pure whiteout
-            vec3 electricIce = vec3(0.70, 0.90, 1.05);
-            col = mix(col, col * electricIce, clamp(pow(uRiserProgress, 1.2) * 0.65, 0.0, 1.0));
           }
         }
 
@@ -602,6 +591,19 @@ export class ThreeDisplacementEngine {
         uDecay: { value: this.decay },
         uColorPrimary: { value: new THREE.Vector3(0.72, 0.76, 0.88) },
         uColorSecondary: { value: new THREE.Vector3(0.45, 0.55, 0.78) },
+
+        // Master Optical Processor Uniforms
+        uPadSlam: { value: 0.0 },
+        uMasterBlackout: { value: 0.0 },
+        uBuildupActive: { value: 0.0 },
+        uRiserType: { value: 0 },
+        uRiserProgress: { value: 0.0 },
+        uStrobePulse: { value: 1.0 },
+        uRadialBlur: { value: 0.0 },
+        uHighPass: { value: 0.0 },
+        uChromatic: { value: 0.0 },
+        uRetinalGhost: { value: 0.0 },
+        uBlinder: { value: 0.0 },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -621,52 +623,156 @@ export class ThreeDisplacementEngine {
         uniform float uDecay;
         uniform vec3 uColorPrimary;
         uniform vec3 uColorSecondary;
+
+        // Master Optical Processor Uniforms
+        uniform float uPadSlam;
+        uniform float uMasterBlackout;
+        uniform float uBuildupActive;
+        uniform int uRiserType;
+        uniform float uRiserProgress;
+        uniform float uStrobePulse;
+        uniform float uRadialBlur;
+        uniform float uHighPass;
+        uniform float uChromatic;
+        uniform float uRetinalGhost;
+        uniform float uBlinder;
+
         varying vec2 vUv;
 
         void main() {
+          // -------------------------------------------------------------
+          // 1. MASTER BLACKOUT / DROP SLAM GATE (100% MANUAL PAD 4 CONTROL)
+          // -------------------------------------------------------------
+          if (uPadSlam > 0.5 || uMasterBlackout > 0.5) {
+            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+            return;
+          }
+
           vec2 center = vec2(0.5);
           vec2 p = vUv - center;
           float r = length(p);
           float angle = atan(p.y, p.x);
 
           // -------------------------------------------------------------
-          // 1. OBSIDIAN VOID HARMONIC BASE (KEEP IT SIMPLE: ZERO SUNBEAMS, PURE DARK VOID)
+          // 2. SINGULARITY VOID HORIZON PINCH (Archetype 1)
           // -------------------------------------------------------------
-          // Pure velvety dark void with microscopic color temperature from primary
+          vec2 sampleUv = vUv;
+          if (uBuildupActive > 0.5 && uRiserType == 1) {
+            float pinch = 1.0 + pow(uRiserProgress, 2.4) * 2.5;
+            sampleUv = p * pinch + center;
+          }
+
+          // -------------------------------------------------------------
+          // 3. RADIAL ZOOM BLUR & CHROMATIC DISPERSION (THE MASTER LENS)
+          // -------------------------------------------------------------
+          vec4 curr;
+          if (uBuildupActive > 0.5 && uRadialBlur > 0.005) {
+            vec2 dir = center - sampleUv;
+            float dist = length(dir);
+            vec2 normDir = dist > 0.0001 ? dir / dist : vec2(0.0);
+            float chromOffset = uChromatic * 0.024 * pow(uRiserProgress, 1.2);
+
+            vec4 accum = vec4(0.0);
+            float stepScale = (uRadialBlur * 0.06) / 8.0;
+
+            for (int i = 0; i < 8; i++) {
+              float fi = float(i);
+              vec2 off = normDir * (dist * fi * stepScale);
+              vec2 uvR = clamp(sampleUv + off + normDir * chromOffset, 0.0, 1.0);
+              vec2 uvG = clamp(sampleUv + off, 0.0, 1.0);
+              vec2 uvB = clamp(sampleUv + off - normDir * chromOffset, 0.0, 1.0);
+
+              float rC = texture2D(uCurrentScene, uvR).r;
+              float gC = texture2D(uCurrentScene, uvG).g;
+              float bC = texture2D(uCurrentScene, uvB).b;
+              float aC = texture2D(uCurrentScene, uvG).a;
+              accum += vec4(rC, gC, bC, aC);
+            }
+            curr = accum / 8.0;
+          } else if (uBuildupActive > 0.5 && uChromatic > 0.005) {
+            vec2 dir = center - sampleUv;
+            float dist = length(dir);
+            vec2 normDir = dist > 0.0001 ? dir / dist : vec2(0.0);
+            float chromOffset = uChromatic * 0.018;
+
+            float rC = texture2D(uCurrentScene, clamp(sampleUv + normDir * chromOffset, 0.0, 1.0)).r;
+            float gC = texture2D(uCurrentScene, clamp(sampleUv, 0.0, 1.0)).g;
+            float bC = texture2D(uCurrentScene, clamp(sampleUv - normDir * chromOffset, 0.0, 1.0)).b;
+            float aC = texture2D(uCurrentScene, clamp(sampleUv, 0.0, 1.0)).a;
+            curr = vec4(rC, gC, bC, aC);
+          } else {
+            curr = texture2D(uCurrentScene, sampleUv);
+          }
+
+          // -------------------------------------------------------------
+          // 4. OPTICAL HIGH-PASS (LUMINANCE WIREFRAME EXTRACTION)
+          // Strips solid fills as tension mounts, matching an audio high-pass filter
+          // -------------------------------------------------------------
+          if (uBuildupActive > 0.5 && uHighPass > 0.005) {
+            vec4 neighbor = texture2D(uCurrentScene, clamp(sampleUv + vec2(0.0022, 0.0022), 0.0, 1.0));
+            float edge = length(curr.rgb - neighbor.rgb);
+            vec3 wireGlow = curr.rgb + vec3(edge * 3.8);
+            vec3 highPassCol = mix(curr.rgb * 0.20, wireGlow * 1.5, uHighPass);
+            curr.rgb = mix(curr.rgb, highPassCol, clamp(uHighPass * 1.15, 0.0, 1.0));
+          }
+
+          // -------------------------------------------------------------
+          // 5. OBSIDIAN VOID HARMONIC BASE & FLUID CORONA
+          // -------------------------------------------------------------
           vec3 deepVoid = vec3(0.008, 0.010, 0.014) + uColorPrimary * 0.012;
 
-          // -------------------------------------------------------------
-          // 2. FLUID SILHOUETTE CORONA (ORGANIC EDGE ADVECTION)
-          // -------------------------------------------------------------
           float zoom = 1.0 + (0.010 * uSpreadReach) + (uKick * 0.030);
           vec2 warpedUv = p / zoom + center;
-
-          // Liquid curl for organic smoke/silk fluid movement
           float curlOffset = sin(r * 14.0 - uTime * 2.0) * (0.0022 * uCurl) * (1.0 + uKick * 1.2);
           warpedUv += vec2(cos(angle), sin(angle)) * curlOffset;
 
-          // Multi-tap soft diffusion so edge fluid disperses like watercolor pigment in water
           vec4 prev1 = texture2D(uPrevFeedback, warpedUv);
           vec4 prev2 = texture2D(uPrevFeedback, warpedUv + vec2(0.0018, 0.0018));
           vec4 prev3 = texture2D(uPrevFeedback, warpedUv - vec2(0.0018, 0.0018));
           vec4 prev = (prev1 * 0.50 + prev2 * 0.25 + prev3 * 0.25) * uDecay;
 
-          // -------------------------------------------------------------
-          // 3. SAMPLE CURRENT FOREGROUND FRAME (TOTEM + STARDUST)
-          // -------------------------------------------------------------
-          vec4 curr = texture2D(uCurrentScene, vUv);
-
-          // Subtle fluid silhouette trails carrying the true colors of the asset edges
           vec3 corona = prev.rgb * (uCoronaIntensity * 0.90);
-
-          // -------------------------------------------------------------
-          // 4. COMPOSITE
-          // -------------------------------------------------------------
           vec3 environment = deepVoid + corona;
 
-          // Composite foreground Totem over environment:
-          // The center hero asset maintains 100% true, crisp, untouched colors.
+          // Composite foreground Totem + Stardust over Environment
           vec3 finalRgb = mix(environment, curr.rgb, curr.a);
+
+          // -------------------------------------------------------------
+          // 6. MASTER STROBE SHUTTER & RETINAL PHOSPHOR GHOSTING
+          // -------------------------------------------------------------
+          if (uBuildupActive > 0.5) {
+            // Hyperdrive Warp (0) and Prism Overdrive (2) engage rhythmic optical shutter
+            if ((uRiserType == 0 || uRiserType == 2) && uStrobePulse < 0.01) {
+              if (uRetinalGhost > 0.01) {
+                // Inverted complementary phosphor after-image on strobe off-cycle
+                vec3 ghost = (vec3(1.0) - finalRgb) * uRetinalGhost * 0.45;
+                finalRgb = mix(vec3(0.0), ghost, uRetinalGhost);
+              } else {
+                finalRgb = vec3(0.0);
+              }
+            }
+          }
+
+          // -------------------------------------------------------------
+          // 7. MASTER BLINDER & CLIMAX ARRIVAL
+          // -------------------------------------------------------------
+          if (uBuildupActive > 0.5 && uBlinder > 0.001) {
+            if (uRiserType == 1) {
+              // Singularity Void: Vanishing into obsidian silence (zero whiteout!)
+              finalRgb *= (1.0 - clamp(uBlinder * 1.15, 0.0, 1.0));
+            } else if (uRiserType == 3) {
+              // Thermal Supernova: Incandescent solar blinder wash
+              vec3 solarClimax = mix(vec3(1.0, 0.70, 0.35), vec3(1.0, 0.96, 1.0), uBlinder);
+              finalRgb = mix(finalRgb, solarClimax, clamp(uBlinder * 0.95, 0.0, 1.0));
+            } else if (uRiserType == 2) {
+              // Prism Overdrive: Intense RGB neon flash
+              vec3 prismClimax = mix(vec3(0.0, 1.0, 0.95), vec3(1.0, 0.15, 0.8), sin(uTime * 24.0) * 0.5 + 0.5);
+              finalRgb = mix(finalRgb, prismClimax, clamp(uBlinder * 0.85, 0.0, 1.0));
+            } else {
+              // Hyperdrive Warp: Pure 100% stadium xenon whiteout
+              finalRgb = mix(finalRgb, vec3(1.0), clamp(uBlinder, 0.0, 1.0));
+            }
+          }
 
           gl_FragColor = vec4(finalRgb, 1.0);
         }
@@ -1442,6 +1548,19 @@ export class ThreeDisplacementEngine {
     this.feedbackMaterial.uniforms.uCurl.value = this.curl;
     this.feedbackMaterial.uniforms.uDecay.value = this.decay;
     this.feedbackMaterial.uniforms.uColorPrimary.value.set(effPrimary[0], effPrimary[1], effPrimary[2]);
+
+    // Master Optical Processor Uniform Updates
+    this.feedbackMaterial.uniforms.uPadSlam.value = computedMidi.padSlam ? 1.0 : 0.0;
+    this.feedbackMaterial.uniforms.uMasterBlackout.value = isShut ? 1.0 : 0.0;
+    this.feedbackMaterial.uniforms.uBuildupActive.value = isBuilding ? 1.0 : 0.0;
+    this.feedbackMaterial.uniforms.uRiserType.value = buildupState ? (buildupState.archetypeIndex !== undefined ? buildupState.archetypeIndex : 0) : 0;
+    this.feedbackMaterial.uniforms.uRiserProgress.value = buildupState ? (buildupState.progress || 0.0) : 0.0;
+    this.feedbackMaterial.uniforms.uStrobePulse.value = isBuilding ? (buildupState.strobePulse !== undefined ? buildupState.strobePulse : 1.0) : 1.0;
+    this.feedbackMaterial.uniforms.uRadialBlur.value = isBuilding ? (buildupState.radialBlur || 0.0) : 0.0;
+    this.feedbackMaterial.uniforms.uHighPass.value = isBuilding ? (buildupState.highPass || 0.0) : 0.0;
+    this.feedbackMaterial.uniforms.uChromatic.value = isBuilding ? (buildupState.chromatic || 0.0) : 0.0;
+    this.feedbackMaterial.uniforms.uRetinalGhost.value = isBuilding ? (buildupState.retinalGhost || 0.0) : 0.0;
+    this.feedbackMaterial.uniforms.uBlinder.value = isBuilding ? (buildupState.blinderIntensity || 0.0) : 0.0;
 
     // 8. 2-Pass Ping-Pong Render Execution
     // Pass 1: Render Crisp Totem Mesh & Stardust Motes to RenderTarget A

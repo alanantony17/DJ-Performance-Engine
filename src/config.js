@@ -87,10 +87,10 @@ export const CONFIG = {
       padB2: { notes: [45], cc: 29, name: 'Cycle Framing Mode', type: 'framing_mode_cycle' },
       padB3: { notes: [46], cc: 30, name: 'Toggle Drop Mode', type: 'drop_toggle' },
       padB4: { notes: [47], cc: 31, name: 'DROP SLAM Blackout (Panic)', type: 'drop_slam' },
-      padB5: { notes: [48], cc: 32, name: 'Arm Kinetic Blitz', type: 'arm_riser_0' },
-      padB6: { notes: [49], cc: 33, name: 'Arm Dark Implosion', type: 'arm_riser_1' },
-      padB7: { notes: [50], cc: 34, name: 'Arm Chromatic Tear', type: 'arm_riser_2' },
-      padB8: { notes: [51], cc: 35, name: 'Arm Solar Bloom', type: 'arm_riser_3' },
+      padB5: { notes: [48], cc: 32, name: 'Arm Hyperdrive Warp', type: 'arm_riser_0' },
+      padB6: { notes: [49], cc: 33, name: 'Arm Singularity Void', type: 'arm_riser_1' },
+      padB7: { notes: [50], cc: 34, name: 'Arm Prism Overdrive', type: 'arm_riser_2' },
+      padB8: { notes: [51], cc: 35, name: 'Arm Thermal Supernova', type: 'arm_riser_3' },
     },
 
     // Fallback Keyboard Shortcuts for Headless / Offline Testing
@@ -118,18 +118,18 @@ export const CONFIG = {
     },
   },
 
-  // One-Shot Buildup Sequencer Parameters & 4 Distinct Riser Archetypes
+  // One-Shot Buildup Sequencer Parameters & 4 World-Class Concert Riser Archetypes
   buildup: {
     defaultBpm: 128.0,
     startFreqHz: 4.0,
     maxFreqHz: 60.0,
-    blinderStartProgress: 0.70, // Whiteout blinder begins ramping at 70% of build to 100% climax
-    autoPreDropSilenceBeats: 0.0, // Handled manually by Pad 4 DROP SLAM master cutoff
+    blinderStartProgress: 0.75, // Whiteout blinder begins ramping in the final 25% of build
+    autoPreDropSilenceBeats: 0.0, // Handled 100% manually via Pad 4 DROP SLAM master cutoff
     archetypes: [
-      { id: 0, name: 'Kinetic Blitz', desc: 'Accelerating high-frequency strobe + blinding whiteout wash', color: '#facc15', mode: 'blitz' },
-      { id: 1, name: 'Dark Implosion', desc: 'Obsidian color drain, singularity vortex pinch, drop silence', color: '#06b6d4', mode: 'implosion' },
-      { id: 2, name: 'Chromatic Tear', desc: 'RGB channel separation, scanline glitch, micro-inversions', color: '#ec4899', mode: 'chromatic' },
-      { id: 3, name: 'Solar Bloom', desc: 'Luminescent golden feedback aurora, boiling fluid wave surge', color: '#f97316', mode: 'solar' },
+      { id: 0, name: 'Hyperdrive Warp', desc: 'Relativistic radial zoom streak, optical wireframe bloom, stadium xenon wash', color: '#38bdf8', mode: 'hyperdrive' },
+      { id: 1, name: 'Singularity Void', desc: 'Monochrome drain, event horizon pinch, absolute obsidian pre-drop silence', color: '#a855f7', mode: 'singularity' },
+      { id: 2, name: 'Prism Overdrive', desc: 'Subdivision RGB tear, retinal phosphor inversion, high-voltage CRT flash', color: '#ec4899', mode: 'prism' },
+      { id: 3, name: 'Thermal Supernova', desc: 'Molten magma to radioactive plasma, boiling fluid over-exposure blinder', color: '#f97316', mode: 'supernova' },
     ],
   },
 

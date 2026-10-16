@@ -4,37 +4,80 @@
 
 ---
 
-## 💡 Quick Braindump / Raw Notes
-- **Bank A Concept -> "Hotcue Keys":**
-  - Treat Bank A as live performance "Hotcue Keys" (instant, high-impact muscle-memory hits).
-  - Rethink Pad 7 (Slicer): Replace or evolve it into something more dynamic as a Hotcue action (e.g., Beat-Repeat / Stutter Glitch, Camera Whip/Zoom Punch, Temporal Freeze Cue, or Kinetic Shock Hit).
-- **Expanding Risers Beyond the Asset (Full-Canvas vs Bounded):**
-  - Currently riser shaders are largely bounded to the central artwork plane UVs.
-  - Explore having tension/energy bleed beyond the artwork into the obsidian void, feedback corona, and stardust motes (shockwave halos, atmospheric vignette, full-screen color temp wash).
-  - *Design balance:* Maintain the signature crisp totem silhouette against deep OLED blacks while allowing dramatic climax expansion.
-- **Riser Evolution & Vanishing Void:**
-  - Double down on **Dark Implosion** completely vanishing into the void (total pre-drop silence / vacuum pocket).
-  - **Color Temperature Trajectories:** Each riser archetype should travel through its own distinct color temperature journey over the 4/8 bars (e.g. Solar Bloom heating up through amber -> solar flare magenta/white; Dark Implosion chilling through desaturated silver -> arctic blue -> obsidian blackout).
-- **Asset Pipeline:**
-  - Get more high-res assets prepared and organized in `/assets/`.
+## 🧠 Active Architectural Challenges & Problem Solving
+
+### 1. Stealth / Instant Asset Cueing (Eliminating On-Screen Step-Through)
+- **The Core Problem:** Cycling through 40+ assets sequentially via Pad 3 forces the viewer/audience to watch dozens of unrelated pieces of art flash across the screen while the DJ searches for a specific visual. In a live projection or stream, this breaks immersion instantly.
+- **Architectural Solutions to Explore:**
+  1. **Companion Web Remote / Second-Screen Deck (`/remote.html` or `/controller.html`):**
+     - Serve a dedicated mobile/tablet touch surface (or second monitor) on the local network (`http://localhost:8000/remote`).
+     - Renders a clean visual grid of all asset thumbnails with metadata tags (e.g., *Totems*, *Cosmic*, *Liquid*, *Sacred*).
+     - Tap any thumbnail to either:
+       - **Instant Hot-Switch:** Immediately swaps the active texture on the main display.
+       - **Cue / Arm for Next Drop:** Arms the asset silently in the background; swaps automatically on the next Pad 4 (DROP SLAM) or Beat 1 measure boundary!
+     - Communicates with the main engine in real time via zero-latency `BroadcastChannel` (for multi-tab/same-machine OBS setups) or a lightweight WebSocket / Fetch endpoint in `serve.py`.
+  2. **Blind Cueing / "Next Asset Arming" on the Hardware Controller:**
+     - Turn Knob or Hold a modifier (e.g., Hold Pad B2 / Shift) to scroll through assets: the asset index changes *only* in the DJ's HUD or on a secondary monitor, NOT on the main canvas.
+     - Tap Pad 3 to commit the cued asset on the exact beat phrase, or have it swap on the next drop.
+  3. **Curated Setlist Banks / Direct Hotkeys:**
+     - Keyboard number keys `0-9` (or numpad) map directly to a curated "Top 10" favorites bank for quick panic-free jumps.
+     - MIDI Bank B combination keys: Bank B pads could select thematic groups (e.g., Pad B5 = Mandalas, B6 = Cosmic, B7 = Fluid, B8 = Abstract), followed by selecting 1 of 4 in that sub-bank.
+
+---
+
+### 2. Pure Projection / Stealth Mode (Zero Overlays, 100% Visuals)
+- **The Core Problem:** Even when the diagnostic HUD is toggled off (`D`), pressing pads or changing settings still triggers floating preview cards (`#asset-preview-card`, `#style-preview-card`, `#buildup-preview-card`, `#framing-preview-card`, `#hue-preview-card`, `#drop-preview-card`), the `#drop-hint` banner, and the mouse cursor. For live stage projectors or clean OBS outputs, **zero text, toast banners, or UI artifacts must ever appear**.
+- **Architectural Solutions to Explore:**
+  1. **Master "Clean Projection" Toggle (`P` Key / URL Parameter `?projection=1` / `?clean=1`):**
+     - Add a clean mode flag: `CONFIG.display.cleanProjectionMode`.
+     - When active:
+       - Adds a `.clean-projection` class to `<body>`.
+       - Completely disables all preview card timeouts and forces `display: none !important;` on all overlay divs, badges, hints, and notification toasts.
+       - Hides the mouse cursor globally (`cursor: none;`).
+       - Auto-hides `#start-overlay` on boot if auto-engaged via MIDI.
+  2. **Decoupled Dual-Window Architecture (The Touring Standard):**
+     - **Window 1 (Projector / OBS Canvas):** `http://localhost:8000/?mode=projection` — Renders 100% pure WebGL canvas without a single DOM overlay or toast element attached to the viewport.
+     - **Window 2 (DJ Laptop / Operator Cockpit):** `http://localhost:8000/?mode=cockpit` — Displays full real-time telemetry: live waveform FFT, BPM confidence, active asset preview, 16-pad state indicators, armed riser status, and touch/click controls.
+     - Synchronized instantaneously via the browser's native `BroadcastChannel('dj_engine_sync')`.
+
+---
+
+### 3. Song-Dynamic & Melodic-Driven Risers (Beyond Fixed Math Clocks)
+- **The Core Problem:** Pre-programmed mathematical risers (ramping strictly based on elapsed beats/time) feel uniform and repetitive across diverse tracks. Songs often have their own organic melodic build-ups (e.g., an ascending synth lead, an opening low-pass filter sweep, a vocal chant getting tighter, or a Shepard tone) that naturally drive crowd tension. The visual riser should listen to and ride those specific sonic cues in real time.
+- **Architectural Solutions to Explore:**
+  1. **Melodic Lead & Harmonic Energy Tracking:**
+     - **Spectral Centroid / Filter Sweep Tracker:** Detects when a track's high-cut filter is opening up by measuring the center of spectral mass across the FFT. As the synth gets brighter, the visual radial streak and optical high-pass wireframe bloom expand in direct proportion to the filter frequency.
+     - **Mid-High Lead Band (250Hz - 4kHz) Envelope Follower:** Isolates the lead synth/melody energy (ignoring kick/sub during breakdowns where drums drop out). Rhythmic synth stabs or arpeggios cause the strobe duty cycle and chromatic dispersion to pulse in lockstep with the actual notes played.
+     - **Spectral Flux / Transient Density:** Measures the rate of harmonic change. If the producer doubles the melody's note rate or introduces microtonal pitch bends, the visual displacement ripples accelerate to match the musical phrasing rather than a generic linear timer.
+  2. **Hybrid "Autopilot + Sonic Ride" Riser Sequencer:**
+     - Instead of the riser progress being strictly `progress = elapsed / totalDuration`:
+       - `Tension = (ClockProgress * 0.40) + (SpectralCentroid * 0.35) + (MelodyEnergy * 0.25)`
+     - This guarantees the riser still reaches its target within 4 or 8 bars, but the *contour* of the build dynamically twists, breathes, surges, and holds with the musical narrative of that specific track.
+  3. **Archetype-Specific Melodic Behaviors:**
+     - **Hyperdrive Warp:** Radial zoom streak velocity and optical wireframe density modulate directly with high-frequency melodic peaks.
+     - **Prism Overdrive:** RGB chromatic separation distance widens when high-register synth notes hit; scanline glitches sync to melodic transients.
+     - **Thermal Supernova:** Solar corona boil rate and incandescent plasma temperature ignite whenever the full-spectrum RMS energy swells.
+     - **Singularity Void:** Inverts energy—detects when the track strips away instruments leading up to the drop, sucking all color and particles inward as the audio gets quieter and more intimate, culminating in the pre-drop vacuum pocket.
 
 ---
 
 ## 🎯 Ready to Build (Curated)
 <!-- Tasks ready to be turned into code -->
+- [ ] **Stealth Projection Mode:** Add `P` shortcut and `?clean=1` / `?projection=1` URL mode that completely suppresses all preview cards, toasts, drop hints, and mouse cursor for pure visual output.
+- [ ] **Song-Dynamic Riser Analysis:** Feed Spectral Centroid (filter cutoff sweep) and Mid-High Lead Synth FFT energy into `BuildupSequencer` so riser tension curves ride the song's actual melodic build.
 - [ ] **Asset Expansion:** Ingest and organize more high-res artwork into /assets/.
 
 ---
 
 ## ✅ Done
 <!-- Completed features -->
+- [x] **Mobile / Tablet Asset Companion Deck (`/remote.html`):** Standalone booth-optimized touch deck with dual-deck cueing (LIVE green vs CUED amber), instant TAKE button, category filters (Totems, Cosmic, Fluid, 16:9), live search, screen WakeLock, PWA standalone meta tags, and automatic execution on Pad 4 DROP SLAM.
 - [x] **Square Asset Immersion & Dual Framing Engine:** World-Field Mode (16:9 screen fill with aspect-corrected UV rotation & seamless mirrored wrap) + Radial Portal Mode (soft circular sacred totem mask for square assets) with live toggle key [M], dynamic asset classification, and 100% manual hardware controller retention.
 - [x] **Hotcue Pad 7 (Temporal Beat-Repeat):** Quantized frame stutter & freeze (1/4, 1/8, 1/16, 1/32) replacing static slicer.
-- [x] **4 Riser Color Temperature Trajectories:** Solar Bloom (amber -> magenta -> white), Dark Implosion (cobalt -> void cutoff), Chromatic Tear (acid cyan/magenta), Kinetic Blitz (ice-blue -> whiteout).
-- [x] **Canvas-Wide Atmosphere Expansion:** Beyond-asset fluid corona eruption, starfield hyperspace/vacuum suction, and obsidian void thermal harmonization across the full 1080p screen.
-- [x] Dual-Bank 16-Pad Performance Matrix (Bank A: "Hotcue Keys", Bank B: Arming & Utility Matrix)
-- [x] Panic SLAM available on both banks (Pad 4 on Bank A, Pad B4 on Bank B)
-- [x] 4 Distinct Concert Riser Archetypes built (Kinetic Blitz, Dark Implosion, Chromatic Tear, Solar Bloom)
+- [x] **Top Layer Master Optical Processor:** Screen-space Radial Zoom Blur (hyperdrive streak), Optical High-Pass Wireframe Extraction (stripping low-frequency solid fills to mirror an audio HPF), Retinal Phosphor Ghosting (negative complementary after-image on strobe off-cycle), and sample-accurate Pad 4 DROP SLAM Master Blackout Gate.
+- [x] **Quantized Musical Subdivision Riser Engine:** Exact musical stepping (1/4 -> 1/8 -> 1/16 -> 1/32 -> 60Hz audio-rate flutter) locked to BPM, with distinct 4-Bar kinetic sprint and 8-Bar 3-Act theatrical narrative curves.
+- [x] **100% Manual Climax Holding:** Climax arrival holds maximum tension indefinitely until the DJ hits Pad 4 (DROP SLAM) on Beat 1—no premature auto-cuts.
+- [x] **4 World-Class Concert Riser Archetypes:** Hyperdrive Warp (Eric Prydz style radial laser streak & xenon wash), Singularity Void (Afterlife style event horizon collapse & obsidian silence), Prism Overdrive (Bicep Chroma style RGB channel tear & retinal inversion), and Thermal Supernova (Justice style molten to solar incandescence).
 - [x] Invert kept on Bank A (Pad 8), Drop mode moved to Bank B (Pad B3)
 - [x] HUD updated to render all 16 buttons with live telemetry and armed badges
 - [x] Pad 4 (DROP SLAM) cancels any active slicer mask immediately

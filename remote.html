@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>DJ Performance Engine - Asset Cue Deck</title>
+  <!-- Apple Web App & Fullscreen PWA Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DJ Cue Deck">
+  <meta name="theme-color" content="#000000">
+  <style>
+    :root {
+      --bg: #000000;
+      --card-bg: #0c0e14;
+      --card-border: rgba(255, 255, 255, 0.10);
+      --live-green: #10b981;
+      --live-glow: rgba(16, 185, 129, 0.35);
+      --cue-amber: #f59e0b;
+      --cue-glow: rgba(245, 158, 11, 0.40);
+      --cyan-accent: #00f0ff;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, sans-serif;
+      overflow-x: hidden;
+      min-height: 100vh;
+      padding-top: env(safe-area-inset-top, 12px);
+      padding-bottom: env(safe-area-inset-bottom, 80px);
+    }
+
+    /* Fixed Sticky Header */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.90);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 10px 14px;
+    }
+
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--live-green);
+      box-shadow: 0 0 8px var(--live-green);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .status-dot.disconnected {
+      background: #ef4444;
+      box-shadow: 0 0 8px #ef4444;
+    }
+
+    .mode-toggle-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.20);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .mode-toggle-btn.cue-mode {
+      border-color: var(--cue-amber);
+      color: var(--cue-amber);
+      background: rgba(245, 158, 11, 0.15);
+    }
+    .mode-toggle-btn.direct-mode {
+      border-color: var(--cyan-accent);
+      color: var(--cyan-accent);
+      background: rgba(0, 240, 255, 0.15);
+    }
+
+    /* Dual Deck Dock: LIVE vs CUED */
+    .dual-dock {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 12px 14px 6px;
+    }
+
+    .deck-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 10px;
+      border: 1.5px solid var(--card-border);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .deck-card.live {
+      border-color: var(--live-green);
+      box-shadow: 0 0 16px var(--live-glow);
+    }
+
+    .deck-card.cued {
+      border-color: var(--cue-amber);
+      box-shadow: 0 0 16px var(--cue-glow);
+    }
+
+    .deck-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .deck-pill {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+    .deck-pill.live-pill {
+      background: rgba(16, 185, 129, 0.20);
+      color: var(--live-green);
+      border: 1px solid var(--live-green);
+    }
+    .deck-pill.cue-pill {
+      background: rgba(245, 158, 11, 0.20);
+      color: var(--cue-amber);
+      border: 1px solid var(--cue-amber);
+    }
+
+    .deck-preview-shell {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #050608;
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .deck-preview-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .deck-preview-placeholder {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 8px;
+      line-height: 1.3;
+    }
+
+    .deck-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .deck-name {
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #fff;
+    }
+    .deck-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* Actions Bar below Cued */
+    .dock-actions {
+      display: flex;
+      gap: 8px;
+      padding: 6px 14px 10px;
+    }
+
+    .take-btn {
+      flex: 2;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #fff;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+    .take-btn:active {
+      transform: scale(0.97);
+    }
+    .take-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .clear-btn {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-muted);
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .clear-btn:active {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* Category Filter Pills */
+    .filter-scroll {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 4px 14px 10px;
+      scrollbar-width: none;
+    }
+    .filter-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .filter-pill {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 16px;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .filter-pill.active {
+      background: #fff;
+      color: #000;
+      border-color: #fff;
+    }
+
+    /* Search Box */
+    .search-shell {
+      padding: 0 14px 12px;
+    }
+    .search-input {
+      width: 100%;
+      background: #10121a;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #fff;
+      font-size: 13px;
+      padding: 9px 14px;
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input:focus {
+      border-color: var(--cyan-accent);
+    }
+    .search-input::placeholder {
+      color: rgba(255, 255, 255, 0.35);
+    }
+
+    /* Assets Grid */
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      padding: 0 14px 20px;
+    }
+    @media (min-width: 600px) {
+      .grid-container {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    @media (min-width: 900px) {
+      .grid-container {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    .asset-card {
+      background: var(--card-bg);
+      border: 1.5px solid var(--card-border);
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .asset-card:active {
+      transform: scale(0.96);
+    }
+
+    .asset-card.is-live {
+      border-color: var(--live-green);
+      box-shadow: 0 0 12px var(--live-glow);
+    }
+    .asset-card.is-cued {
+      border-color: var(--cue-amber);
+      box-shadow: 0 0 12px var(--cue-glow);
+    }
+
+    .asset-thumb-wrap {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #040508;
+      position: relative;
+      overflow: hidden;
+    }
+    .asset-thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.3s;
+    }
+
+    .asset-tag-badge {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+    .asset-card.is-live .asset-tag-badge {
+      background: var(--live-green);
+      border-color: var(--live-green);
+      color: #000;
+    }
+    .asset-card.is-cued .asset-tag-badge {
+      background: var(--cue-amber);
+      border-color: var(--cue-amber);
+      color: #000;
+    }
+
+    .asset-framing-badge {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      font-size: 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.65);
+      color: var(--text-muted);
+    }
+
+    .asset-info {
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .asset-title {
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #fff;
+    }
+    .asset-num {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* Fixed Bottom Panic Bar: DROP SLAM */
+    .panic-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 10px 14px calc(env(safe-area-inset-bottom, 10px) + 8px);
+      z-index: 100;
+    }
+
+    .slam-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%);
+      color: #fff;
+      border: 1px solid #fda4af;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(244, 63, 94, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform 0.1s;
+    }
+    .slam-btn:active {
+      transform: scale(0.97);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="top-bar">
+      <div class="status-badge">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="status-text">ONLINE</span>
+      </div>
+      <button class="mode-toggle-btn cue-mode" id="mode-toggle-btn">
+        <span id="mode-icon">🎯</span>
+        <span id="mode-text">MODE: CUE NEXT</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Dual Deck Dock: LIVE vs CUED -->
+  <section class="dual-dock">
+    <!-- Live Card (Crowd View) -->
+    <div class="deck-card live">
+      <div class="deck-header">
+        <span class="deck-pill live-pill">LIVE ON SCREEN</span>
+      </div>
+      <div class="deck-preview-shell">
+        <img class="deck-preview-img" id="live-img" src="" alt="Live Visual" style="display: none;">
+        <span class="deck-preview-placeholder" id="live-placeholder">Loading...</span>
+      </div>
+      <div class="deck-meta">
+        <span class="deck-name" id="live-name">—</span>
+        <span class="deck-sub" id="live-sub">Playing to Projector</span>
+      </div>
+    </div>
+
+    <!-- Cued Card (Armed for Drop) -->
+    <div class="deck-card cued">
+      <div class="deck-header">
+        <span class="deck-pill cue-pill">ARMED / CUED</span>
+      </div>
+      <div class="deck-preview-shell">
+        <img class="deck-preview-img" id="cued-img" src="" alt="Cued Visual" style="display: none;">
+        <span class="deck-preview-placeholder" id="cued-placeholder">Tap any asset to arm</span>
+      </div>
+      <div class="deck-meta">
+        <span class="deck-name" id="cued-name">Empty Cue</span>
+        <span class="deck-sub" id="cued-sub">Drops on Pad 4 SLAM</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Dock Actions Bar -->
+  <div class="dock-actions">
+    <button class="take-btn" id="take-btn" disabled>
+      <span>⚡ TAKE NOW</span>
+    </button>
+    <button class="clear-btn" id="clear-btn" disabled>CLEAR</button>
+  </div>
+
+  <!-- Category Filter Pills -->
+  <div class="filter-scroll">
+    <button class="filter-pill active" data-cat="all">ALL (40+)</button>
+    <button class="filter-pill" data-cat="totem">TOTEMS / SACRED</button>
+    <button class="filter-pill" data-cat="cosmic">COSMIC / SPACE</button>
+    <button class="filter-pill" data-cat="fluid">FLUID & ORGANIC</button>
+    <button class="filter-pill" data-cat="world">WORLD 16:9</button>
+  </div>
+
+  <!-- Search Filter -->
+  <div class="search-shell">
+    <input type="text" class="search-input" id="search-input" placeholder="Search assets by name (e.g. mandala, fluid, ink)..." autocomplete="off">
+  </div>
+
+  <!-- Assets Grid -->
+  <main class="grid-container" id="grid-container">
+    <!-- Populated dynamically via JS -->
+  </main>
+
+  <!-- Fixed Bottom Panic Bar: DROP SLAM -->
+  <footer class="panic-bar">
+    <button class="slam-btn" id="slam-btn">
+      <span>💥 DROP SLAM & FIRE CUE</span>
+    </button>
+  </footer>
+
+  <script>
+    // State Registers
+    let allAssets = [];
+    let activeAssetId = 0;
+    let cuedAssetId = null;
+    let activeFilter = 'all';
+    let searchQuery = '';
+    let tapMode = 'cue'; // 'cue' | 'direct'
+    let wakeLock = null;
+
+    // DOM Elements
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    const modeToggleBtn = document.getElementById('mode-toggle-btn');
+    const modeIcon = document.getElementById('mode-icon');
+    const modeText = document.getElementById('mode-text');
+
+    const liveImg = document.getElementById('live-img');
+    const livePlaceholder = document.getElementById('live-placeholder');
+    const liveName = document.getElementById('live-name');
+    const liveSub = document.getElementById('live-sub');
+
+    const cuedImg = document.getElementById('cued-img');
+    const cuedPlaceholder = document.getElementById('cued-placeholder');
+    const cuedName = document.getElementById('cued-name');
+    const cuedSub = document.getElementById('cued-sub');
+
+    const takeBtn = document.getElementById('take-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const slamBtn = document.getElementById('slam-btn');
+    const gridContainer = document.getElementById('grid-container');
+    const searchInput = document.getElementById('search-input');
+    const filterPills = document.querySelectorAll('.filter-pill');
+
+    // BroadcastChannel for multi-tab zero-latency local communication
+    const remoteChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('dj_engine_assets') : null;
+
+    // Haptic feedback helper
+    function haptic(ms = 25) {
+      if ('vibrate' in navigator) {
+        try { navigator.vibrate(ms); } catch (_) {}
+      }
+    }
+
+    // Screen Wake Lock API (keeps mobile screen awake in booth)
+    async function requestWakeLock() {
+      if ('wakeLock' in navigator) {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+          console.log('[WakeLock] Screen lock acquired.');
+        } catch (e) {
+          console.warn('[WakeLock] Could not acquire lock:', e);
+        }
+      }
+    }
+    requestWakeLock();
+
+    // Re-acquire Wake Lock & Resync when app returns to foreground
+    document.addEventListener('visibilitychange', async () => {
+      if (document.visibilityState === 'visible') {
+        await requestWakeLock();
+        await pollState();
+      }
+    });
+
+    // Categorization helper
+    function getCategory(asset) {
+      const name = (asset.name || '').toLowerCase();
+      const fn = (asset.filename || '').toLowerCase();
+      const text = name + ' ' + fn;
+
+      if (text.includes('space') || text.includes('supernova') || text.includes('blackhole') || text.includes('star')) {
+        return 'cosmic';
+      }
+      if (text.includes('fluid') || text.includes('ink') || text.includes('ferro') || text.includes('slime') || text.includes('ice') || text.includes('aerogel')) {
+        return 'fluid';
+      }
+      if (asset.framing === 'world' || text.includes('art') || text.includes('skyline') || text.includes('comic') || text.includes('fabric')) {
+        return 'world';
+      }
+      return 'totem'; // mandalas, diya, rangoli, jalebi, wheel, etc.
+    }
+
+    // Render Grid
+    function renderGrid() {
+      gridContainer.innerHTML = '';
+
+      const filtered = allAssets.filter(asset => {
+        // Category filter
+        if (activeFilter !== 'all') {
+          const cat = getCategory(asset);
+          if (activeFilter === 'totem' && cat !== 'totem') return false;
+          if (activeFilter === 'cosmic' && cat !== 'cosmic') return false;
+          if (activeFilter === 'fluid' && cat !== 'fluid') return false;
+          if (activeFilter === 'world' && cat !== 'world' && asset.framing !== 'world') return false;
+        }
+        // Search query
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          const matchName = (asset.name || '').toLowerCase().includes(q);
+          const matchFn = (asset.filename || '').toLowerCase().includes(q);
+          if (!matchName && !matchFn) return false;
+        }
+        return true;
+      });
+
+      filtered.forEach(asset => {
+        const isLive = asset.id === activeAssetId;
+        const isCued = asset.id === cuedAssetId;
+
+        const card = document.createElement('div');
+        card.className = `asset-card ${isLive ? 'is-live' : ''} ${isCued ? 'is-cued' : ''}`;
+        card.dataset.id = asset.id;
+
+        const tagText = isLive ? 'LIVE' : (isCued ? 'CUED' : `#${asset.id + 1}`);
+        const framingText = asset.framing === 'world' ? '16:9' : 'TOTEM';
+
+        card.innerHTML = `
+          <div class="asset-thumb-wrap">
+            <img class="asset-thumb" src="${asset.path}" alt="${asset.name}" loading="lazy">
+            <span class="asset-tag-badge">${tagText}</span>
+            <span class="asset-framing-badge">${framingText}</span>
+          </div>
+          <div class="asset-info">
+            <span class="asset-title">${asset.name}</span>
+            <span class="asset-num">ID: ${asset.id}</span>
+          </div>
+        `;
+
+        card.addEventListener('click', () => handleAssetClick(asset.id));
+        gridContainer.appendChild(card);
+      });
+    }
+
+    // Update Top Dual Dock (Live & Cued)
+    function updateDock() {
+      // 1. Live Asset
+      const liveAsset = allAssets.find(a => a.id === activeAssetId);
+      if (liveAsset) {
+        liveImg.src = liveAsset.path;
+        liveImg.style.display = 'block';
+        livePlaceholder.style.display = 'none';
+        liveName.textContent = liveAsset.name;
+        liveSub.textContent = `Asset #${liveAsset.id + 1} (${liveAsset.framing === 'world' ? '16:9 Field' : 'Radial Totem'})`;
+      } else {
+        liveImg.style.display = 'none';
+        livePlaceholder.style.display = 'block';
+        liveName.textContent = '—';
+      }
+
+      // 2. Cued Asset
+      const cuedAsset = allAssets.find(a => a.id === cuedAssetId);
+      if (cuedAsset) {
+        cuedImg.src = cuedAsset.path;
+        cuedImg.style.display = 'block';
+        cuedPlaceholder.style.display = 'none';
+        cuedName.textContent = cuedAsset.name;
+        cuedSub.textContent = 'Armed for Pad 4 DROP SLAM';
+        takeBtn.disabled = false;
+        clearBtn.disabled = false;
+      } else {
+        cuedImg.style.display = 'none';
+        cuedPlaceholder.style.display = 'block';
+        cuedPlaceholder.textContent = 'Tap any asset to arm';
+        cuedName.textContent = 'Empty Cue';
+        cuedSub.textContent = 'Drops on Pad 4 SLAM';
+        takeBtn.disabled = true;
+        clearBtn.disabled = true;
+      }
+    }
+
+    // Handle Asset Card Tap
+    async function handleAssetClick(id) {
+      haptic(30);
+
+      if (tapMode === 'direct') {
+        // Direct Hot-Fire
+        await postAction('select_asset', id);
+      } else {
+        // Cue Mode
+        if (cuedAssetId === id) {
+          // Tapping cued asset again clears it
+          await postAction('clear_cue');
+        } else {
+          await postAction('cue_asset', id);
+        }
+      }
+    }
+
+    // Post Action to Server & BroadcastChannel
+    async function postAction(action, id = null) {
+      // Local optimistic update
+      if (action === 'select_asset') {
+        activeAssetId = id;
+        cuedAssetId = null;
+      } else if (action === 'cue_asset') {
+        cuedAssetId = id;
+      } else if (action === 'clear_cue') {
+        cuedAssetId = null;
+      } else if (action === 'commit_cued') {
+        if (cuedAssetId !== null) {
+          activeAssetId = cuedAssetId;
+          cuedAssetId = null;
+        }
+      }
+
+      updateDock();
+      renderGrid();
+
+      // Broadcast to local tabs
+      if (remoteChannel) {
+        remoteChannel.postMessage({ action, id, source: 'remote' });
+      }
+
+      // Send to server API
+      try {
+        const res = await fetch('/api/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, id, source: 'remote' })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.activeAssetId !== undefined) activeAssetId = data.activeAssetId;
+          if (data.cuedAssetId !== undefined) cuedAssetId = data.cuedAssetId;
+          updateDock();
+          renderGrid();
+          setConnectionStatus(true);
+        } else {
+          setConnectionStatus(false);
+        }
+      } catch (err) {
+        setConnectionStatus(false);
+      }
+    }
+
+    function setConnectionStatus(online) {
+      if (online) {
+        statusDot.classList.remove('disconnected');
+        statusText.textContent = 'ONLINE';
+      } else {
+        statusDot.classList.add('disconnected');
+        statusText.textContent = 'CONNECTING...';
+      }
+    }
+
+    // Poll State from Server
+    async function pollState() {
+      try {
+        const res = await fetch('/api/state?t=' + Date.now());
+        if (res.ok) {
+          const state = await res.json();
+          let changed = false;
+          if (state.activeAssetId !== undefined && state.activeAssetId !== activeAssetId) {
+            activeAssetId = state.activeAssetId;
+            changed = true;
+          }
+          if (state.cuedAssetId !== undefined && state.cuedAssetId !== cuedAssetId) {
+            cuedAssetId = state.cuedAssetId;
+            changed = true;
+          }
+          if (changed) {
+            updateDock();
+            renderGrid();
+          }
+          setConnectionStatus(true);
+        } else {
+          setConnectionStatus(false);
+        }
+      } catch (_) {
+        setConnectionStatus(false);
+      }
+    }
+    setInterval(pollState, 450);
+
+    // Initial Fetch of All Assets
+    async function loadAssets() {
+      try {
+        const res = await fetch('/api/assets?t=' + Date.now());
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.assets)) {
+            allAssets = data.assets;
+            updateDock();
+            renderGrid();
+          }
+        }
+      } catch (e) {
+        console.warn('[Remote] Failed to fetch assets dynamically, trying static fallback.');
+        try {
+          const mRes = await fetch('assets/manifest.json');
+          if (mRes.ok) {
+            allAssets = await mRes.json();
+            updateDock();
+            renderGrid();
+          }
+        } catch (_) {}
+      }
+      await pollState();
+    }
+
+    // Event Listeners
+    modeToggleBtn.addEventListener('click', () => {
+      haptic(20);
+      tapMode = tapMode === 'cue' ? 'direct' : 'cue';
+      if (tapMode === 'cue') {
+        modeToggleBtn.className = 'mode-toggle-btn cue-mode';
+        modeIcon.textContent = '🎯';
+        modeText.textContent = 'MODE: CUE NEXT';
+      } else {
+        modeToggleBtn.className = 'mode-toggle-btn direct-mode';
+        modeIcon.textContent = '⚡';
+        modeText.textContent = 'MODE: DIRECT FIRE';
+      }
+    });
+
+    takeBtn.addEventListener('click', () => {
+      haptic(40);
+      postAction('commit_cued');
+    });
+
+    clearBtn.addEventListener('click', () => {
+      haptic(20);
+      postAction('clear_cue');
+    });
+
+    slamBtn.addEventListener('click', () => {
+      haptic(50);
+      postAction('commit_cued');
+    });
+
+    filterPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        haptic(15);
+        filterPills.forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        activeFilter = pill.dataset.cat;
+        renderGrid();
+      });
+    });
+
+    searchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value.trim();
+      renderGrid();
+    });
+
+    // Listen to local BroadcastChannel messages
+    if (remoteChannel) {
+      remoteChannel.onmessage = (e) => {
+        const { action, id, source } = e.data || {};
+        if (source === 'engine') {
+          if (action === 'select_asset' && id !== undefined) {
+            activeAssetId = id;
+            cuedAssetId = null;
+            updateDock();
+            renderGrid();
+          } else if (action === 'cue_asset' && id !== undefined) {
+            cuedAssetId = id;
+            updateDock();
+            renderGrid();
+          } else if (action === 'commit_cued') {
+            if (cuedAssetId !== null) {
+              activeAssetId = cuedAssetId;
+              cuedAssetId = null;
+              updateDock();
+              renderGrid();
+            }
+          }
+        }
+      };
+    }
+
+    // Startup
+    loadAssets();
+  </script>
+</body>
+</html>

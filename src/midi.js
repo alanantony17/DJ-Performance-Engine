@@ -73,21 +73,46 @@ export class MidiController {
     if (!this.midiAccess) return;
 
     const inputs = Array.from(this.midiAccess.inputs.values());
-    if (inputs.length === 0) {
+
+    // Clear any previous listeners on all ports to prevent duplicate/dangling callbacks
+    inputs.forEach(input => {
+      input.onmidimessage = null;
+    });
+
+    // 1. Explicitly isolate AKAI MPK Mini
+    const mpkInputs = inputs.filter(i => i.name && i.name.toLowerCase().includes('mpk'));
+
+    if (mpkInputs.length > 0) {
+      this.state.connected = true;
+      this.state.deviceName = mpkInputs[0].name || 'AKAI MPK Mini';
+      console.log(`[MIDI] Exclusively connected to MPK Mini: ${this.state.deviceName}`);
+
+      mpkInputs.forEach(input => {
+        input.onmidimessage = (msg) => this.handleMidiMessage(msg);
+      });
+    } else if (inputs.length > 0) {
+      // 2. Safe fallback: exclude DJ controllers (Pioneer, DDJ, FLX) so Rekordbox stays untouched
+      const safeInputs = inputs.filter(i => {
+        const name = (i.name || '').toLowerCase();
+        return !name.includes('flx') && !name.includes('ddj') && !name.includes('pioneer');
+      });
+
+      if (safeInputs.length > 0) {
+        this.state.connected = true;
+        this.state.deviceName = safeInputs[0].name || 'Generic MIDI Device';
+        console.log(`[MIDI] MPK not found. Connected to non-DJ controller: ${this.state.deviceName}`);
+        safeInputs.forEach(input => {
+          input.onmidimessage = (msg) => this.handleMidiMessage(msg);
+        });
+      } else {
+        this.state.connected = false;
+        this.state.deviceName = 'DJ Controller Ignored (No MPK)';
+        console.log('[MIDI] Only DJ controllers (DDJ-FLX4/Pioneer) detected. Ignoring to protect Rekordbox.');
+      }
+    } else {
       this.state.connected = false;
       this.state.deviceName = 'No MIDI device found';
       console.log('[MIDI] No MIDI input devices currently connected.');
-    } else {
-      this.state.connected = true;
-      // Prefer MPK Mini if found, otherwise use first device
-      const mpk = inputs.find(i => i.name && i.name.toLowerCase().includes('mpk'));
-      const activeDevice = mpk || inputs[0];
-      this.state.deviceName = activeDevice.name || 'Generic MIDI Device';
-      console.log(`[MIDI] Connected to: ${this.state.deviceName}`);
-
-      inputs.forEach(input => {
-        input.onmidimessage = (msg) => this.handleMidiMessage(msg);
-      });
     }
     this.notify();
   }
