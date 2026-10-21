@@ -8,6 +8,7 @@ import { CONFIG } from './config.js';
 export class DiagnosticHud {
   constructor() {
     this.overlay = document.getElementById('hud-overlay');
+    this.remoteUrlEl = document.getElementById('hud-remote-url');
     this.fpsEl = document.getElementById('hud-fps');
     this.bpmEl = document.getElementById('hud-bpm');
     this.midiDeviceEl = document.getElementById('hud-midi-device');
@@ -50,15 +51,19 @@ export class DiagnosticHud {
     this.padB8 = document.getElementById('hud-pad-b8');
     this.visualStyleEl = document.getElementById('hud-visual-style');
     this.hueStatusEl = document.getElementById('hud-hue-status');
-    this.repeatStatusEl = document.getElementById('hud-repeat-status') || document.getElementById('hud-slicer-status');
+    this.gratingStatusEl = document.getElementById('hud-grating-status') || document.getElementById('hud-repeat-status') || document.getElementById('hud-slicer-status');
+    this.repeatStatusEl = this.gratingStatusEl;
     this.slicerStatusEl = this.repeatStatusEl;
     this.armedRiserEl = document.getElementById('hud-armed-riser');
-    this.loadedRepeatEl = document.getElementById('hud-loaded-repeat') || document.getElementById('hud-loaded-slicer');
+    this.loadedGratingEl = document.getElementById('hud-loaded-grating') || document.getElementById('hud-loaded-repeat') || document.getElementById('hud-loaded-slicer');
+    this.loadedRepeatEl = this.loadedGratingEl;
     this.loadedSlicerEl = this.loadedRepeatEl;
     this.riserRotationEl = document.getElementById('hud-riser-rotation');
     this.framingStatusEl = document.getElementById('hud-framing-status');
     this.framingBtn = document.getElementById('hud-framing-btn');
     this.framingPadB2 = document.getElementById('hud-pad-b2');
+    this.laserStatusEl = document.getElementById('hud-laser-status');
+    this.laserBtn = document.getElementById('hud-laser-btn');
 
     const triggerFramingCycle = (e) => {
       e.stopPropagation();
@@ -68,6 +73,23 @@ export class DiagnosticHud {
     };
     if (this.framingBtn) this.framingBtn.addEventListener('click', triggerFramingCycle);
     if (this.framingPadB2) this.framingPadB2.addEventListener('click', triggerFramingCycle);
+
+    const triggerLaserToggle = (e) => {
+      e.stopPropagation();
+      if (window.threeEngine && window.threeEngine.toggleLaserPunch) {
+        window.threeEngine.toggleLaserPunch();
+      }
+    };
+    if (this.laserBtn) this.laserBtn.addEventListener('click', triggerLaserToggle);
+
+    this.projectionStatusEl = document.getElementById('hud-projection-status');
+    this.projectionBtn = document.getElementById('hud-projection-btn');
+    if (this.projectionBtn) {
+      this.projectionBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (window.toggleCleanProjection) window.toggleCleanProjection();
+      });
+    }
 
     // BPM Header Controls
     this.bpmLockBadge = document.getElementById('hud-bpm-lock-badge');
@@ -135,6 +157,22 @@ export class DiagnosticHud {
       }
     });
 
+        // Listen for dynamic optical grating change events
+    window.addEventListener('engine:gratingChanged', (e) => {
+      if (this.gratingStatusEl && e.detail) {
+        if (e.detail.active && e.detail.style) {
+          this.gratingStatusEl.textContent = `${e.detail.style.badge || e.detail.style.name.toUpperCase()} ACTIVE`;
+          this.gratingStatusEl.style.color = '#00f0ff';
+        } else {
+          this.gratingStatusEl.textContent = 'BYPASSED';
+          this.gratingStatusEl.style.color = '#64748b';
+        }
+      }
+      if (this.loadedGratingEl && e.detail && e.detail.style) {
+        this.loadedGratingEl.textContent = `[${e.detail.index + 1}/4] ${e.detail.style.name}`;
+      }
+    });
+
     // Listen for dynamic beat repeat change events
     window.addEventListener('engine:beatRepeatChanged', (e) => {
       if (this.repeatStatusEl && e.detail) {
@@ -176,6 +214,30 @@ export class DiagnosticHud {
       if (bEl) {
         bEl.textContent = label;
         bEl.style.color = color;
+      }
+    });
+
+    // Listen for dynamic projection mode change events
+    window.addEventListener('engine:projectionModeChanged', (e) => {
+      if (this.projectionStatusEl) {
+        const active = e.detail && e.detail.active;
+        this.projectionStatusEl.textContent = active ? 'CLEAN (100% VISUALS)' : 'OFF';
+        this.projectionStatusEl.style.color = active ? '#c084fc' : '#64748b';
+      }
+    });
+
+    // Listen for dynamic laser toggle events
+    window.addEventListener('engine:serverIpDiscovered', (e) => {
+      if (this.remoteUrlEl && e.detail && e.detail.ip) {
+        this.remoteUrlEl.textContent = 'http://' + e.detail.ip + ':8000/remote';
+      }
+    });
+
+    window.addEventListener('engine:laserToggled', (e) => {
+      if (this.laserStatusEl) {
+        const active = e.detail && e.detail.active;
+        this.laserStatusEl.textContent = active ? 'VECTOR ACTIVE' : 'BYPASS';
+        this.laserStatusEl.style.color = active ? '#00ff66' : '#64748b';
       }
     });
 
@@ -332,7 +394,7 @@ export class DiagnosticHud {
     if (this.pad4) this.pad4.classList.toggle('active', slamActive);
     if (this.pad5) this.pad5.classList.toggle('active', midiState.pads.pad5);
     if (this.pad6) this.pad6.classList.toggle('active', midiState.pads.pad6 || (window.threeEngine && window.threeEngine.hueFlowActive));
-    if (this.pad7) this.pad7.classList.toggle('active', midiState.pads.pad7 || (window.threeEngine && (window.threeEngine.beatRepeatActive || window.threeEngine.slicerActive)));
+    if (this.pad7) this.pad7.classList.toggle('active', midiState.pads.pad7 || (window.threeEngine && (window.threeEngine.gratingActive || window.threeEngine.beatRepeatActive || window.threeEngine.slicerActive)));
     if (this.pad8) this.pad8.classList.toggle('active', midiState.pads.pad8 || (window.threeEngine && window.threeEngine.negativeActive));
 
     // --- BANK B: ARMING & CONFIG ---
@@ -346,19 +408,25 @@ export class DiagnosticHud {
     if (this.padB8) this.padB8.classList.toggle('active', midiState.pads.padB8 || (buildupState && buildupState.archetypeIndex === 3));
 
     // Telemetry indicators
-    if (this.repeatStatusEl && window.threeEngine) {
-      if (window.threeEngine.beatRepeatActive) {
+    if (this.gratingStatusEl && window.threeEngine) {
+      if (window.threeEngine.gratingActive) {
+        const curStyle = window.threeEngine.gratingStyles[window.threeEngine.gratingStyle];
+        const isBuilding = buildupState && (buildupState.state === 'building' || buildupState.state === 'holding_climax');
+        const badge = curStyle ? (curStyle.badge || curStyle.name.toUpperCase()) : 'GRATING';
+        if (isBuilding) {
+          this.gratingStatusEl.textContent = `${badge} (RISER SYNC)`;
+          this.gratingStatusEl.style.color = '#facc15';
+        } else {
+          this.gratingStatusEl.textContent = `${badge} ACTIVE`;
+          this.gratingStatusEl.style.color = '#00f0ff';
+        }
+      } else if (window.threeEngine.beatRepeatActive) {
         const curStyle = window.threeEngine.beatRepeatStyles[window.threeEngine.beatRepeatIndex];
-        this.repeatStatusEl.textContent = curStyle ? `${curStyle.name.toUpperCase()} [${window.threeEngine.beatRepeatIndex + 1}/4]` : 'ACTIVE';
-        this.repeatStatusEl.style.color = '#22d3ee';
-      } else if (window.threeEngine.slicerActive) {
-        const styles = ['VENETIAN SLATS', 'RADIAL IRIS', 'CONCENTRIC DISCS', 'PRISM SHARDS'];
-        const styleName = styles[window.threeEngine.slicerStyle] || 'ACTIVE';
-        this.repeatStatusEl.textContent = `${styleName} [${window.threeEngine.slicerStyle + 1}/4]`;
-        this.repeatStatusEl.style.color = '#22d3ee';
+        this.gratingStatusEl.textContent = curStyle ? `${curStyle.name.toUpperCase()} [${window.threeEngine.beatRepeatIndex + 1}/4]` : 'ACTIVE';
+        this.gratingStatusEl.style.color = '#22d3ee';
       } else {
-        this.repeatStatusEl.textContent = 'BYPASSED';
-        this.repeatStatusEl.style.color = '#64748b';
+        this.gratingStatusEl.textContent = 'BYPASSED';
+        this.gratingStatusEl.style.color = '#64748b';
       }
     }
 
@@ -370,16 +438,36 @@ export class DiagnosticHud {
       }
     }
 
-    if (this.loadedRepeatEl && window.threeEngine) {
-      const curStyle = window.threeEngine.beatRepeatStyles[window.threeEngine.beatRepeatIndex];
+    if (this.loadedGratingEl && window.threeEngine) {
+      const curStyle = window.threeEngine.gratingStyles ? window.threeEngine.gratingStyles[window.threeEngine.gratingStyle] : null;
       if (curStyle) {
-        this.loadedRepeatEl.textContent = `[${window.threeEngine.beatRepeatIndex + 1}/4] ${curStyle.name}`;
+        this.loadedGratingEl.textContent = `[${window.threeEngine.gratingStyle + 1}/4] ${curStyle.name}`;
       }
     }
 
     if (this.riserRotationEl && buildupState) {
       this.riserRotationEl.textContent = buildupState.autoCycle ? 'Auto-Cycle (Round-Robin)' : 'Manual Locked';
       this.riserRotationEl.style.color = buildupState.autoCycle ? '#22c55e' : '#94a3b8';
+    }
+
+    if (this.laserStatusEl && window.threeEngine) {
+      if (window.threeEngine.laserManualPunch) {
+        this.laserStatusEl.textContent = 'PUNCH ACTIVE';
+        this.laserStatusEl.style.color = '#00ff66';
+      } else if (buildupState && buildupState.state === 'building' && (buildupState.highPass || 0) > 0.05) {
+        const hpPct = Math.round((buildupState.highPass || 0) * 100);
+        this.laserStatusEl.textContent = `BUILDUP (${hpPct}%)`;
+        this.laserStatusEl.style.color = '#22d3ee';
+      } else {
+        this.laserStatusEl.textContent = 'BYPASS';
+        this.laserStatusEl.style.color = '#64748b';
+      }
+    }
+
+    if (this.projectionStatusEl) {
+      const isClean = document.body.classList.contains('clean-projection');
+      this.projectionStatusEl.textContent = isClean ? 'CLEAN (100% VISUALS)' : 'OFF';
+      this.projectionStatusEl.style.color = isClean ? '#c084fc' : '#64748b';
     }
 
     // 5. Audio Transient Followers & Source

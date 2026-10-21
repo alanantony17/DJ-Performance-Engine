@@ -746,3 +746,31 @@ html, body {
   letter-spacing: 0.5px;
 }
 
+
+
+/* =========================================================================
+   PURE PROJECTION / STEALTH MODE (KEY: P or ?clean=1 / ?projection=1)
+   Completely suppresses all UI overlays, toast previews, badges, hints,
+   and mouse cursor for zero-latency 100% clean visual projector / OBS output.
+   ========================================================================= */
+body.clean-projection,
+body.clean-projection * {
+  cursor: none !important;
+}
+
+body.clean-projection #hud-overlay,
+body.clean-projection #asset-preview-card,
+body.clean-projection #style-preview-card,
+body.clean-projection #hue-preview-card,
+body.clean-projection #drop-preview-card,
+body.clean-projection #buildup-preview-card,
+body.clean-projection #framing-preview-card,
+body.clean-projection #drop-hint,
+body.clean-projection #audio-source-pill,
+body.clean-projection #audio-modal,
+body.clean-projection #start-overlay {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}

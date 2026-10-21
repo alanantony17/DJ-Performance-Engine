@@ -800,6 +800,11 @@
         const res = await fetch('/api/state?t=' + Date.now());
         if (res.ok) {
           const state = await res.json();
+          // Auto-detect when new assets have been added to the engine folder
+          if (state.assetCount !== undefined && state.assetCount !== allAssets.length) {
+            await loadAssets();
+            return;
+          }
           let changed = false;
           if (state.activeAssetId !== undefined && state.activeAssetId !== activeAssetId) {
             activeAssetId = state.activeAssetId;
@@ -822,6 +827,7 @@
       }
     }
     setInterval(pollState, 450);
+    setInterval(loadAssets, 10000); // Dynamic asset sync
 
     // Initial Fetch of All Assets
     async function loadAssets() {

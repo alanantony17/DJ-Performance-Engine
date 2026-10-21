@@ -42,22 +42,37 @@ export class ThreeDisplacementEngine {
     this.hueFlowActive = false;
     this.autoHue = 0.0;
 
-    // Hotcue FX State: Temporal Beat Repeat (Pad 7) & Negative Invert (Pad 8)
-    this.beatRepeatActive = false;
-    this.beatRepeatIndex = 1; // 0: 1/4 Beat, 1: 1/8 Beat (Stutter), 2: 1/16 Beat (Roll), 3: 1/32 Beat (Hyper)
-    this.beatRepeatDivisions = [1.0, 0.5, 0.25, 0.125];
-    this.beatRepeatStyles = [
-      { id: 0, name: '1/4 Beat Freeze', desc: 'Quarter-note frame hold & cadence snap' },
-      { id: 1, name: '1/8 Beat Stutter', desc: 'High-energy 8th-note temporal stutter & glitch' },
-      { id: 2, name: '1/16 Beat Roll', desc: 'Machine-gun 16th-note rapid micro-repeat' },
-      { id: 3, name: '1/32 Beat Hyper', desc: 'Granular audio-rate hyper-flutter' },
+    // Dynamic Optical Grating / Comb Shutter Registers (Pad 7 / Master Lens Shutter)
+    this.gratingActive = false;
+    this.gratingStyle = 0; // 0: Linear Kinetic Sweep, 1: Radial Gobo Teeth, 2: Kinetic Moire Waves, 3: Sonic Breathing Slits
+    this.gratingRotation = 0.785398; // 45 deg
+    this.gratingDensity = 14.0;
+    this.gratingWidth = 0.18; // Thick, high-contrast shadow bars
+    this.gratingDeployProgress = 0.0;
+    this.gratingDeployDuration = 1.0; // Standalone mechanical deployment duration (~2 beats)
+    this.gratingBeatTime = 0.0; // Tempo-locked beat accumulator (1.0 = 1 quarter-note beat)
+    this.gratingStyles = [
+      { id: 0, name: 'Linear Kinetic Sweep', badge: 'LINEAR', desc: 'Thick diagonal shadow bars sweeping across the lens' },
+      { id: 1, name: 'Radial Gobo Teeth', badge: 'RADIAL', desc: 'Motorized optical pinwheel teeth spinning from center core' },
+      { id: 2, name: 'Kinetic Moiré Waves', badge: 'MOIRÉ', desc: 'Dual-layer optical interference producing massive swimming ripples' },
+      { id: 3, name: 'Sonic Breathing Slits', badge: 'SONIC', desc: 'Acoustic shutter aperture breathing dynamically to kick bass' },
     ];
+    // Backward compatibility references
+    this.beatRepeatActive = false;
+    this.beatRepeatIndex = 0;
+    this.beatRepeatStyles = this.gratingStyles;
 
     // Physical In-Shader FX States (Legacy Slicer & Invert)
     this.slicerActive = false;
     this.slicerStyle = 0;
     this.slicerRotation = 0.785398;
     this.negativeActive = false;
+
+    // ILDA Projector Laser & Spatial Strobe Engine Registers (Approach B)
+    this.laserManualPunch = false;
+    this.laserBeamWidth = 1.0;
+    this.laserFanSpeed = 2.5;
+    this.laserFanBlades = 12.0;
 
     // Camera smoothing registers
     this.camTiltX = 0.0;
@@ -604,6 +619,26 @@ export class ThreeDisplacementEngine {
         uChromatic: { value: 0.0 },
         uRetinalGhost: { value: 0.0 },
         uBlinder: { value: 0.0 },
+
+        // Dynamic Optical Grating / Comb Shutter Uniforms (Master Lens Shutter)
+        uGratingActive: { value: 0.0 },
+        uGratingStyle: { value: 0 },
+        uGratingDensity: { value: 14.0 },
+        uGratingWidth: { value: 0.18 },
+        uGratingAngle: { value: 0.785398 },
+        uGratingTime: { value: 0.0 },
+        uGratingAudio: { value: 0.0 },
+        uGratingProgress: { value: 0.0 },
+        uGratingSubdivision: { value: 1.0 },
+
+        // ILDA Projector Laser & Spatial Vector Uniforms (Approach B)
+        uLaserIntensity: { value: 0.0 },
+        uLaserBeamWidth: { value: 1.0 },
+        uLaserColor: { value: new THREE.Vector3(0.0, 1.0, 0.45) },
+        uLaserFanSpeed: { value: 2.5 },
+        uLaserFanBlades: { value: 12.0 },
+        uJoystickPan: { value: 0.5 },
+        uJoystickTilt: { value: 0.5 },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -636,6 +671,26 @@ export class ThreeDisplacementEngine {
         uniform float uChromatic;
         uniform float uRetinalGhost;
         uniform float uBlinder;
+
+        // Dynamic Optical Grating / Comb Shutter Uniforms (Master Lens Shutter)
+        uniform float uGratingActive;
+        uniform int uGratingStyle;
+        uniform float uGratingDensity;
+        uniform float uGratingWidth;
+        uniform float uGratingAngle;
+        uniform float uGratingTime;
+        uniform float uGratingAudio;
+        uniform float uGratingProgress;
+        uniform float uGratingSubdivision;
+
+        // ILDA Projector Laser & Spatial Vector Uniforms (Approach B)
+        uniform float uLaserIntensity;
+        uniform float uLaserBeamWidth;
+        uniform vec3 uLaserColor;
+        uniform float uLaserFanSpeed;
+        uniform float uLaserFanBlades;
+        uniform float uJoystickPan;
+        uniform float uJoystickTilt;
 
         varying vec2 vUv;
 
@@ -705,21 +760,63 @@ export class ThreeDisplacementEngine {
           }
 
           // -------------------------------------------------------------
-          // 4. OPTICAL HIGH-PASS (LUMINANCE WIREFRAME EXTRACTION)
-          // Strips solid fills as tension mounts, matching an audio high-pass filter
+          // 4. ILDA PROJECTOR LASER VECTORIZER & SPATIAL STROBE (APPROACH B)
           // -------------------------------------------------------------
-          if (uBuildupActive > 0.5 && uHighPass > 0.005) {
-            vec4 neighbor = texture2D(uCurrentScene, clamp(sampleUv + vec2(0.0022, 0.0022), 0.0, 1.0));
-            float edge = length(curr.rgb - neighbor.rgb);
-            vec3 wireGlow = curr.rgb + vec3(edge * 3.8);
-            vec3 highPassCol = mix(curr.rgb * 0.20, wireGlow * 1.5, uHighPass);
-            curr.rgb = mix(curr.rgb, highPassCol, clamp(uHighPass * 1.15, 0.0, 1.0));
+          float effectiveLaser = max(uLaserIntensity, (uBuildupActive > 0.5) ? uHighPass : 0.0);
+
+          if (effectiveLaser > 0.002) {
+            // A. High-Precision 4-Tap Orthogonal Gradient for Vector Contour Extraction
+            vec2 dUv = vec2(1.0 / 1920.0, 1.0 / 1080.0) * (1.2 + uLaserBeamWidth * 0.8);
+            vec3 cL = texture2D(uCurrentScene, clamp(sampleUv - vec2(dUv.x, 0.0), 0.0, 1.0)).rgb;
+            vec3 cR = texture2D(uCurrentScene, clamp(sampleUv + vec2(dUv.x, 0.0), 0.0, 1.0)).rgb;
+            vec3 cT = texture2D(uCurrentScene, clamp(sampleUv + vec2(0.0, dUv.y), 0.0, 1.0)).rgb;
+            vec3 cB = texture2D(uCurrentScene, clamp(sampleUv - vec2(0.0, dUv.y), 0.0, 1.0)).rgb;
+
+            vec3 gradX = cR - cL;
+            vec3 gradY = cT - cB;
+            float edgeMag = (length(gradX) + length(gradY)) * 3.4;
+
+            // B. Dual-Threshold: Incandescent Xenon Core + Saturated Laser Wavelength Envelope
+            float laserCore = smoothstep(0.12, 0.40, edgeMag);
+            float laserAura = smoothstep(0.025, 0.22, edgeMag);
+
+            // Coherent laser line with overdriven phosphor core
+            vec3 laserLine = mix(uLaserColor * laserAura * 2.4, vec3(1.0, 1.0, 1.0) * 2.8, laserCore * 0.88);
+
+            // C. Solid Fill De-Materialization (Body dissolves into pure pitch-black)
+            float dissolveFactor = smoothstep(0.10, 0.90, effectiveLaser);
+            vec3 solidRemains = curr.rgb * (1.0 - dissolveFactor * 0.96);
+            curr.rgb = solidRemains + laserLine * effectiveLaser;
+
+            // D. Volumetric Spatial Laser Beams (Aerial Prism Fans & Warp Tunnels)
+            vec2 fanCenter = center + vec2((uJoystickPan - 0.5) * 0.45, (uJoystickTilt - 0.5) * 0.28);
+            vec2 fanP = sampleUv - fanCenter;
+            float fanR = length(fanP);
+            float fanAngle = atan(fanP.y, fanP.x) + uTime * uLaserFanSpeed;
+
+            // Rotating Aerial Prism Blades (8-24 razor-thin laser rays slicing across the room)
+            float spokeSin = abs(sin(fanAngle * uLaserFanBlades));
+            float spokeRay = smoothstep(0.962, 0.998, spokeSin);
+            // Center aperture cutout and outer reach
+            spokeRay *= smoothstep(0.04, 0.18, fanR) * (1.0 - smoothstep(0.85, 1.25, fanR));
+
+            // Concentric Warp Tunnel Rings (projecting cones into audience)
+            float ringSin = abs(sin(fanR * 26.0 - uTime * 14.0));
+            float ringRay = smoothstep(0.935, 0.995, ringSin) * smoothstep(0.06, 0.24, fanR);
+
+            // Modulate spatial rays by strobe shutter pulse and laser intensity
+            float beamPulse = (0.30 + 0.70 * uStrobePulse);
+            vec3 spatialBeams = (uLaserColor * spokeRay * 2.6) + (vec3(1.0) * ringRay * 1.8);
+            curr.rgb += spatialBeams * effectiveLaser * beamPulse;
           }
 
           // -------------------------------------------------------------
           // 5. OBSIDIAN VOID HARMONIC BASE & FLUID CORONA
           // -------------------------------------------------------------
           vec3 deepVoid = vec3(0.008, 0.010, 0.014) + uColorPrimary * 0.012;
+          if (effectiveLaser > 0.05) {
+            deepVoid *= (1.0 - effectiveLaser * 0.92);
+          }
 
           float zoom = 1.0 + (0.010 * uSpreadReach) + (uKick * 0.030);
           vec2 warpedUv = p / zoom + center;
@@ -732,6 +829,9 @@ export class ThreeDisplacementEngine {
           vec4 prev = (prev1 * 0.50 + prev2 * 0.25 + prev3 * 0.25) * uDecay;
 
           vec3 corona = prev.rgb * (uCoronaIntensity * 0.90);
+          if (effectiveLaser > 0.05) {
+            corona *= (1.0 - effectiveLaser * 0.85);
+          }
           vec3 environment = deepVoid + corona;
 
           // Composite foreground Totem + Stardust over Environment
@@ -771,6 +871,138 @@ export class ThreeDisplacementEngine {
             } else {
               // Hyperdrive Warp: Pure 100% stadium xenon whiteout
               finalRgb = mix(finalRgb, vec3(1.0), clamp(uBlinder, 0.0, 1.0));
+            }
+          }
+
+          // -------------------------------------------------------------
+          // 7b. DYNAMIC OPTICAL GRATING / COMB SHUTTER (PAD 7 - MASTER LENS SHUTTER)
+          // BPM-synchronized, progressive, and interlaced mechanical occlusion engine
+          // -------------------------------------------------------------
+          if (uGratingActive > 0.001) {
+            float shutterMask = 1.0;
+            
+            if (uGratingStyle == 0) {
+              // Style 0: Linear Kinetic Sweep - Interlocking Comb Fingers (BPM Synced)
+              // Even bars slide from top/left, Odd bars slide from bottom/right, interlocking like industrial fingers
+              float cosA = cos(uGratingAngle);
+              float sinA = sin(uGratingAngle);
+              vec2 rotP = vec2(cosA * p.x - sinA * p.y, sinA * p.x + cosA * p.y);
+
+              // Density tightens musically when clubbed with higher subdivisions
+              float densityMult = (uGratingSubdivision >= 16.0) ? 1.25 : 1.0;
+              float effDensity = uGratingDensity * densityMult;
+
+              // Periodic bar coordinate along rotP.x (uGratingTime is in BPM musical beats)
+              // 0.25 means bars shift by exactly 1 full slit every 4 beats (1 musical bar measure at song tempo)
+              float barCoord = rotP.x * effDensity + uGratingTime * 0.25;
+              float barIndex = floor(barCoord);
+              float isEven = mod(barIndex, 2.0); // 0.0 or 1.0
+
+              // Periodic wave for razor-sharp slits
+              float wave = sin(barCoord * 6.283185);
+              float af = fwidth(wave) * 1.5;
+              
+              // Shadow bar width expands with progress for solid industrial heft
+              float curWidth = mix(uGratingWidth * 0.70, uGratingWidth * 1.30, uGratingProgress);
+              float barCut = smoothstep(-af, af, wave - curWidth); // 0.0 in shadow bar, 1.0 in light slit
+
+              // Mechanical Finger Interlacing along rotP.y:
+              // Even fingers slide down from top (+y): reaches from +1.6 down to -1.6
+              float evenTip = mix(1.6, -1.6, clamp(uGratingProgress * 1.40, 0.0, 1.0));
+              float evenPresent = smoothstep(evenTip - 0.08, evenTip + 0.08, rotP.y);
+
+              // Odd fingers slide up from bottom (-y): reaches from -1.6 up to +1.6
+              float oddTip = mix(-1.6, 1.6, clamp(uGratingProgress * 1.40, 0.0, 1.0));
+              float oddPresent = smoothstep(oddTip + 0.08, oddTip - 0.08, rotP.y);
+
+              // Select finger reach based on even/odd bar
+              float fingerReach = mix(oddPresent, evenPresent, isEven);
+
+              // Apply shadow occlusion where fingers have reached (locks permanently across the entire screen once meshed!)
+              shutterMask = mix(1.0, barCut, fingerReach);
+            } else if (uGratingStyle == 1) {
+              // Style 1: Radial Gobo Teeth - Clockwork Radar Spoke Spawn & Iris Choke (BPM Synced)
+              // Rotates in tempo: 1 full 360° revolution every 16 beats (4 musical bars)
+              float normAngle = (angle + 3.14159265) / 6.2831853; // 0.0 to 1.0
+              
+              float maxSpokes = max(6.0, floor(uGratingDensity * 0.75));
+              float spokeCount = floor(mix(4.0, maxSpokes, clamp(uGratingProgress * 1.20, 0.0, 1.0)));
+
+              // Angular spin speed synced to musical tempo (pi/8 radians per beat = 16 beats per revolution)
+              float spinSpeed = 0.3927 * (1.0 + uGratingProgress * 0.40);
+              float phi = angle + uGratingTime * spinSpeed;
+              float wave = sin(phi * spokeCount);
+              float af = fwidth(wave) * 1.5;
+              float teethCut = smoothstep(-af, af, wave - uGratingWidth);
+
+              // 1. Clockwork Spoke Spawn (spokes appear sequentially around the circle)
+              float spawnLead = clamp(uGratingProgress * 1.35, 0.0, 1.0);
+              float spokeSpawn = smoothstep(0.0, 0.15, spawnLead - normAngle * 0.85);
+
+              // 2. Iris Aperture Choke (teeth creep inward from perimeter toward the core)
+              float irisChoke = mix(0.85, 0.12, clamp(uGratingProgress * 1.15, 0.0, 1.0));
+              float irisReach = smoothstep(irisChoke - 0.08, irisChoke + 0.08, r);
+
+              float goboPresence = spokeSpawn * irisReach;
+              shutterMask = mix(1.0, teethCut, goboPresence);
+            } else if (uGratingStyle == 2) {
+              // Style 2: Kinetic Moiré Waves - Two-Stage Layer Emergence (BPM Synced)
+              // Layer 1: Sleek diagonal grating moving at musical tempo
+              vec2 p1 = vec2(cos(uGratingAngle) * p.x - sin(uGratingAngle) * p.y, sin(uGratingAngle) * p.x + cos(uGratingAngle) * p.y);
+              float speed1 = 0.125 + uGratingProgress * 0.08;
+              float w1 = sin((p1.x * uGratingDensity + uGratingTime * speed1) * 6.283185);
+              float af1 = fwidth(w1) * 1.5;
+              float m1 = smoothstep(-af1, af1, w1 - 0.05);
+              
+              float l1Presence = clamp(uGratingProgress * 3.0, 0.0, 1.0);
+              float l1 = mix(1.0, m1, l1Presence);
+
+              // Stage 2: Layer 2 Emergence
+              float l2Weight = smoothstep(0.30, 0.75, uGratingProgress);
+              float angleOffset = mix(0.045, 0.125, l2Weight);
+              float a2 = uGratingAngle + angleOffset;
+              vec2 p2 = vec2(cos(a2) * p.x - sin(a2) * p.y, sin(a2) * p.x + cos(a2) * p.y);
+              
+              float speed2 = 0.09 + l2Weight * 0.10;
+              float density2 = uGratingDensity * (1.0 + l2Weight * 0.06);
+              float w2 = sin((p2.x * density2 - uGratingTime * speed2) * 6.283185);
+              float af2 = fwidth(w2) * 1.5;
+              float m2 = smoothstep(-af2, af2, w2 - 0.05);
+              float l2 = mix(1.0, m2, l2Weight);
+
+              shutterMask = l1 * l2;
+            } else if (uGratingStyle == 3) {
+              // Style 3: Sonic Breathing Slits - Progressive Claustrophobia Choke & Alternating Optical Diaphragm (BPM Synced)
+              float kickAperture = clamp(uGratingAudio * 0.95, 0.0, 1.0);
+
+              float baselineThresh = mix(0.12, 0.68, clamp(uGratingProgress * 1.15, 0.0, 1.0));
+              float dynamicThresh = mix(baselineThresh, -0.70, kickAperture);
+
+              float barCoord = p.y * uGratingDensity + uGratingTime * 0.06;
+              float barId = floor(barCoord);
+              float staggerSign = mod(barId, 2.0) > 0.5 ? 1.0 : -1.0;
+              
+              // 2-beat rhythmic breathing diaphragm (pulsing in musical lockstep)
+              float diaphragmOsc = staggerSign * sin(uGratingTime * 3.14159265 + kickAperture * 1.57) * (0.12 + uGratingProgress * 0.22);
+              float wave = sin((barCoord + diaphragmOsc) * 6.283185);
+              float af = fwidth(wave) * 1.5;
+              float slitMask = smoothstep(-af, af, wave - dynamicThresh);
+
+              float presence = clamp(uGratingProgress * 2.5, 0.0, 1.0);
+              shutterMask = mix(1.0, slitMask, presence);
+            }
+
+            finalRgb *= mix(1.0, shutterMask, uGratingActive);
+          }
+
+          // -------------------------------------------------------------
+          // 8. RUTHLESS BLACK FLOOR CLAMPING (PROJECTOR TRAP ELIMINATOR)
+          // Any near-black pixel is crushed strictly to #000000 so the projector lens casts zero gray box
+          // -------------------------------------------------------------
+          if (effectiveLaser > 0.12 || uBuildupActive > 0.5 || uGratingActive > 0.5) {
+            float lum = dot(finalRgb, vec3(0.299, 0.587, 0.114));
+            if (lum < 0.040) {
+              finalRgb = vec3(0.0);
             }
           }
 
@@ -1080,67 +1312,96 @@ export class ThreeDisplacementEngine {
     ];
   }
 
-  // Bank A Pad 7: Temporal Beat Repeat Hotcue
-  toggleBeatRepeat() {
-    this.beatRepeatActive = !this.beatRepeatActive;
-    const style = this.beatRepeatStyles[this.beatRepeatIndex];
-    console.log(`[ThreeEngine] Temporal Beat Repeat: ${this.beatRepeatActive ? 'ACTIVE' : 'BYPASS'} (${style.name})`);
-    window.dispatchEvent(new CustomEvent('engine:beatRepeatChanged', {
-      detail: { active: this.beatRepeatActive, style: style, index: this.beatRepeatIndex }
-    }));
-    return { active: this.beatRepeatActive, style: style, index: this.beatRepeatIndex };
+  // Bank A Pad 7: Dynamic Optical Grating / Comb Shutter Master Punch
+  toggleGratingPunch() {
+    this.gratingActive = !this.gratingActive;
+    this.beatRepeatActive = this.gratingActive;
+    if (this.gratingActive) {
+      this.gratingDeployProgress = 0.0;
+    }
+    const style = this.gratingStyles[this.gratingStyle];
+    console.log(`[ThreeEngine] Optical Grating Shutter: ${this.gratingActive ? 'ACTIVE' : 'BYPASS'} (${style.name})`);
+
+    const detail = { active: this.gratingActive, style: style, index: this.gratingStyle };
+    window.dispatchEvent(new CustomEvent('engine:gratingChanged', { detail }));
+    window.dispatchEvent(new CustomEvent('engine:beatRepeatChanged', { detail }));
+    return detail;
   }
 
-  // Bank B Pad 1: Cycle armed beat repeat subdivision rate
+  // Bank B Pad 1: Cycle armed Optical Grating Style
+  cycleGratingStyle() {
+    this.gratingStyle = (this.gratingStyle + 1) % this.gratingStyles.length;
+    this.beatRepeatIndex = this.gratingStyle;
+    const style = this.gratingStyles[this.gratingStyle];
+    console.log(`[ThreeEngine] Armed Grating Style: [${this.gratingStyle + 1}/4] ${style.name}`);
+
+    const detail = { active: this.gratingActive, style: style, index: this.gratingStyle };
+    window.dispatchEvent(new CustomEvent('engine:gratingChanged', { detail }));
+    window.dispatchEvent(new CustomEvent('engine:beatRepeatChanged', { detail }));
+    return detail;
+  }
+
+  setGratingStyle(index) {
+    this.gratingStyle = Math.max(0, Math.min(this.gratingStyles.length - 1, index));
+    this.beatRepeatIndex = this.gratingStyle;
+    const style = this.gratingStyles[this.gratingStyle];
+
+    const detail = { active: this.gratingActive, style: style, index: this.gratingStyle };
+    window.dispatchEvent(new CustomEvent('engine:gratingChanged', { detail }));
+    window.dispatchEvent(new CustomEvent('engine:beatRepeatChanged', { detail }));
+    return detail;
+  }
+
+  resetGrating() {
+    if (this.gratingActive) {
+      this.gratingActive = false;
+      this.beatRepeatActive = false;
+      this.gratingDeployProgress = 0.0;
+      const style = this.gratingStyles[this.gratingStyle];
+      const detail = { active: false, style: style, index: this.gratingStyle };
+      window.dispatchEvent(new CustomEvent('engine:gratingChanged', { detail }));
+      window.dispatchEvent(new CustomEvent('engine:beatRepeatChanged', { detail }));
+      return true;
+    }
+    return false;
+  }
+
+  // Backward compatibility aliases
+  toggleBeatRepeat() {
+    return this.toggleGratingPunch();
+  }
+
   cycleBeatRepeatRate() {
-    this.beatRepeatIndex = (this.beatRepeatIndex + 1) % this.beatRepeatStyles.length;
-    const style = this.beatRepeatStyles[this.beatRepeatIndex];
-    console.log(`[ThreeEngine] Armed Beat Repeat Rate: [${this.beatRepeatIndex + 1}/4] ${style.name}`);
-    window.dispatchEvent(new CustomEvent('engine:beatRepeatChanged', {
-      detail: { active: this.beatRepeatActive, style: style, index: this.beatRepeatIndex }
-    }));
-    return { active: this.beatRepeatActive, style: style, index: this.beatRepeatIndex };
+    return this.cycleGratingStyle();
   }
 
   setBeatRepeatRate(index) {
-    this.beatRepeatIndex = Math.max(0, Math.min(this.beatRepeatStyles.length - 1, index));
-    const style = this.beatRepeatStyles[this.beatRepeatIndex];
-    window.dispatchEvent(new CustomEvent('engine:beatRepeatChanged', {
-      detail: { active: this.beatRepeatActive, style: style, index: this.beatRepeatIndex }
-    }));
-    return { active: this.beatRepeatActive, style: style, index: this.beatRepeatIndex };
+    return this.setGratingStyle(index);
   }
 
   resetBeatRepeat() {
-    if (this.beatRepeatActive) {
-      this.beatRepeatActive = false;
-      const style = this.beatRepeatStyles[this.beatRepeatIndex];
-      window.dispatchEvent(new CustomEvent('engine:beatRepeatChanged', {
-        detail: { active: false, style: style, index: this.beatRepeatIndex }
-      }));
-    }
+    return this.resetGrating();
   }
 
-  // Bank A Pad 7: Fast ON / OFF punch for the loaded slicer style
   toggleSlicerPunch() {
-    return this.toggleBeatRepeat();
+    return this.toggleGratingPunch();
   }
 
-  // Bank B Pad 1: Cycle armed slicer style without forcing on/off
   cycleSlicerStyle() {
-    return this.cycleBeatRepeatRate();
+    return this.cycleGratingStyle();
   }
 
   setSlicerStyle(index) {
-    return this.setBeatRepeatRate(index);
+    return this.setGratingStyle(index);
   }
 
   toggleSlicer() {
-    return this.toggleBeatRepeat();
+    return this.toggleGratingPunch();
   }
 
   resetSlicer() {
-    this.resetBeatRepeat();
+    this.resetGrating();
+    this.resetLaser();
     if (this.slicerActive) {
       this.slicerActive = false;
       this.slicerStyle = 0;
@@ -1150,6 +1411,27 @@ export class ThreeDisplacementEngine {
       console.log('[ThreeEngine] Physical Slicer cancelled by DROP SLAM.');
       window.dispatchEvent(new CustomEvent('engine:slicerChanged', {
         detail: { active: false, style: null, index: 0 }
+      }));
+      return true;
+    }
+    return false;
+  }
+
+  // Live ILDA Laser Vectorizer Hotcue Toggle (Triggered via Key X, MIDI, or Buildup)
+  toggleLaserPunch() {
+    this.laserManualPunch = !this.laserManualPunch;
+    console.log(`[ThreeEngine] ILDA Laser Vectorizer: ${this.laserManualPunch ? 'ACTIVE' : 'BYPASS'}`);
+    window.dispatchEvent(new CustomEvent('engine:laserToggled', {
+      detail: { active: this.laserManualPunch }
+    }));
+    return this.laserManualPunch;
+  }
+
+  resetLaser() {
+    if (this.laserManualPunch) {
+      this.laserManualPunch = false;
+      window.dispatchEvent(new CustomEvent('engine:laserToggled', {
+        detail: { active: false }
       }));
       return true;
     }
@@ -1223,16 +1505,9 @@ export class ThreeDisplacementEngine {
       beatPhase = audioState.beatPhase || 0.0;
     }
 
-    // Temporal Beat-Repeat Hotcue Quantization
+    // Continuous High-Performance Rendering Clock
     let effectiveNow = now;
     let effectiveBeatPhase = beatPhase;
-    if (this.beatRepeatActive) {
-      const beatSec = 60.0 / Math.max(60.0, bpm);
-      const div = this.beatRepeatDivisions[this.beatRepeatIndex];
-      const sliceMs = (beatSec * div) * 1000.0;
-      effectiveNow = Math.floor(now / sliceMs) * sliceMs;
-      effectiveBeatPhase = ((effectiveNow * 0.001) / beatSec) % 1.0;
-    }
 
     if (audioState) {
       // Extract Melody & Vocals from FFT bins 11 to 35
@@ -1409,9 +1684,7 @@ export class ThreeDisplacementEngine {
     if (buildupState && buildupState.cameraTension > 0.0) {
       targetPosZ -= buildupState.cameraTension * 2.2;
     }
-    if (this.beatRepeatActive) {
-      targetPosZ -= 0.65;
-    }
+    // Grating shutter operates purely as optical lens occlusion without jarring camera jumps
 
     this.camTiltX = THREE.MathUtils.lerp(this.camTiltX, targetTiltX, 0.06);
     this.camPosY = THREE.MathUtils.lerp(this.camPosY, targetPosY, 0.06);
@@ -1435,7 +1708,7 @@ export class ThreeDisplacementEngine {
     this.uniforms.uHue.value = effectiveHue;
     if (computedMidi.padSlam) {
       if (this.slicerActive) this.resetSlicer();
-      if (this.beatRepeatActive) this.resetBeatRepeat();
+      if (this.gratingActive) this.resetGrating();
     }
     this.uniforms.uPadSlam.value = computedMidi.padSlam ? 1.0 : 0.0;
 
@@ -1461,9 +1734,7 @@ export class ThreeDisplacementEngine {
     let glitchVal = isBuilding && buildupState.progress > 0.65
       ? (buildupState.progress - 0.65) * 1.8
       : 0.0;
-    if (this.beatRepeatActive) {
-      glitchVal = Math.max(glitchVal, 0.45);
-    }
+    // Grating shutter is an optical occlusion comb, not a texture displacement/glitch
     this.uniforms.uGlitch.value = glitchVal;
     this.uniforms.uRiserType.value = buildupState ? (buildupState.archetypeIndex !== undefined ? buildupState.archetypeIndex : 0) : 0;
     this.uniforms.uRiserProgress.value = buildupState ? (buildupState.progress || 0.0) : 0.0;
@@ -1561,6 +1832,84 @@ export class ThreeDisplacementEngine {
     this.feedbackMaterial.uniforms.uChromatic.value = isBuilding ? (buildupState.chromatic || 0.0) : 0.0;
     this.feedbackMaterial.uniforms.uRetinalGhost.value = isBuilding ? (buildupState.retinalGhost || 0.0) : 0.0;
     this.feedbackMaterial.uniforms.uBlinder.value = isBuilding ? (buildupState.blinderIntensity || 0.0) : 0.0;
+
+    // ILDA Projector Laser & Spatial Vector Uniform Updates
+    const laserBuild = isBuilding ? Math.max(0.0, Math.min(1.0, (buildupState.highPass || 0.0) * 1.35)) : 0.0;
+    const finalLaserIntensity = Math.max(laserBuild, this.laserManualPunch ? 1.0 : 0.0);
+
+    // Calculate Laser Wavelength Color
+    let laserR = 0.0, laserG = 1.0, laserB = 0.45; // Default: 532nm DPSS Emerald Green
+    if (computedMidi.hue !== undefined && computedMidi.hue > 0.001) {
+      const h = computedMidi.hue;
+      if (h < 0.25) {
+        const t = h / 0.25;
+        laserR = 0.0; laserG = 1.0; laserB = 0.45 + t * 0.55;
+      } else if (h < 0.50) {
+        const t = (h - 0.25) / 0.25;
+        laserR = t; laserG = 1.0; laserB = 1.0;
+      } else if (h < 0.75) {
+        const t = (h - 0.50) / 0.25;
+        laserR = 1.0; laserG = 1.0 - t * 0.92; laserB = 1.0 - t * 0.55;
+      } else {
+        const t = (h - 0.75) / 0.25;
+        laserR = 1.0 - t; laserG = 0.08 + t * 0.92; laserB = 0.45;
+      }
+    } else if (buildupState && isBuilding) {
+      const archIdx = buildupState.archetypeIndex || 0;
+      if (archIdx === 0) {
+        laserR = 0.0; laserG = 0.95; laserB = 1.0; // Hyperdrive: Electric Cyan
+      } else if (archIdx === 1) {
+        laserR = 0.85; laserG = 0.92; laserB = 1.0; // Singularity: Arctic Silver
+      } else if (archIdx === 2) {
+        laserR = 1.0; laserG = 0.08; laserB = 0.55; // Prism: Acid Ruby / Neon Magenta
+      } else if (archIdx === 3) {
+        laserR = 1.0; laserG = 0.65; laserB = 0.15; // Thermal: Solar Flare / Molten Amber
+      }
+    }
+
+    this.feedbackMaterial.uniforms.uLaserIntensity.value = finalLaserIntensity;
+    this.feedbackMaterial.uniforms.uLaserBeamWidth.value = this.laserBeamWidth;
+    this.feedbackMaterial.uniforms.uLaserColor.value.set(laserR, laserG, laserB);
+    this.feedbackMaterial.uniforms.uLaserFanSpeed.value = 2.0 + (computedMidi.rippleRate || 1.0) * 3.5;
+    // Dynamic Optical Grating / Comb Shutter Master Uniforms
+    const effectiveBpm = Math.max(60.0, Math.min(220.0, bpm || 128.0));
+    // Accumulate tempo-locked musical beat clock (1.0 = 1 quarter-note beat)
+    this.gratingBeatTime += (effectiveBpm / 60.0) * dt;
+
+    if (this.gratingActive) {
+      // Standalone deployment advances over ~2 musical beats at track BPM
+      const deploySpeed = (effectiveBpm / 60.0) / 2.0;
+      this.gratingDeployProgress = Math.min(1.0, this.gratingDeployProgress + dt * deploySpeed);
+    } else {
+      this.gratingDeployProgress = 0.0;
+    }
+
+    // If DJ clubbed grating with a riser, synchronize progress & subdivision; otherwise use standalone mechanical deployment
+    let effGratingProgress = this.gratingDeployProgress;
+    let effGratingSubdivision = 1.0;
+
+    if (this.gratingActive && isBuilding && buildupState) {
+      effGratingProgress = Math.max(this.gratingDeployProgress, buildupState.progress || 0.0);
+      effGratingSubdivision = buildupState.subdivision || 4.0;
+    }
+
+    const gratingPunch = this.gratingActive ? 1.0 : 0.0;
+    this.gratingRotation += (0.18 + (computedMidi.strobeLfoHz || 8.0) * 0.06 + (isBuilding ? effGratingProgress * 0.25 : 0.0)) * dt;
+    const baseDensity = 12.0 + (computedMidi.waveSpread ? (computedMidi.waveSpread - 1.8) * 10.0 : 0.0);
+
+    this.feedbackMaterial.uniforms.uGratingActive.value = gratingPunch;
+    this.feedbackMaterial.uniforms.uGratingStyle.value = this.gratingStyle;
+    this.feedbackMaterial.uniforms.uGratingDensity.value = this.gratingStyle === 1 ? Math.floor(baseDensity * 0.8) : baseDensity;
+    this.feedbackMaterial.uniforms.uGratingWidth.value = this.gratingWidth;
+    this.feedbackMaterial.uniforms.uGratingAngle.value = this.gratingRotation;
+    this.feedbackMaterial.uniforms.uGratingTime.value = this.gratingBeatTime; // Tempo-locked to song BPM!
+    this.feedbackMaterial.uniforms.uGratingAudio.value = bass;
+    this.feedbackMaterial.uniforms.uGratingProgress.value = effGratingProgress;
+    this.feedbackMaterial.uniforms.uGratingSubdivision.value = effGratingSubdivision;
+
+    this.feedbackMaterial.uniforms.uLaserFanBlades.value = (isBuilding && buildupState.subdivision >= 16) ? 24.0 : 12.0;
+    this.feedbackMaterial.uniforms.uJoystickPan.value = computedMidi.joystickPan !== undefined ? computedMidi.joystickPan : 0.5;
+    this.feedbackMaterial.uniforms.uJoystickTilt.value = computedMidi.joystickAperture !== undefined ? computedMidi.joystickAperture : 0.5;
 
     // 8. 2-Pass Ping-Pong Render Execution
     // Pass 1: Render Crisp Totem Mesh & Stardust Motes to RenderTarget A

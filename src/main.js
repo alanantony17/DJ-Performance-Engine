@@ -93,8 +93,57 @@ function resizeCanvases() {
 window.addEventListener('resize', resizeCanvases);
 resizeCanvases();
 
+
+// Master Clean Projection Mode State & Controller (Key P / URL ?clean=1)
+export let isCleanProjection = false;
+
+export function toggleCleanProjection(forceState = null) {
+  if (forceState !== null) {
+    isCleanProjection = forceState;
+  } else {
+    isCleanProjection = !isCleanProjection;
+  }
+
+  if (isCleanProjection) {
+    document.body.classList.add('clean-projection');
+    if (hud) hud.hide();
+
+    if (previewTimeout) clearTimeout(previewTimeout);
+    if (stylePreviewTimeout) clearTimeout(stylePreviewTimeout);
+    if (huePreviewTimeout) clearTimeout(huePreviewTimeout);
+    if (dropPreviewTimeout) clearTimeout(dropPreviewTimeout);
+    if (buildupPreviewTimeout) clearTimeout(buildupPreviewTimeout);
+    if (framingPreviewTimeout) clearTimeout(framingPreviewTimeout);
+
+    const cards = [
+      assetPreviewCard, stylePreviewCard, huePreviewCard,
+      dropPreviewCard, buildupPreviewCard, framingPreviewCard,
+      startOverlay, audioModal
+    ];
+    cards.forEach(card => {
+      if (card) {
+        card.classList.remove('visible');
+        card.classList.add('hidden');
+      }
+    });
+
+    console.log('[Engine] Master Clean Projection Mode: ENGAGED (100% Visuals, Zero Overlays)');
+  } else {
+    document.body.classList.remove('clean-projection');
+    console.log('[Engine] Master Clean Projection Mode: BYPASSED (UI Overlays Restored)');
+    showEffectPreview('PROJECTION MODE OFF', 'UI Overlays & Previews Restored', '#10b981');
+  }
+
+  window.dispatchEvent(new CustomEvent('engine:projectionModeChanged', {
+    detail: { active: isCleanProjection }
+  }));
+
+  return isCleanProjection;
+}
+
 // Show on-screen Asset Preview card (smooth fade)
 export function showAssetPreview(assetIndex) {
+  if (isCleanProjection) return;
   const asset = CONFIG.assets.list[assetIndex % CONFIG.assets.list.length];
   if (!asset) return;
 
@@ -114,6 +163,7 @@ export function showAssetPreview(assetIndex) {
 
 // Show on-screen Visual Style Preview card (smooth fade)
 export function showStylePreview(style) {
+  if (isCleanProjection) return;
   if (!stylePreviewCard || !style) return;
 
   if (stylePreviewTag) {
@@ -141,6 +191,7 @@ export function showStylePreview(style) {
 
 // Show on-screen Hue Mode Preview card (smooth fade)
 export function showHuePreview(hueMode) {
+  if (isCleanProjection) return;
   if (!huePreviewCard || !hueMode) return;
 
   if (huePreviewName) {
@@ -165,6 +216,7 @@ export function showHuePreview(hueMode) {
 
 // Show on-screen Drop Dynamics Preview card (smooth fade)
 export function showDropPreview(dropDetail) {
+  if (isCleanProjection) return;
   if (!dropPreviewCard || !dropDetail) return;
 
   if (dropDetail.mode === 'forced') {
@@ -211,6 +263,7 @@ export function showDropPreview(dropDetail) {
 
 // Show on-screen Buildup Sequence Preview card (smooth fade)
 export function showBuildupPreview(detail) {
+  if (isCleanProjection) return;
   if (!buildupPreviewCard || !detail) return;
 
   if (detail.state === 'building') {
@@ -262,6 +315,7 @@ export function showBuildupPreview(detail) {
 
 // Show on-screen Framing Mode Preview card (smooth fade)
 export function showFramingPreview(framingInfo) {
+  if (isCleanProjection) return;
   if (!framingPreviewCard || !framingInfo) return;
 
   if (framingPreviewTag) framingPreviewTag.textContent = 'FRAMING MODE';
@@ -285,6 +339,7 @@ export function showFramingPreview(framingInfo) {
 
 // Show generic FX notification using Hue Preview Card
 export function showEffectPreview(title, desc, color = '#00f0ff') {
+  if (isCleanProjection) return;
   if (!huePreviewCard) return;
   if (huePreviewName) {
     huePreviewName.textContent = title;
@@ -400,6 +455,14 @@ async function syncRemoteCompanion() {
     const res = await fetch('/api/state?t=' + Date.now());
     if (res.ok) {
       const state = await res.json();
+      // Auto-update assets if server reports changes
+      if (state.assetCount !== undefined && state.assetCount !== CONFIG.assets.list.length) {
+        autoDiscoverAssets();
+      }
+      if (state.serverIp && (!window.__currentServerIp || window.__currentServerIp !== state.serverIp)) {
+        window.__currentServerIp = state.serverIp;
+        window.dispatchEvent(new CustomEvent('engine:serverIpDiscovered', { detail: { ip: state.serverIp } }));
+      }
       if (state.lastUpdate && state.lastUpdate > lastRemoteUpdate) {
         lastRemoteUpdate = state.lastUpdate;
         if (state.actionSource === 'remote') {
@@ -474,6 +537,9 @@ if (startOverlay) {
 }
 
 // 3. Initialize Web MIDI Controller (AKAI MPK Mini 3 - Clean 8-Pad Layout)
+let pad7PressTime = 0;
+let pad7WasActiveOnPress = false;
+
 const midi = new MidiController({
   onAnyInput: () => {
     // Zero-click auto resume on first MIDI touch
@@ -515,6 +581,8 @@ const midi = new MidiController({
       if (threeEngine) {
         threeEngine.resetSlicer();
         threeEngine.resetBeatRepeat();
+        threeEngine.resetLaser();
+        threeEngine.resetGrating();
       }
       // If an asset was armed/cued via phone, immediately drop it now!
       const didDropCued = commitCuedAsset(true);
@@ -528,10 +596,12 @@ const midi = new MidiController({
       // Pad 6: Toggle Auto-Hue Flow
       toggleHue();
     } else if (padId === 'pad7') {
-      // Pad 7: Temporal Beat Repeat Hotcue Key (Quantized stutter/freeze)
+      // Pad 7: Dynamic Optical Grating / Comb Shutter (Tap to Lock / Hold to Punch)
+      pad7PressTime = performance.now();
       if (threeEngine) {
-        const res = threeEngine.toggleBeatRepeat();
-        showEffectPreview('BEAT REPEAT', res.active ? `${res.style.name.toUpperCase()} ACTIVE` : 'REPEAT BYPASSED', res.active ? '#00f0ff' : '#94a3b8');
+        pad7WasActiveOnPress = threeEngine.gratingActive;
+        const res = threeEngine.toggleGratingPunch();
+        showEffectPreview('GRATING SHUTTER', res.active ? `${res.style.name.toUpperCase()} ACTIVE` : 'SHUTTER BYPASSED', res.active ? '#00f0ff' : '#94a3b8');
       }
     } else if (padId === 'pad8') {
       // Pad 8: Negative X-Ray Invert
@@ -543,10 +613,10 @@ const midi = new MidiController({
 
     // --- BANK B: ARMING & UTILITY CONFIGURATION ---
     else if (padId === 'padB1') {
-      // Pad B1: Cycle Armed Beat Repeat Subdivision Rate
+      // Pad B1: Cycle Armed Optical Grating Style
       if (threeEngine) {
-        const res = threeEngine.cycleBeatRepeatRate();
-        showEffectPreview(`REPEAT RATE [${res.index + 1}/4]`, `${res.style.name}: ${res.style.desc}`, '#00f0ff');
+        const res = threeEngine.cycleGratingStyle();
+        showEffectPreview(`GRATING [${res.index + 1}/4]`, `${res.style.name}: ${res.style.desc}`, '#00f0ff');
       }
     } else if (padId === 'padB2') {
       // Pad B2: Cycle Framing Mode (World-Field / Radial Portal / Classic)
@@ -566,6 +636,8 @@ const midi = new MidiController({
       if (threeEngine) {
         threeEngine.resetSlicer();
         threeEngine.resetBeatRepeat();
+        threeEngine.resetLaser();
+        threeEngine.resetGrating();
       }
       // If an asset was armed/cued via phone, immediately drop it now!
       const didDropCued = commitCuedAsset(true);
@@ -600,6 +672,18 @@ const midi = new MidiController({
   },
   onStateChange: (rawState, computed) => {
     // State is read continuously in rAF loop
+  },
+  onPadRelease: (padId) => {
+    if (padId === 'pad7') {
+      const holdDuration = performance.now() - pad7PressTime;
+      // Momentary hold: If held down for >= 250ms and this press activated it, release immediately on finger lift!
+      if (holdDuration >= 250 && !pad7WasActiveOnPress) {
+        if (threeEngine && threeEngine.gratingActive) {
+          threeEngine.resetGrating();
+          showEffectPreview('GRATING SHUTTER', 'SHUTTER RELEASED', '#94a3b8');
+        }
+      }
+    }
   }
 });
 
@@ -619,6 +703,11 @@ window.addEventListener('engine:buildupReleased', (e) => {
 
 // Key bindings for HUD, Drop Mode, and Direct Asset Switching
 window.addEventListener('keydown', (e) => {
+  // Toggle Master Clean Projection Mode (Key P)
+  if (e.code === (CONFIG.midi.keyboardFallback.toggleProjectionKey || 'KeyP')) {
+    toggleCleanProjection();
+    return;
+  }
   if (e.code === CONFIG.midi.keyboardFallback.toggleHud) {
     hud.toggle();
   }
@@ -637,6 +726,17 @@ window.addEventListener('keydown', (e) => {
     if (threeEngine) {
       const mode = threeEngine.cycleFramingMode();
       showFramingPreview(mode);
+    }
+  }
+  // Toggle ILDA Projector Laser Vectorizer (Key X)
+  if (e.code === 'KeyX') {
+    if (threeEngine) {
+      const isLaser = threeEngine.toggleLaserPunch();
+      showEffectPreview(
+        isLaser ? 'ILDA LASER ENGAGED' : 'LASER BYPASS',
+        isLaser ? 'Vector Contour Extraction & Spatial Prism Fan Active' : 'Normal Organic Rendering Restored',
+        isLaser ? '#00ff66' : '#94a3b8'
+      );
     }
   }
   // Direct asset selection via Alt + 1..9 (reserving Shift + 1-8 for Bank B pads)
@@ -816,6 +916,17 @@ window.midi = midi;
 window.hud = hud;
 window.buildup = buildup;
 window.CONFIG = CONFIG;
+
+// URL Parameter Detection for OBS / Clean Projection Mode (?clean=1 or ?projection=1)
+try {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('clean') === '1' || urlParams.get('projection') === '1' || urlParams.get('mode') === 'projection') {
+    toggleCleanProjection(true);
+  }
+} catch (_) {}
+
+window.toggleCleanProjection = toggleCleanProjection;
+
 
 export { midi, audio, threeEngine, hud, buildup, currentAssetIndex, CONFIG };
 console.log('[Engine] High-Performance Three.js Audiovisual Rig Online & Ready for OBS.');

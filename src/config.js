@@ -9,6 +9,7 @@ export const CONFIG = {
     width: 1920,
     height: 1080,
     targetFps: 60,
+    cleanProjectionMode: false,
   },
 
   // Asset Pipeline (All 29 assets registered with clean URL encoding & framing category)
@@ -79,11 +80,11 @@ export const CONFIG = {
       pad4: { notes: [39], cc: 23, name: 'DROP SLAM Blackout', type: 'drop_slam' },
       pad5: { notes: [40], cc: 24, name: 'Cycle 3D Motion Preset', type: 'style_cycle' },
       pad6: { notes: [41], cc: 25, name: 'Toggle Auto-Hue Flow', type: 'hue_flow_toggle' },
-      pad7: { notes: [42], cc: 26, name: 'Temporal Beat Repeat', type: 'beat_repeat_toggle' },
+      pad7: { notes: [42], cc: 26, name: 'Dynamic Optical Grating Shutter', type: 'grating_toggle' },
       pad8: { notes: [43], cc: 27, name: 'Negative X-Ray Flash', type: 'negative_toggle' },
 
       // BANK B: Arming & Configuration Matrix
-      padB1: { notes: [44], cc: 28, name: 'Cycle Repeat Rate', type: 'repeat_rate_cycle' },
+      padB1: { notes: [44], cc: 28, name: 'Cycle Grating Shutter Style', type: 'grating_style_cycle' },
       padB2: { notes: [45], cc: 29, name: 'Cycle Framing Mode', type: 'framing_mode_cycle' },
       padB3: { notes: [46], cc: 30, name: 'Toggle Drop Mode', type: 'drop_toggle' },
       padB4: { notes: [47], cc: 31, name: 'DROP SLAM Blackout (Panic)', type: 'drop_slam' },
@@ -106,9 +107,12 @@ export const CONFIG = {
       cycleStyleKey: 'KeyV',
       toggleDropKey: 'KeyB',
       toggleHud: 'KeyD',
-      toggleSlicerKey: 'KeyP',
+      toggleProjectionKey: 'KeyP',
+      toggleGratingKey: 'KeyU',
+      toggleSlicerKey: 'KeyU',
       toggleNegativeKey: 'KeyN',
       toggleFramingKey: 'KeyM',
+      toggleLaserKey: 'KeyX',
       resetPan: 'KeyC',
       knob5Up: 'KeyT',
       knob5Down: 'KeyG',

@@ -44,6 +44,7 @@ export class MidiController {
     };
 
     this.midiAccess = null;
+    this.onPadRelease = null;
     this.initMidi();
     this.initKeyboardFallback();
   }
@@ -258,7 +259,9 @@ export class MidiController {
     this.state.padVelocities[padId] = isPressed ? velocity : 0;
 
     if (isPressed && !wasPressed) {
-      this.onPadTrigger(padId, velocity);
+      if (this.onPadTrigger) this.onPadTrigger(padId, velocity);
+    } else if (!isPressed && wasPressed) {
+      if (this.onPadRelease) this.onPadRelease(padId);
     }
     this.notify();
   }
@@ -281,7 +284,7 @@ export class MidiController {
 
       if (e.code === kb.cycleStyleKey) this.triggerPad('pad5', true, 1.0);
       else if (e.code === kb.toggleDropKey) this.triggerPad('padB3', true, 1.0);
-      else if (e.code === kb.toggleSlicerKey) this.triggerPad('pad7', true, 1.0);
+      else if (e.code === kb.toggleGratingKey || e.code === kb.toggleSlicerKey) this.triggerPad('pad7', true, 1.0);
       else if (e.code === kb.toggleNegativeKey) this.triggerPad('pad8', true, 1.0);
       else if (e.code === kb.resetPan) {
         this.state.joystick.pan = 0.5;
@@ -365,7 +368,7 @@ export class MidiController {
       const kb = CONFIG.midi.keyboardFallback;
       if (e.code === kb.cycleStyleKey) this.triggerPad('pad5', false, 0);
       else if (e.code === kb.toggleDropKey) this.triggerPad('padB3', false, 0);
-      else if (e.code === kb.toggleSlicerKey) this.triggerPad('pad7', false, 0);
+      else if (e.code === kb.toggleGratingKey || e.code === kb.toggleSlicerKey) this.triggerPad('pad7', false, 0);
       else if (e.code === kb.toggleNegativeKey) this.triggerPad('pad8', false, 0);
     });
 
