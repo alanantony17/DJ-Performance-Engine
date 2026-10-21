@@ -556,7 +556,7 @@
     "name": "Kabir: Early Morning",
     "filename": "Kabir's universe/kabir - early morning.jpg",
     "path": "assets/Kabir%27s%20universe/kabir%20-%20early%20morning.jpg",
-    "framing": "totem",
+    "framing": "world",
     "collection": "kabir",
     "chapter": 1,
     "scene": "Early Morning"
@@ -566,7 +566,7 @@
     "name": "Kabir: Balcony",
     "filename": "Kabir's universe/kabir - balcony.jpg",
     "path": "assets/Kabir%27s%20universe/kabir%20-%20balcony.jpg",
-    "framing": "totem",
+    "framing": "world",
     "collection": "kabir",
     "chapter": 2,
     "scene": "Balcony"
@@ -576,7 +576,7 @@
     "name": "Kabir: Kitchen",
     "filename": "Kabir's universe/kabir - kitchen.jpg",
     "path": "assets/Kabir%27s%20universe/kabir%20-%20kitchen.jpg",
-    "framing": "totem",
+    "framing": "world",
     "collection": "kabir",
     "chapter": 3,
     "scene": "Kitchen"
@@ -586,7 +586,7 @@
     "name": "Kabir: Pooja",
     "filename": "Kabir's universe/kabir - pooja.jpg",
     "path": "assets/Kabir%27s%20universe/kabir%20-%20pooja.jpg",
-    "framing": "totem",
+    "framing": "world",
     "collection": "kabir",
     "chapter": 4,
     "scene": "Pooja"
@@ -596,7 +596,7 @@
     "name": "Kabir: Shopping",
     "filename": "Kabir's universe/kabir - shopping.jpg",
     "path": "assets/Kabir%27s%20universe/kabir%20-%20shopping.jpg",
-    "framing": "totem",
+    "framing": "world",
     "collection": "kabir",
     "chapter": 5,
     "scene": "Shopping"
@@ -606,7 +606,7 @@
     "name": "Kabir: Aisha - Getting Ready",
     "filename": "Kabir's universe/aisha - getting ready.jpg",
     "path": "assets/Kabir%27s%20universe/aisha%20-%20getting%20ready.jpg",
-    "framing": "totem",
+    "framing": "world",
     "collection": "kabir",
     "chapter": 6,
     "scene": "Aisha - Getting Ready"
@@ -616,7 +616,7 @@
     "name": "Kabir: Rangoli Making",
     "filename": "Kabir's universe/kabir - rangoli making.jpg",
     "path": "assets/Kabir%27s%20universe/kabir%20-%20rangoli%20making.jpg",
-    "framing": "totem",
+    "framing": "world",
     "collection": "kabir",
     "chapter": 7,
     "scene": "Rangoli Making"
@@ -626,7 +626,7 @@
     "name": "Kabir: Outdoors",
     "filename": "Kabir's universe/kabir - outdoors.jpg",
     "path": "assets/Kabir%27s%20universe/kabir%20-%20outdoors.jpg",
-    "framing": "totem",
+    "framing": "world",
     "collection": "kabir",
     "chapter": 8,
     "scene": "Outdoors"
@@ -636,7 +636,7 @@
     "name": "Kabir: With The Case",
     "filename": "Kabir's universe/kabir - with the case.jpg",
     "path": "assets/Kabir%27s%20universe/kabir%20-%20with%20the%20case.jpg",
-    "framing": "totem",
+    "framing": "world",
     "collection": "kabir",
     "chapter": 9,
     "scene": "With The Case"
@@ -646,7 +646,7 @@
     "name": "Kabir: Technician",
     "filename": "Kabir's universe/kabir - technician.jpg",
     "path": "assets/Kabir%27s%20universe/kabir%20-%20technician.jpg",
-    "framing": "totem",
+    "framing": "world",
     "collection": "kabir",
     "chapter": 10,
     "scene": "Technician"
@@ -656,7 +656,7 @@
     "name": "Kabir: Light Setup",
     "filename": "Kabir's universe/kabir - light setup.jpg",
     "path": "assets/Kabir%27s%20universe/kabir%20-%20light%20setup.jpg",
-    "framing": "totem",
+    "framing": "world",
     "collection": "kabir",
     "chapter": 11,
     "scene": "Light Setup"
@@ -666,7 +666,7 @@
     "name": "Kabir: Performing",
     "filename": "Kabir's universe/kabir - performing.jpg",
     "path": "assets/Kabir%27s%20universe/kabir%20-%20performing.jpg",
-    "framing": "totem",
+    "framing": "world",
     "collection": "kabir",
     "chapter": 12,
     "scene": "Performing"
@@ -676,7 +676,7 @@
     "name": "Kabir: Clocking Out",
     "filename": "Kabir's universe/kabir - clocking out.jpg",
     "path": "assets/Kabir%27s%20universe/kabir%20-%20clocking%20out.jpg",
-    "framing": "totem",
+    "framing": "world",
     "collection": "kabir",
     "chapter": 13,
     "scene": "Clocking Out"
@@ -686,7 +686,7 @@
     "name": "Kabir: Playing Cards",
     "filename": "Kabir's universe/kabir - playing cards.jpg",
     "path": "assets/Kabir%27s%20universe/kabir%20-%20playing%20cards.jpg",
-    "framing": "totem",
+    "framing": "world",
     "collection": "kabir",
     "chapter": 14,
     "scene": "Playing Cards"
@@ -696,7 +696,7 @@
     "name": "Kabir: Morning After",
     "filename": "Kabir's universe/kabir - morning after.jpg",
     "path": "assets/Kabir%27s%20universe/kabir%20-%20morning%20after.jpg",
-    "framing": "totem",
+    "framing": "world",
     "collection": "kabir",
     "chapter": 15,
     "scene": "Morning After"
@@ -706,7 +706,7 @@
     "name": "Kabir: Kabir - The Poster",
     "filename": "Kabir's universe/Kabir - poster.jpg",
     "path": "assets/Kabir%27s%20universe/Kabir%20-%20poster.jpg",
-    "framing": "totem",
+    "framing": "world",
     "collection": "kabir",
     "chapter": 16,
     "scene": "Kabir - The Poster"

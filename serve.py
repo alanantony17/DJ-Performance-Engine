@@ -152,7 +152,7 @@ def scan_asset_list():
                     'name': f"Kabir: {title}",
                     'filename': f"Kabir's universe/{fn}",
                     'path': f"assets/{quoted}",
-                    'framing': 'totem',
+                    'framing': 'world',
                     'collection': 'kabir',
                     'chapter': ch,
                     'scene': title

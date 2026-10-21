@@ -685,7 +685,7 @@
           if (!isLive && !isCued) {
             tagText = `CH ${String(asset.chapter || (asset.id - 68)).padStart(2, '0')}`;
           }
-          framingText = 'STORY';
+          framingText = '16:9 STORY';
         }
 
         card.innerHTML = `
@@ -715,7 +715,7 @@
         livePlaceholder.style.display = 'none';
         liveName.textContent = liveAsset.name;
         if (liveAsset.collection === 'kabir') {
-          liveSub.textContent = `Story Chapter ${liveAsset.chapter || ''} • Playing to Projector`;
+          liveSub.textContent = `Story Chapter ${liveAsset.chapter || ''} • 16:9 World-Field`;
         } else {
           liveSub.textContent = `Asset #${liveAsset.id + 1} (${liveAsset.framing === 'world' ? '16:9 Field' : 'Radial Totem'})`;
         }
