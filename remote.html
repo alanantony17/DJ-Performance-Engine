@@ -524,11 +524,12 @@
 
   <!-- Category Filter Pills -->
   <div class="filter-scroll">
-    <button class="filter-pill active" data-cat="all">ALL (40+)</button>
+    <button class="filter-pill active" data-cat="all">ALL ABSTRACT (69)</button>
     <button class="filter-pill" data-cat="totem">TOTEMS / SACRED</button>
     <button class="filter-pill" data-cat="cosmic">COSMIC / SPACE</button>
     <button class="filter-pill" data-cat="fluid">FLUID & ORGANIC</button>
     <button class="filter-pill" data-cat="world">WORLD 16:9</button>
+    <button class="filter-pill" data-cat="kabir" style="border-color: rgba(245, 158, 11, 0.45); color: #fbbf24; background: rgba(245, 158, 11, 0.08);">📖 KABIR'S UNIVERSE (16)</button>
   </div>
 
   <!-- Search Filter -->
@@ -615,6 +616,9 @@
 
     // Categorization helper
     function getCategory(asset) {
+      if (asset.collection === 'kabir' || (asset.filename && asset.filename.includes("Kabir's universe"))) {
+        return 'kabir';
+      }
       const name = (asset.name || '').toLowerCase();
       const fn = (asset.filename || '').toLowerCase();
       const text = name + ' ' + fn;
@@ -636,14 +640,25 @@
       gridContainer.innerHTML = '';
 
       const filtered = allAssets.filter(asset => {
+        const isKabir = asset.collection === 'kabir' || (asset.filename && asset.filename.includes("Kabir's universe"));
+
         // Category filter
-        if (activeFilter !== 'all') {
-          const cat = getCategory(asset);
-          if (activeFilter === 'totem' && cat !== 'totem') return false;
-          if (activeFilter === 'cosmic' && cat !== 'cosmic') return false;
-          if (activeFilter === 'fluid' && cat !== 'fluid') return false;
-          if (activeFilter === 'world' && cat !== 'world' && asset.framing !== 'world') return false;
+        if (activeFilter === 'kabir') {
+          // Strictly show only the Kabir story collection
+          if (!isKabir) return false;
+        } else {
+          // Keep all regular abstract collections completely clean of story cards!
+          if (isKabir) return false;
+
+          if (activeFilter !== 'all') {
+            const cat = getCategory(asset);
+            if (activeFilter === 'totem' && cat !== 'totem') return false;
+            if (activeFilter === 'cosmic' && cat !== 'cosmic') return false;
+            if (activeFilter === 'fluid' && cat !== 'fluid') return false;
+            if (activeFilter === 'world' && cat !== 'world' && asset.framing !== 'world') return false;
+          }
         }
+
         // Search query
         if (searchQuery) {
           const q = searchQuery.toLowerCase();
@@ -657,23 +672,31 @@
       filtered.forEach(asset => {
         const isLive = asset.id === activeAssetId;
         const isCued = asset.id === cuedAssetId;
+        const isKabir = asset.collection === 'kabir';
 
         const card = document.createElement('div');
         card.className = `asset-card ${isLive ? 'is-live' : ''} ${isCued ? 'is-cued' : ''}`;
         card.dataset.id = asset.id;
 
-        const tagText = isLive ? 'LIVE' : (isCued ? 'CUED' : `#${asset.id + 1}`);
-        const framingText = asset.framing === 'world' ? '16:9' : 'TOTEM';
+        let tagText = isLive ? 'LIVE' : (isCued ? 'CUED' : `#${asset.id + 1}`);
+        let framingText = asset.framing === 'world' ? '16:9' : 'TOTEM';
+
+        if (isKabir) {
+          if (!isLive && !isCued) {
+            tagText = `CH ${String(asset.chapter || (asset.id - 68)).padStart(2, '0')}`;
+          }
+          framingText = 'STORY';
+        }
 
         card.innerHTML = `
           <div class="asset-thumb-wrap">
             <img class="asset-thumb" src="${asset.path}" alt="${asset.name}" loading="lazy">
-            <span class="asset-tag-badge">${tagText}</span>
-            <span class="asset-framing-badge">${framingText}</span>
+            <span class="asset-tag-badge" ${isKabir && !isLive && !isCued ? 'style="background: rgba(245, 158, 11, 0.25); border-color: rgba(245, 158, 11, 0.45); color: #fbbf24;"' : ''}>${tagText}</span>
+            <span class="asset-framing-badge" ${isKabir ? 'style="background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.4); color: #fde68a;"' : ''}>${framingText}</span>
           </div>
           <div class="asset-info">
-            <span class="asset-title">${asset.name}</span>
-            <span class="asset-num">ID: ${asset.id}</span>
+            <span class="asset-title" ${isKabir ? 'style="color: #fef08a;"' : ''}>${asset.name}</span>
+            <span class="asset-num">${isKabir ? `Chapter ${asset.chapter || ''}` : `ID: ${asset.id}`}</span>
           </div>
         `;
 
@@ -691,7 +714,11 @@
         liveImg.style.display = 'block';
         livePlaceholder.style.display = 'none';
         liveName.textContent = liveAsset.name;
-        liveSub.textContent = `Asset #${liveAsset.id + 1} (${liveAsset.framing === 'world' ? '16:9 Field' : 'Radial Totem'})`;
+        if (liveAsset.collection === 'kabir') {
+          liveSub.textContent = `Story Chapter ${liveAsset.chapter || ''} • Playing to Projector`;
+        } else {
+          liveSub.textContent = `Asset #${liveAsset.id + 1} (${liveAsset.framing === 'world' ? '16:9 Field' : 'Radial Totem'})`;
+        }
       } else {
         liveImg.style.display = 'none';
         livePlaceholder.style.display = 'block';

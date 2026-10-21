@@ -14,6 +14,7 @@ export const CONFIG = {
 
   // Asset Pipeline (All 29 assets registered with clean URL encoding & framing category)
   assets: {
+    mainCount: 69,
     list: [
       { id: 0, name: 'Wheel', path: 'assets/wheel.png', framing: 'totem' },
       { id: 1, name: 'Beauty', path: 'assets/beauty.png', framing: 'totem' },
@@ -222,6 +223,9 @@ export async function autoDiscoverAssets() {
       const data = await res.json();
       if (data && Array.isArray(data.assets) && data.assets.length > 0) {
         CONFIG.assets.list = data.assets;
+        if (data.mainCount) {
+          CONFIG.assets.mainCount = data.mainCount;
+        }
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('engine:assetsDiscovered', { detail: { assets: data.assets } }));
         }

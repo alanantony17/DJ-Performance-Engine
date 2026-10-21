@@ -439,8 +439,10 @@ export function commitCuedAsset(notifyRemote = true) {
 
 // Cycle to next asset
 export function cycleAsset() {
-  const nextIdx = (currentAssetIndex + 1) % CONFIG.assets.list.length;
-  console.log(`[Engine] Switched to asset: ${CONFIG.assets.list[nextIdx].name} (${CONFIG.assets.list[nextIdx].path})`);
+  // Pad 3 cycles strictly through the main abstract asset collection (0..68)
+  const mainCount = CONFIG.assets.mainCount || 69;
+  const nextIdx = (currentAssetIndex + 1) % mainCount;
+  console.log(`[Engine] Switched to asset: ${CONFIG.assets.list[nextIdx]?.name} (${CONFIG.assets.list[nextIdx]?.path})`);
   selectAsset(nextIdx, true);
   // Silently check if new assets have been placed in the folder
   autoDiscoverAssets();

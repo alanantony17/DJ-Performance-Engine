@@ -108,6 +108,7 @@ def scan_asset_list():
         return 'totem' if base in totems else 'world'
 
     asset_list = []
+    # 1. Main Performance Asset Library (Abstract Totems & Worlds)
     for idx, fn in enumerate(files):
         quoted = urllib.parse.quote(fn)
         asset_list.append({
@@ -115,8 +116,47 @@ def scan_asset_list():
             'name': clean_name(fn),
             'filename': fn,
             'path': f'assets/{quoted}',
-            'framing': get_framing(fn)
+            'framing': get_framing(fn),
+            'collection': 'main'
         })
+
+    # 2. Curated Story Deck: Kabir's Universe (Chronological Narrative Sequence)
+    kabir_dir = os.path.join(assets_dir, "Kabir's universe")
+    kabir_order = [
+        ('kabir - early morning.jpg', 'Early Morning', 1),
+        ('kabir - balcony.jpg', 'Balcony', 2),
+        ('kabir - kitchen.jpg', 'Kitchen', 3),
+        ('kabir - pooja.jpg', 'Pooja', 4),
+        ('kabir - shopping.jpg', 'Shopping', 5),
+        ('aisha - getting ready.jpg', 'Aisha - Getting Ready', 6),
+        ('kabir - rangoli making.jpg', 'Rangoli Making', 7),
+        ('kabir - outdoors.jpg', 'Outdoors', 8),
+        ('kabir - with the case.jpg', 'With The Case', 9),
+        ('kabir - technician.jpg', 'Technician', 10),
+        ('kabir - light setup.jpg', 'Light Setup', 11),
+        ('kabir - performing.jpg', 'Performing', 12),
+        ('kabir - clocking out.jpg', 'Clocking Out', 13),
+        ('kabir - playing cards.jpg', 'Playing Cards', 14),
+        ('kabir - morning after.jpg', 'Morning After', 15),
+        ('Kabir - poster.jpg', 'Kabir - The Poster', 16),
+    ]
+
+    if os.path.exists(kabir_dir):
+        for fn, title, ch in kabir_order:
+            fp = os.path.join(kabir_dir, fn)
+            if os.path.exists(fp):
+                quoted = urllib.parse.quote(f"Kabir's universe/{fn}")
+                next_id = len(asset_list)
+                asset_list.append({
+                    'id': next_id,
+                    'name': f"Kabir: {title}",
+                    'filename': f"Kabir's universe/{fn}",
+                    'path': f"assets/{quoted}",
+                    'framing': 'totem',
+                    'collection': 'kabir',
+                    'chapter': ch,
+                    'scene': title
+                })
 
     # Also keep assets/manifest.json up-to-date as a static fallback
     manifest_path = os.path.join(assets_dir, 'manifest.json')
@@ -180,7 +220,8 @@ class EngineHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         if self.path.startswith('/api/assets'):
             try:
                 asset_list = scan_asset_list()
-                payload = json.dumps({'count': len(asset_list), 'assets': asset_list}).encode('utf-8')
+                main_count = len([a for a in asset_list if a.get('collection') == 'main'])
+                payload = json.dumps({'count': len(asset_list), 'mainCount': main_count, 'assets': asset_list}).encode('utf-8')
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Content-Length', str(len(payload)))

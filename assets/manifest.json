@@ -4,482 +4,711 @@
     "name": "CDs",
     "filename": "CDs.jpg",
     "path": "assets/CDs.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 1,
     "name": "Jalebi",
     "filename": "Jalebi.png",
     "path": "assets/Jalebi.png",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 2,
     "name": "Aasa Kooda",
     "filename": "aasa kooda.jpg",
     "path": "assets/aasa%20kooda.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 3,
     "name": "Aerogel",
     "filename": "aerogel.jpg",
     "path": "assets/aerogel.jpg",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 4,
     "name": "Amul Girl",
     "filename": "amul.png",
     "path": "assets/amul.png",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 5,
     "name": "Art1",
     "filename": "art1.png",
     "path": "assets/art1.png",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 6,
     "name": "Art2",
     "filename": "art2.png",
     "path": "assets/art2.png",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 7,
     "name": "Art3",
     "filename": "art3.png",
     "path": "assets/art3.png",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 8,
     "name": "Art4",
     "filename": "art4.png",
     "path": "assets/art4.png",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 9,
     "name": "Beach & Water",
     "filename": "beach and water.jpg",
     "path": "assets/beach%20and%20water.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 10,
     "name": "Beauty",
     "filename": "beauty.png",
     "path": "assets/beauty.png",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 11,
     "name": "Beyblade",
     "filename": "beyblade.jpg",
     "path": "assets/beyblade.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 12,
     "name": "Blackhole",
     "filename": "blackhole.png",
     "path": "assets/blackhole.png",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 13,
     "name": "Blue Night",
     "filename": "blue night.jpg",
     "path": "assets/blue%20night.jpg",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 14,
     "name": "Blue Oilspill",
     "filename": "blue oilspill.jpg",
     "path": "assets/blue%20oilspill.jpg",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 15,
     "name": "Blue Optic",
     "filename": "blue optic.jpg",
     "path": "assets/blue%20optic.jpg",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 16,
     "name": "Blue Rangoli",
     "filename": "blue rangoli.jpg",
     "path": "assets/blue%20rangoli.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 17,
     "name": "Camlin",
     "filename": "camlin.jpg",
     "path": "assets/camlin.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 18,
     "name": "Candy Rangoli",
     "filename": "candy rangoli.jpg",
     "path": "assets/candy%20rangoli.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 19,
     "name": "Carbon Ink",
     "filename": "carbon ink.jpg",
     "path": "assets/carbon%20ink.jpg",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 20,
     "name": "Chalk",
     "filename": "chalk.jpg",
     "path": "assets/chalk.jpg",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 21,
     "name": "Choli Ke Peeche",
     "filename": "choli ke peeche.jpg",
     "path": "assets/choli%20ke%20peeche.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 22,
     "name": "Comics",
     "filename": "comics.png",
     "path": "assets/comics.png",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 23,
     "name": "Cosmic Oval",
     "filename": "cosmic oval.jpg",
     "path": "assets/cosmic%20oval.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 24,
     "name": "Crystaline Structures",
     "filename": "crystaline structures.jpg",
     "path": "assets/crystaline%20structures.jpg",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 25,
     "name": "Dabba",
     "filename": "dabba.jpg",
     "path": "assets/dabba.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 26,
     "name": "Diwali Street Art",
     "filename": "diwali street art.jpg",
     "path": "assets/diwali%20street%20art.jpg",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 27,
     "name": "Diya 2",
     "filename": "diya 2.png",
     "path": "assets/diya%202.png",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 28,
     "name": "Diya",
     "filename": "diya.png",
     "path": "assets/diya.png",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 29,
     "name": "Ferro Fluid",
     "filename": "ferro fluid.png",
     "path": "assets/ferro%20fluid.png",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 30,
     "name": "Fire",
     "filename": "fire.jpg",
     "path": "assets/fire.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 31,
     "name": "Fluid Ink",
     "filename": "fluid ink.jpg",
     "path": "assets/fluid%20ink.jpg",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 32,
     "name": "Fractal Network",
     "filename": "fractal network.png",
     "path": "assets/fractal%20network.png",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 33,
     "name": "Genda Phool",
     "filename": "genda phool.jpg",
     "path": "assets/genda%20phool.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 34,
     "name": "God In You",
     "filename": "god in you.jpg",
     "path": "assets/god%20in%20you.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 35,
     "name": "Gypsum",
     "filename": "gypsum.jpg",
     "path": "assets/gypsum.jpg",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 36,
     "name": "Ice",
     "filename": "ice.png",
     "path": "assets/ice.png",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 37,
     "name": "Kites",
     "filename": "kites.jpg",
     "path": "assets/kites.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 38,
     "name": "Lady",
     "filename": "lady.png",
     "path": "assets/lady.png",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 39,
     "name": "Magma",
     "filename": "magma.jpg",
     "path": "assets/magma.jpg",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 40,
     "name": "Tiger Mandala",
     "filename": "mandala.jpg",
     "path": "assets/mandala.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 41,
     "name": "Molten Grays",
     "filename": "molten grays.jpg",
     "path": "assets/molten%20grays.jpg",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 42,
     "name": "Oil Honeycomb",
     "filename": "oil honeycomb.jpg",
     "path": "assets/oil%20honeycomb.jpg",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 43,
     "name": "Paper Art",
     "filename": "paper.png",
     "path": "assets/paper.png",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 44,
     "name": "Peacock",
     "filename": "peacock.png",
     "path": "assets/peacock.png",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 45,
     "name": "Physics Fire",
     "filename": "physics fire.jpg",
     "path": "assets/physics%20fire.jpg",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 46,
     "name": "Rainbow Rangoli",
     "filename": "rainbow rangoli.jpg",
     "path": "assets/rainbow%20rangoli.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 47,
     "name": "Rangoli 1",
     "filename": "rangoli 1.png",
     "path": "assets/rangoli%201.png",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 48,
     "name": "Rangoli 2",
     "filename": "rangoli 2.png",
     "path": "assets/rangoli%202.png",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 49,
     "name": "Rangoli 3",
     "filename": "rangoli 3.png",
     "path": "assets/rangoli%203.png",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 50,
     "name": "Red Eye",
     "filename": "red eye.png",
     "path": "assets/red%20eye.png",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 51,
     "name": "Ribbon Whistle",
     "filename": "ribbon whistle.jpg",
     "path": "assets/ribbon%20whistle.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 52,
     "name": "Skyline",
     "filename": "skyline.png",
     "path": "assets/skyline.png",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 53,
     "name": "Slate",
     "filename": "slate.jpg",
     "path": "assets/slate.jpg",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 54,
     "name": "Slime",
     "filename": "slime.png",
     "path": "assets/slime.png",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 55,
     "name": "Spacey",
     "filename": "spacey.png",
     "path": "assets/spacey.png",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 56,
     "name": "Stickers",
     "filename": "stickers.jpg",
     "path": "assets/stickers.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 57,
     "name": "Supernova",
     "filename": "supernova.png",
     "path": "assets/supernova.png",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 58,
     "name": "Taj Mahal",
     "filename": "taj mahal.png",
     "path": "assets/taj%20mahal.png",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 59,
     "name": "Truck Art",
     "filename": "truck art.png",
     "path": "assets/truck%20art.png",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 60,
     "name": "Tubes",
     "filename": "tubes.png",
     "path": "assets/tubes.png",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 61,
     "name": "Turban",
     "filename": "turban.jpg",
     "path": "assets/turban.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 62,
     "name": "Vintage Reel",
     "filename": "vintage reel.jpg",
     "path": "assets/vintage%20reel.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 63,
     "name": "Virus Crystals",
     "filename": "virus crystals.png",
     "path": "assets/virus%20crystals.png",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 64,
     "name": "Water",
     "filename": "water.jpg",
     "path": "assets/water.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 65,
     "name": "Dharma Wheel",
     "filename": "wheel.png",
     "path": "assets/wheel.png",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
   },
   {
     "id": 66,
     "name": "White Virus",
     "filename": "white virus.jpg",
     "path": "assets/white%20virus.jpg",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 67,
     "name": "Woven Fabric",
     "filename": "woven fabric.jpg",
     "path": "assets/woven%20fabric.jpg",
-    "framing": "world"
+    "framing": "world",
+    "collection": "main"
   },
   {
     "id": 68,
     "name": "X-Ray Rangoli",
     "filename": "x ray rangoli.jpg",
     "path": "assets/x%20ray%20rangoli.jpg",
-    "framing": "totem"
+    "framing": "totem",
+    "collection": "main"
+  },
+  {
+    "id": 69,
+    "name": "Kabir: Early Morning",
+    "filename": "Kabir's universe/kabir - early morning.jpg",
+    "path": "assets/Kabir%27s%20universe/kabir%20-%20early%20morning.jpg",
+    "framing": "totem",
+    "collection": "kabir",
+    "chapter": 1,
+    "scene": "Early Morning"
+  },
+  {
+    "id": 70,
+    "name": "Kabir: Balcony",
+    "filename": "Kabir's universe/kabir - balcony.jpg",
+    "path": "assets/Kabir%27s%20universe/kabir%20-%20balcony.jpg",
+    "framing": "totem",
+    "collection": "kabir",
+    "chapter": 2,
+    "scene": "Balcony"
+  },
+  {
+    "id": 71,
+    "name": "Kabir: Kitchen",
+    "filename": "Kabir's universe/kabir - kitchen.jpg",
+    "path": "assets/Kabir%27s%20universe/kabir%20-%20kitchen.jpg",
+    "framing": "totem",
+    "collection": "kabir",
+    "chapter": 3,
+    "scene": "Kitchen"
+  },
+  {
+    "id": 72,
+    "name": "Kabir: Pooja",
+    "filename": "Kabir's universe/kabir - pooja.jpg",
+    "path": "assets/Kabir%27s%20universe/kabir%20-%20pooja.jpg",
+    "framing": "totem",
+    "collection": "kabir",
+    "chapter": 4,
+    "scene": "Pooja"
+  },
+  {
+    "id": 73,
+    "name": "Kabir: Shopping",
+    "filename": "Kabir's universe/kabir - shopping.jpg",
+    "path": "assets/Kabir%27s%20universe/kabir%20-%20shopping.jpg",
+    "framing": "totem",
+    "collection": "kabir",
+    "chapter": 5,
+    "scene": "Shopping"
+  },
+  {
+    "id": 74,
+    "name": "Kabir: Aisha - Getting Ready",
+    "filename": "Kabir's universe/aisha - getting ready.jpg",
+    "path": "assets/Kabir%27s%20universe/aisha%20-%20getting%20ready.jpg",
+    "framing": "totem",
+    "collection": "kabir",
+    "chapter": 6,
+    "scene": "Aisha - Getting Ready"
+  },
+  {
+    "id": 75,
+    "name": "Kabir: Rangoli Making",
+    "filename": "Kabir's universe/kabir - rangoli making.jpg",
+    "path": "assets/Kabir%27s%20universe/kabir%20-%20rangoli%20making.jpg",
+    "framing": "totem",
+    "collection": "kabir",
+    "chapter": 7,
+    "scene": "Rangoli Making"
+  },
+  {
+    "id": 76,
+    "name": "Kabir: Outdoors",
+    "filename": "Kabir's universe/kabir - outdoors.jpg",
+    "path": "assets/Kabir%27s%20universe/kabir%20-%20outdoors.jpg",
+    "framing": "totem",
+    "collection": "kabir",
+    "chapter": 8,
+    "scene": "Outdoors"
+  },
+  {
+    "id": 77,
+    "name": "Kabir: With The Case",
+    "filename": "Kabir's universe/kabir - with the case.jpg",
+    "path": "assets/Kabir%27s%20universe/kabir%20-%20with%20the%20case.jpg",
+    "framing": "totem",
+    "collection": "kabir",
+    "chapter": 9,
+    "scene": "With The Case"
+  },
+  {
+    "id": 78,
+    "name": "Kabir: Technician",
+    "filename": "Kabir's universe/kabir - technician.jpg",
+    "path": "assets/Kabir%27s%20universe/kabir%20-%20technician.jpg",
+    "framing": "totem",
+    "collection": "kabir",
+    "chapter": 10,
+    "scene": "Technician"
+  },
+  {
+    "id": 79,
+    "name": "Kabir: Light Setup",
+    "filename": "Kabir's universe/kabir - light setup.jpg",
+    "path": "assets/Kabir%27s%20universe/kabir%20-%20light%20setup.jpg",
+    "framing": "totem",
+    "collection": "kabir",
+    "chapter": 11,
+    "scene": "Light Setup"
+  },
+  {
+    "id": 80,
+    "name": "Kabir: Performing",
+    "filename": "Kabir's universe/kabir - performing.jpg",
+    "path": "assets/Kabir%27s%20universe/kabir%20-%20performing.jpg",
+    "framing": "totem",
+    "collection": "kabir",
+    "chapter": 12,
+    "scene": "Performing"
+  },
+  {
+    "id": 81,
+    "name": "Kabir: Clocking Out",
+    "filename": "Kabir's universe/kabir - clocking out.jpg",
+    "path": "assets/Kabir%27s%20universe/kabir%20-%20clocking%20out.jpg",
+    "framing": "totem",
+    "collection": "kabir",
+    "chapter": 13,
+    "scene": "Clocking Out"
+  },
+  {
+    "id": 82,
+    "name": "Kabir: Playing Cards",
+    "filename": "Kabir's universe/kabir - playing cards.jpg",
+    "path": "assets/Kabir%27s%20universe/kabir%20-%20playing%20cards.jpg",
+    "framing": "totem",
+    "collection": "kabir",
+    "chapter": 14,
+    "scene": "Playing Cards"
+  },
+  {
+    "id": 83,
+    "name": "Kabir: Morning After",
+    "filename": "Kabir's universe/kabir - morning after.jpg",
+    "path": "assets/Kabir%27s%20universe/kabir%20-%20morning%20after.jpg",
+    "framing": "totem",
+    "collection": "kabir",
+    "chapter": 15,
+    "scene": "Morning After"
+  },
+  {
+    "id": 84,
+    "name": "Kabir: Kabir - The Poster",
+    "filename": "Kabir's universe/Kabir - poster.jpg",
+    "path": "assets/Kabir%27s%20universe/Kabir%20-%20poster.jpg",
+    "framing": "totem",
+    "collection": "kabir",
+    "chapter": 16,
+    "scene": "Kabir - The Poster"
   }
 ]
