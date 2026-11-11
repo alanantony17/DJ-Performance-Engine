@@ -73,13 +73,14 @@ export class BpmDetector {
     for (let b = this.minBpm; b <= this.maxBpm; b += 0.5) {
       this.candidateList.push(b);
     }
+    this._scoresBuffer = new Float32Array(this.candidateList.length);
 
     // Tap tempo history
     this.tapTimes = [];
 
     // Periodic detection throttle
     this.lastAnalysisTime = 0.0;
-    this.analysisIntervalSec = 0.08; // Run clustering analysis ~12 times/sec
+    this.analysisIntervalSec = 0.12; // Run clustering analysis on new drum onsets (max ~8 times/sec)
   }
 
   /**
@@ -207,11 +208,13 @@ export class BpmDetector {
         this.addOnset(audioTime, snareFlux, 'snare');
       }
 
-      // Purge onsets older than 6 seconds
-      this.onsets = this.onsets.filter(o => (audioTime - o.time) < this.maxOnsetAgeSec);
+      // Purge onsets older than 6 seconds in-place (zero per-frame array allocation)
+      while (this.onsets.length > 0 && (audioTime - this.onsets[0].time) >= this.maxOnsetAgeSec) {
+        this.onsets.shift();
+      }
 
-      // 5. Periodic Multi-Interval Harmonic Clustering (runs every ~80ms)
-      if ((audioTime - this.lastAnalysisTime) > this.analysisIntervalSec && this.onsets.length >= 4) {
+      // 5. Event-Driven Multi-Interval Harmonic Clustering (only runs when a new onset occurred)
+      if ((isKickOnset || isSnareOnset) && (audioTime - this.lastAnalysisTime) > this.analysisIntervalSec && this.onsets.length >= 4) {
         this.lastAnalysisTime = audioTime;
         if (!this.isManual) {
           this.runHarmonicClustering(audioTime);
@@ -272,8 +275,9 @@ export class BpmDetector {
     const n = this.onsets.length;
     if (n < 4) return;
 
-    // Score map for each candidate BPM in 0.5 BPM steps
-    const scores = new Float32Array(this.candidateList.length);
+    // Reuse pre-allocated score buffer for each candidate BPM in 0.5 BPM steps
+    const scores = this._scoresBuffer || (this._scoresBuffer = new Float32Array(this.candidateList.length));
+    scores.fill(0);
 
     // Evaluate all pairwise intervals (t_j - t_i)
     let totalPairs = 0;
@@ -386,7 +390,7 @@ export class BpmDetector {
    * Direct BPM Setting (e.g. from preset or manual entry)
    */
   setBpm(newBpm, lock = false) {
-    const clamped = Math.max(this.minBpm, Math.min(this.maxBpm, Math.round(newBpm * 10) / 10));
+    const clamped = Math.max(60.0, Math.min(200.0, Math.round(newBpm * 10) / 10));
     this.bpm = clamped;
     this.stableBpm = clamped;
     this.rawBpm = clamped;
@@ -401,7 +405,7 @@ export class BpmDetector {
    * Nudge BPM up or down (+/- 1.0, +/- 0.1, or +/- 5.0)
    */
   adjustBpm(delta) {
-    return this.setBpm(this.bpm + delta, false);
+    return this.setBpm(this.bpm + delta, this.isManual);
   }
 
   /**
@@ -412,6 +416,9 @@ export class BpmDetector {
     this.tapTimes = this.tapTimes.filter(t => (now - t) < 3200);
     this.tapTimes.push(now);
 
+    // Always phase-align beat clock to the tap strike
+    this.beatPhase = 0.0;
+
     if (this.tapTimes.length >= 2) {
       const intervals = [];
       for (let i = 1; i < this.tapTimes.length; i++) {
@@ -420,10 +427,8 @@ export class BpmDetector {
       const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
       const tappedBpm = Math.round((60000 / avgInterval) * 10) / 10;
 
-      if (tappedBpm >= this.minBpm && tappedBpm <= this.maxBpm) {
-        this.setBpm(tappedBpm, false);
-        // Reset clock phase to sync with tap strike
-        this.beatPhase = 0.0;
+      if (tappedBpm >= 60.0 && tappedBpm <= 200.0) {
+        this.setBpm(tappedBpm, true);
         return tappedBpm;
       }
     }

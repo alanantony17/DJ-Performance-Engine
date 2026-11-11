@@ -12,9 +12,36 @@ export const CONFIG = {
     cleanProjectionMode: false,
   },
 
-  // Asset Pipeline (All 29 assets registered with clean URL encoding & framing category)
+  // Stability & Memory Guardrails (multi-hour gig safety)
+  performance: {
+    maxCachedTextures: 8,       // LRU cap on GPU textures kept warm (evicted textures call .dispose())
+    maxTextureSize: 2048,       // Power-of-two cap: avoids synchronous 2D canvas redraw & Three.js NPOT double-resize
+    preloadNeighbors: 1,        // Pre-warm only the next immediate asset (+cued) after idle delay to prevent frame stalls
+    maxPixelRatio: 1.0,         // Lock 1:1 native pixel ratio so Pass 1 & Pass 2 match without fractional DPI supersampling
+  },
+
+  // Freeze Watchdog & Self-Healing Recovery
+  resilience: {
+    watchdogIntervalMs: 1000,
+    stallRestartMs: 2200,       // No frame for > 2.2s -> re-kick rAF loop & resume AudioContext
+    stallRebuildMs: 6000,       // Still stalled > 6s -> rebuild WebGL renderer & restore visual state
+    stallReloadMs: 12000,       // Still stalled > 12s -> auto-reload page & restore full session state
+    contextLostRebuildMs: 3500, // WebGL context lost & not restored within 3.5s -> rebuild on fresh canvas
+    maxAutoReloadsPer10Min: 3,  // Circuit breaker against reload loops
+    healthPostIntervalMs: 2000, // Telemetry heartbeat interval to serve.py / mobile remote
+  },
+
+  // Asset Pipeline - Multi-Crate Architecture (Halloween, Diwali, Master Vault, Kabir's Universe)
   assets: {
-    mainCount: 69,
+    activeCrate: 'halloween',
+    crates: [
+      { id: 'halloween', name: 'Halloween', icon: '🎃', count: 23 },
+      { id: 'diwali', name: 'Diwali', icon: '🪔', count: 29 },
+      { id: 'master', name: 'Master Vault', icon: '📁', count: 64 },
+      { id: 'kabir', name: "Kabir's Universe", icon: '📖', count: 17 }
+    ],
+    crateCount: 23,
+    mainCount: 23,
     list: [
       { id: 0, name: 'Wheel', path: 'assets/wheel.png', framing: 'totem' },
       { id: 1, name: 'Beauty', path: 'assets/beauty.png', framing: 'totem' },
@@ -223,13 +250,28 @@ export async function autoDiscoverAssets() {
       const data = await res.json();
       if (data && Array.isArray(data.assets) && data.assets.length > 0) {
         CONFIG.assets.list = data.assets;
+        if (data.crates) {
+          CONFIG.assets.crates = data.crates;
+        }
+        if (data.activeCrate) {
+          CONFIG.assets.activeCrate = data.activeCrate;
+        }
+        if (data.crateCount) {
+          CONFIG.assets.crateCount = data.crateCount;
+        }
         if (data.mainCount) {
           CONFIG.assets.mainCount = data.mainCount;
         }
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('engine:assetsDiscovered', { detail: { assets: data.assets } }));
+          window.dispatchEvent(new CustomEvent('engine:assetsDiscovered', {
+            detail: {
+              assets: data.assets,
+              crates: data.crates,
+              activeCrate: data.activeCrate
+            }
+          }));
         }
-        console.log(`[AutoDiscover] Discovered ${data.assets.length} performance assets dynamically.`);
+        console.log(`[AutoDiscover] Discovered ${data.assets.length} performance assets across ${data.crates ? data.crates.length : 1} crates (Active: ${data.activeCrate || 'halloween'}).`);
         return data.assets;
       }
     }

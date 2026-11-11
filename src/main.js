@@ -13,7 +13,7 @@ import { BuildupSequencer } from './buildup-sequencer.js';
 console.log('[Engine] Initializing DJ Performance Engine Core...');
 
 // DOM References
-const threeCanvas = document.getElementById('three-canvas');
+let threeCanvas = document.getElementById('three-canvas');
 const startOverlay = document.getElementById('start-overlay');
 const startBtn = document.getElementById('start-btn');
 const assetPreviewCard = document.getElementById('asset-preview-card');
@@ -141,14 +141,26 @@ export function toggleCleanProjection(forceState = null) {
   return isCleanProjection;
 }
 
+// Retrieve assets strictly within the currently active performance crate
+export function getActiveCrateAssets() {
+  const crateId = CONFIG.assets.activeCrate || 'halloween';
+  const filtered = (CONFIG.assets.list || []).filter(a => a.crate === crateId);
+  return filtered.length > 0 ? filtered : (CONFIG.assets.list || []);
+}
+
 // Show on-screen Asset Preview card (smooth fade)
 export function showAssetPreview(assetIndex) {
   if (isCleanProjection) return;
   const asset = CONFIG.assets.list[assetIndex % CONFIG.assets.list.length];
   if (!asset) return;
 
+  const crateAssets = getActiveCrateAssets();
+  const posInCrate = crateAssets.findIndex(a => a.id === asset.id);
+  const posText = posInCrate >= 0 ? `[${posInCrate + 1}/${crateAssets.length}]` : `[${assetIndex + 1}/${CONFIG.assets.list.length}]`;
+  const crateTag = asset.crateName ? `${asset.crateIcon || '📦'} ${asset.crateName}` : 'Asset';
+
   assetPreviewThumb.src = asset.path;
-  assetPreviewTag.textContent = `Asset [${assetIndex + 1}/${CONFIG.assets.list.length}]`;
+  assetPreviewTag.textContent = `${crateTag} ${posText}`;
   assetPreviewName.textContent = asset.name;
 
   assetPreviewCard.classList.remove('hidden');
@@ -379,15 +391,16 @@ let lastRemoteUpdate = 0;
 const remoteChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('dj_engine_assets') : null;
 
 // Post local changes to backend API and BroadcastChannel
-async function postActionToServer(action, id = null) {
+async function postActionToServer(action, id = null, extra = {}) {
   try {
+    const payload = { action, id, source: 'engine', ...extra };
     if (remoteChannel) {
-      remoteChannel.postMessage({ action, id, source: 'engine' });
+      remoteChannel.postMessage(payload);
     }
     const res = await fetch('/api/action', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, id, source: 'engine' })
+      body: JSON.stringify(payload)
     });
     if (res.ok) {
       const data = await res.json();
@@ -396,6 +409,71 @@ async function postActionToServer(action, id = null) {
   } catch (_) {}
 }
 
+// Persistent Session State (survives watchdog reloads or manual browser refreshes)
+const SESSION_STORAGE_KEY = 'dj_engine_session_v1';
+let isEngineEngaged = false;
+let engineWakeLock = null;
+let _saveSessionTimer = null;
+
+function _writeSessionStateNow(extra = {}) {
+  try {
+    const snap = threeEngine && threeEngine.getSnapshot ? threeEngine.getSnapshot() : {};
+    const payload = {
+      activeCrate: CONFIG.assets.activeCrate || 'halloween',
+      activeAssetId: currentAssetIndex,
+      cuedAssetId: cuedAssetIndex,
+      cleanProjection: isCleanProjection,
+      engaged: isEngineEngaged,
+      framingMode: snap.framingMode,
+      framingManualOverride: snap.framingManualOverride,
+      presetIndex: snap.currentPresetIndex,
+      hueFlowActive: snap.hueFlowActive,
+      pulseMode: Boolean(audio && audio.pulseMode),
+      bpm: audio && audio.state ? (audio.state.bpm || 128.0) : 128.0,
+      waveSpread: midi && midi.getComputedValues ? midi.getComputedValues().waveSpread : 2.5,
+      savedAt: Date.now(),
+      ...extra,
+    };
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(payload));
+  } catch (_) {}
+}
+
+function saveSessionState(extra = {}) {
+  // Immediate write when preparing for a page reload; otherwise debounce by 800ms to avoid synchronous disk I/O during slider drags
+  if (extra && (extra.reloadReason || extra.autoEngage !== undefined)) {
+    if (_saveSessionTimer) {
+      clearTimeout(_saveSessionTimer);
+      _saveSessionTimer = null;
+    }
+    _writeSessionStateNow(extra);
+    return;
+  }
+  if (_saveSessionTimer) clearTimeout(_saveSessionTimer);
+  _saveSessionTimer = setTimeout(() => {
+    _saveSessionTimer = null;
+    _writeSessionStateNow(extra);
+  }, 800);
+}
+
+// Screen Wake Lock API for Projector / Laptop Display (prevents Windows 10-min display sleep)
+async function requestEngineWakeLock() {
+  if (typeof navigator !== 'undefined' && 'wakeLock' in navigator) {
+    try {
+      if (!engineWakeLock || engineWakeLock.released) {
+        engineWakeLock = await navigator.wakeLock.request('screen');
+        console.log('[WakeLock] Projector display wake lock acquired.');
+      }
+    } catch (_) {}
+  }
+}
+requestEngineWakeLock();
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    requestEngineWakeLock();
+  }
+});
+
 // Select direct asset by index (0-based)
 export function selectAsset(index, notifyRemote = true) {
   if (index >= 0 && index < CONFIG.assets.list.length) {
@@ -403,6 +481,10 @@ export function selectAsset(index, notifyRemote = true) {
     cuedAssetIndex = null;
     showAssetPreview(currentAssetIndex);
     window.dispatchEvent(new CustomEvent('engine:assetChange', { detail: { index: currentAssetIndex, asset: CONFIG.assets.list[currentAssetIndex] } }));
+    if (threeEngine && threeEngine.preloadCrateAssets) {
+      threeEngine.preloadCrateAssets(getActiveCrateAssets(), currentAssetIndex, cuedAssetIndex);
+    }
+    saveSessionState();
     if (notifyRemote) {
       postActionToServer('select_asset', index);
     }
@@ -416,6 +498,10 @@ export function cueAsset(index, notifyRemote = true) {
     const asset = CONFIG.assets.list[index];
     console.log(`[Engine] Cued asset for next drop: ${asset.name} (#${index})`);
     showEffectPreview('ARMED FOR DROP', `${asset.name} (Hit Pad 4 to drop)`, '#f59e0b');
+    if (threeEngine && threeEngine.preloadCrateAssets) {
+      threeEngine.preloadCrateAssets(getActiveCrateAssets(), currentAssetIndex, cuedAssetIndex);
+    }
+    saveSessionState();
     if (notifyRemote) {
       postActionToServer('cue_asset', index);
     }
@@ -437,22 +523,297 @@ export function commitCuedAsset(notifyRemote = true) {
   return false;
 }
 
-// Cycle to next asset
-export function cycleAsset() {
-  // Pad 3 cycles strictly through the main abstract asset collection (0..68)
-  const mainCount = CONFIG.assets.mainCount || 69;
-  const nextIdx = (currentAssetIndex + 1) % mainCount;
-  console.log(`[Engine] Switched to asset: ${CONFIG.assets.list[nextIdx]?.name} (${CONFIG.assets.list[nextIdx]?.path})`);
-  selectAsset(nextIdx, true);
-  // Silently check if new assets have been placed in the folder
-  autoDiscoverAssets();
+// Switch Active Performance Crate (Halloween, Diwali, Master Vault, Kabir's Universe)
+export function setActiveCrate(crateId, notifyRemote = true) {
+  if (!crateId) return;
+  CONFIG.assets.activeCrate = crateId;
+  const crateAssets = getActiveCrateAssets();
+  const crateInfo = (CONFIG.assets.crates || []).find(c => c.id === crateId) || { id: crateId, name: crateId, icon: '📦' };
+
+  // If current asset is not inside this crate, jump to the first asset in the crate
+  const isCurrentInCrate = crateAssets.some(a => a.id === currentAssetIndex);
+  if (!isCurrentInCrate && crateAssets.length > 0) {
+    selectAsset(crateAssets[0].id, notifyRemote);
+  }
+
+  showEffectPreview(`${crateInfo.icon || '📦'} CRATE: ${crateInfo.name.toUpperCase()}`, `${crateAssets.length} assets loaded • Pad 3 scoped to crate`, '#f97316');
+
+  window.dispatchEvent(new CustomEvent('engine:crateChanged', {
+    detail: { crateId, crateInfo, count: crateAssets.length }
+  }));
+
+  if (notifyRemote) {
+    postActionToServer('select_crate', null, { crate: crateId, crateId });
+  }
+  if (threeEngine && threeEngine.preloadCrateAssets) {
+    threeEngine.preloadCrateAssets(crateAssets, currentAssetIndex, cuedAssetIndex);
+  }
+  saveSessionState();
+  console.log(`[Engine] Switched Active Party Crate to: ${crateInfo.name} (${crateAssets.length} assets)`);
 }
 
-// Background auto-discovery polling every 15 seconds
-setInterval(autoDiscoverAssets, 15000);
+// Cycle between performance crates (Key K or HUD button)
+export function cycleCrate() {
+  const crateIds = ['halloween', 'diwali', 'master', 'kabir'];
+  const currentIdx = crateIds.indexOf(CONFIG.assets.activeCrate || 'halloween');
+  const nextIdx = (currentIdx + 1) % crateIds.length;
+  setActiveCrate(crateIds[nextIdx], true);
+}
 
-// Polling for remote companion actions over Wi-Fi
-async function syncRemoteCompanion() {
+// Cycle to next asset (Hardware Pad 3 / Key 3) - strictly scoped to active crate!
+export function cycleAsset() {
+  const crateAssets = getActiveCrateAssets();
+  if (!crateAssets.length) return;
+
+  const currentPos = crateAssets.findIndex(a => a.id === currentAssetIndex);
+  const nextPos = (currentPos + 1) % crateAssets.length;
+  const nextAsset = crateAssets[nextPos];
+  console.log(`[Engine] Switched to asset in crate [${CONFIG.assets.activeCrate}]: ${nextAsset.name} (#${nextAsset.id})`);
+  selectAsset(nextAsset.id, true);
+}
+
+// Background auto-discovery polling every 30 seconds (non-disruptive)
+setInterval(autoDiscoverAssets, 30000);
+
+// Update Start Screen & HUD QR Code + Remote URL when server IP is discovered
+function updateRemoteQrAndUrl(ip) {
+  if (!ip) return;
+  const remoteUrl = `http://${ip}:8000/remote`;
+  const startUrlEl = document.getElementById('start-remote-url');
+  const hudUrlEl = document.getElementById('hud-remote-url');
+  const startQrEl = document.getElementById('start-qr-img');
+  const hudQrEl = document.getElementById('hud-qr-img');
+  if (startUrlEl) startUrlEl.textContent = remoteUrl;
+  if (hudUrlEl) hudUrlEl.textContent = remoteUrl;
+  const qrSrc = `/api/qr.svg?url=${encodeURIComponent(remoteUrl)}`;
+  if (startQrEl && startQrEl.getAttribute('data-url') !== remoteUrl) {
+    startQrEl.src = qrSrc;
+    startQrEl.setAttribute('data-url', remoteUrl);
+  }
+  if (hudQrEl && hudQrEl.getAttribute('data-url') !== remoteUrl) {
+    hudQrEl.src = qrSrc;
+    hudQrEl.setAttribute('data-url', remoteUrl);
+  }
+}
+window.addEventListener('engine:serverIpDiscovered', (e) => {
+  if (e.detail && e.detail.ip) updateRemoteQrAndUrl(e.detail.ip);
+});
+
+// Handle remote live performance controls (Sensitivity Slider, 4/8-Bar Risers, Blackout, Drop Slam, Clean Mode)
+let _lastSliderToastTime = 0;
+export function executeRemoteControl(cmd, value = null) {
+  if (!isEngineEngaged) {
+    engageEngine();
+  }
+  const currentBpm = audio && audio.state ? (audio.state.bpm || 128.0) : 128.0;
+  const nowMs = performance.now();
+
+  if (cmd === 'set_sensitivity' && value !== null && value !== undefined) {
+    const k4 = CONFIG.midi?.knobs?.knob4 || { min: 0.2, max: 3.5 };
+    const clamped = Math.max(k4.min, Math.min(k4.max, parseFloat(value) || 1.5));
+    const norm = (clamped - k4.min) / (k4.max - k4.min);
+    if (midi && midi.state && midi.state.knobs) {
+      midi.state.knobs.knob4 = Math.max(0.0, Math.min(1.0, norm));
+    }
+    if ((nowMs - _lastSliderToastTime) > 180) {
+      _lastSliderToastTime = nowMs;
+      showEffectPreview('AUDIO SENSITIVITY', `${clamped.toFixed(1)}x Reactivity`, '#38bdf8');
+    }
+    saveSessionState();
+  } else if (cmd === 'riser_4') {
+    if (threeEngine && threeEngine.masterBlackout) {
+      threeEngine.toggleMasterBlackout(false);
+    }
+    if (buildup) {
+      const summary = buildup.toggle(4, currentBpm);
+      showBuildupPreview(summary);
+    }
+  } else if (cmd === 'riser_8') {
+    if (threeEngine && threeEngine.masterBlackout) {
+      threeEngine.toggleMasterBlackout(false);
+    }
+    if (buildup) {
+      const summary = buildup.toggle(8, currentBpm);
+      showBuildupPreview(summary);
+    }
+  } else if (cmd === 'blackout_toggle') {
+    if (threeEngine) {
+      const isBlack = threeEngine.toggleMasterBlackout(value !== null && value !== undefined ? Boolean(value) : null);
+      if (isBlack && buildup && buildup.state !== 'idle') {
+        buildup.cancel();
+      } else if (!isBlack && buildup && buildup.state === 'blackout_shut') {
+        buildup.cancel();
+      }
+      showEffectPreview(
+        isBlack ? '🌑 MASTER BLACKOUT' : '⚡ VISUALS LIVE',
+        isBlack ? 'Projector output blacked out' : 'Projector output restored',
+        isBlack ? '#ef4444' : '#10b981'
+      );
+    }
+  } else if (cmd === 'drop_slam') {
+    if (buildup && buildup.state !== 'idle') {
+      buildup.cancel();
+      showBuildupPreview({ state: 'cancelled' });
+    }
+    if (threeEngine) {
+      threeEngine.toggleMasterBlackout(false);
+      threeEngine.resetSlicer();
+      threeEngine.resetBeatRepeat();
+      threeEngine.resetLaser();
+      threeEngine.resetGrating();
+    }
+    const didDropCued = commitCuedAsset(false);
+    if (!didDropCued) {
+      showEffectPreview('DROP SLAM', 'Master Blackout & FX Cleared', '#f43f5e');
+    }
+  } else if (cmd === 'clean_projection_toggle') {
+    toggleCleanProjection(value !== null && value !== undefined ? Boolean(value) : null);
+    saveSessionState();
+  } else if (cmd === 'bpm_pulse_toggle') {
+    if (audio) {
+      const isPulse = audio.togglePulseMode(value !== null && value !== undefined ? Boolean(value) : null);
+      showEffectPreview(
+        isPulse ? '💓 BPM PULSE ACTIVE' : '🎵 AUDIO REACTIVE',
+        isPulse ? `Pulsing locked at ${audio.state.bpm.toFixed(1)} BPM` : 'Listening to live audio input',
+        isPulse ? '#10b981' : '#38bdf8'
+      );
+      saveSessionState();
+    }
+  } else if (cmd === 'set_bpm' && value !== null && value !== undefined) {
+    if (audio) {
+      const newBpm = audio.setBpm(parseFloat(value) || 128.0, true);
+      showEffectPreview('TEMPO SET', `${newBpm.toFixed(1)} BPM`, '#10b981');
+      saveSessionState();
+    }
+  } else if (cmd === 'nudge_bpm' && value !== null && value !== undefined) {
+    if (audio) {
+      const newBpm = audio.adjustBpm(parseFloat(value) || 0);
+      showEffectPreview('TEMPO ADJUST', `${newBpm.toFixed(1)} BPM`, '#00f0ff');
+      saveSessionState();
+    }
+  } else if (cmd === 'tap_tempo') {
+    if (audio) {
+      let newBpm;
+      if (value !== null && value !== undefined && !isNaN(parseFloat(value))) {
+        newBpm = audio.setBpm(parseFloat(value), true);
+        audio.syncBeatPhase();
+      } else {
+        newBpm = audio.tapTempo();
+      }
+      showEffectPreview('🥁 TAP TEMPO', `${newBpm.toFixed(1)} BPM • Beat 1 Synced`, '#10b981');
+      saveSessionState();
+    }
+  } else if (cmd === 'set_spread' && value !== null && value !== undefined) {
+    const k3 = CONFIG.midi?.knobs?.knob3 || { min: 1.8, max: 3.6 };
+    const clamped = Math.max(k3.min, Math.min(k3.max, parseFloat(value) || 2.5));
+    const norm = (clamped - k3.min) / (k3.max - k3.min);
+    if (midi && midi.state && midi.state.knobs) {
+      midi.state.knobs.knob3 = Math.max(0.0, Math.min(1.0, norm));
+    }
+    if (threeEngine && threeEngine.uniforms && threeEngine.uniforms.uSpread) {
+      threeEngine.uniforms.uSpread.value = clamped;
+    }
+    if ((nowMs - _lastSliderToastTime) > 180) {
+      _lastSliderToastTime = nowMs;
+      showEffectPreview('WAVE SPREAD', `${clamped.toFixed(2)} Spatial Reach`, '#38bdf8');
+    }
+    saveSessionState();
+  } else if (cmd === 'cycle_preset') {
+    cycleStyle();
+    saveSessionState();
+  } else if (cmd === 'set_preset' && value !== null && value !== undefined) {
+    if (threeEngine) {
+      const idx = parseInt(value, 10);
+      if (!isNaN(idx) && idx >= 0 && idx < CONFIG.visualStyles.length) {
+        threeEngine.currentPresetIndex = idx;
+        if (threeEngine.uniforms?.uPreset) threeEngine.uniforms.uPreset.value = idx;
+        const activePreset = CONFIG.visualStyles[idx];
+        showStylePreview(activePreset);
+        saveSessionState();
+      }
+    }
+  }
+}
+
+// Handle remote recovery & panic actions from mobile companion
+function handleRemoteRecoveryAction(action, data = {}) {
+  if (action === 'control' && data.cmd) {
+    executeRemoteControl(data.cmd, data.value);
+    return true;
+  }
+  if (action === 'reload_engine') {
+    console.warn('[Engine] Remote requested full engine reload — saving session state & reloading...');
+    saveSessionState({ autoEngage: true, reloadReason: 'remote_reload' });
+    setTimeout(() => window.location.reload(), 60);
+    return true;
+  }
+  if (action === 'rebuild_webgl') {
+    console.warn('[Engine] Remote requested WebGL renderer rebuild...');
+    if (typeof window.rebuildThreeEngine === 'function') {
+      window.rebuildThreeEngine('remote_rebuild');
+    }
+    return true;
+  }
+  if (action === 'soft_reset') {
+    console.log('[Engine] Remote requested FX soft reset...');
+    if (typeof window.softResetEngine === 'function') {
+      window.softResetEngine('remote_soft_reset');
+    }
+    return true;
+  }
+  return false;
+}
+
+// Real-Time Server-Sent Events (SSE) Stream for Sub-10ms Wi-Fi Hot-Switching
+let sseConnection = null;
+let lastProcessedCommandSeq = 0;
+function initSSE() {
+  if (typeof EventSource === 'undefined') return;
+  try {
+    if (sseConnection) sseConnection.close();
+    sseConnection = new EventSource('/api/events');
+    sseConnection.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (!data) return;
+        const { action, id, crate, state, source } = data;
+        if (state && state.pendingCommand && state.pendingCommand.seq) {
+          lastProcessedCommandSeq = Math.max(lastProcessedCommandSeq, state.pendingCommand.seq);
+        }
+        if (source === 'remote') {
+          if (!isEngineEngaged) engageEngine();
+          if (handleRemoteRecoveryAction(action, data)) return;
+          if (action === 'select_asset' && id !== undefined && id !== currentAssetIndex) {
+            selectAsset(id, false);
+          } else if (action === 'cue_asset' && id !== undefined) {
+            cueAsset(id, false);
+          } else if (action === 'commit_cued') {
+            commitCuedAsset(false);
+          } else if (action === 'select_crate' && crate) {
+            setActiveCrate(crate, false);
+          }
+        }
+        if (state) {
+          if (state.activeCrate && state.activeCrate !== CONFIG.assets.activeCrate) {
+            setActiveCrate(state.activeCrate, false);
+          }
+        }
+      } catch (_) {}
+    };
+    sseConnection.onerror = () => {
+      // Browser auto-reconnects; syncRemoteCompanion serves as reliable fallback
+    };
+  } catch (err) {
+    console.warn('[SSE] EventSource init fallback:', err);
+  }
+}
+initSSE();
+
+// Backup Telemetry Polling (only runs when SSE is disconnected or on initial IP discovery)
+async function syncRemoteCompanion(force = false) {
+  if (!force && window.__currentServerIp && sseConnection && sseConnection.readyState === 1) {
+    return;
+  }
   try {
     const res = await fetch('/api/state?t=' + Date.now());
     if (res.ok) {
@@ -464,6 +825,17 @@ async function syncRemoteCompanion() {
       if (state.serverIp && (!window.__currentServerIp || window.__currentServerIp !== state.serverIp)) {
         window.__currentServerIp = state.serverIp;
         window.dispatchEvent(new CustomEvent('engine:serverIpDiscovered', { detail: { ip: state.serverIp } }));
+      }
+      // Execute any pending recovery or live control command sent while SSE was reconnecting
+      if (state.pendingCommand && state.pendingCommand.seq > lastProcessedCommandSeq) {
+        lastProcessedCommandSeq = state.pendingCommand.seq;
+        if ((Date.now() / 1000) - (state.pendingCommand.time || 0) < 15) {
+          handleRemoteRecoveryAction(state.pendingCommand.action, state.pendingCommand);
+        }
+      }
+      // Synchronize active crate with remote
+      if (state.activeCrate && state.activeCrate !== CONFIG.assets.activeCrate) {
+        setActiveCrate(state.activeCrate, false);
       }
       if (state.lastUpdate && state.lastUpdate > lastRemoteUpdate) {
         lastRemoteUpdate = state.lastUpdate;
@@ -483,19 +855,25 @@ async function syncRemoteCompanion() {
     }
   } catch (_) {}
 }
-setInterval(syncRemoteCompanion, 350);
+setInterval(syncRemoteCompanion, 4000);
+setTimeout(() => syncRemoteCompanion(true), 200);
 
 // Listen to local BroadcastChannel for multi-tab zero-latency sync
 if (remoteChannel) {
   remoteChannel.onmessage = (e) => {
-    const { action, id, source } = e.data || {};
+    const data = e.data || {};
+    const { action, id, source } = data;
     if (source === 'remote') {
+      if (!isEngineEngaged) engageEngine();
+      if (handleRemoteRecoveryAction(action, data)) return;
       if (action === 'select_asset' && id !== undefined) {
         selectAsset(id, false);
       } else if (action === 'cue_asset' && id !== undefined) {
         cueAsset(id, false);
       } else if (action === 'commit_cued') {
         commitCuedAsset(false);
+      } else if (action === 'select_crate' && (data.crate || data.crateId)) {
+        setActiveCrate(data.crate || data.crateId, false);
       }
     }
   };
@@ -520,10 +898,13 @@ const buildup = new BuildupSequencer();
 
 // Auto-engage engine function
 async function engageEngine() {
+  isEngineEngaged = true;
   if (startOverlay) {
     startOverlay.classList.add('hidden');
     startOverlay.style.display = 'none';
   }
+  requestEngineWakeLock();
+  saveSessionState({ engaged: true });
   try {
     await audio.resume();
   } catch (err) {
@@ -716,11 +1097,35 @@ window.addEventListener('keydown', (e) => {
   if (e.code === CONFIG.midi.keyboardFallback.toggleDropKey) {
     toggleDrop();
   }
+  // Switch Party Crate (Key K)
+  if (e.code === 'KeyK') {
+    cycleCrate();
+  }
   // Toggle BPM Lock (Key L)
   if (e.code === 'KeyL') {
     if (audio) {
       const isLocked = audio.toggleBpmLock();
       showEffectPreview(isLocked ? 'BPM LOCKED' : 'BPM AUTO TRACK', `${audio.state.bpm.toFixed(1)} BPM`, isLocked ? '#22c55e' : '#00f0ff');
+    }
+  }
+  // Toggle Manual BPM Pulse Mode (Key O)
+  if (e.code === 'KeyO') {
+    if (audio) {
+      const isPulse = audio.togglePulseMode();
+      showEffectPreview(
+        isPulse ? '💓 BPM PULSE ACTIVE' : '🎵 AUDIO REACTIVE',
+        isPulse ? `Pulsing locked at ${audio.state.bpm.toFixed(1)} BPM` : 'Listening to live audio input',
+        isPulse ? '#10b981' : '#38bdf8'
+      );
+      saveSessionState();
+    }
+  }
+  // Tap Tempo & Beat 1 Phase Sync (Key T)
+  if (e.code === 'KeyT') {
+    if (audio) {
+      const newBpm = audio.tapTempo();
+      showEffectPreview('🥁 TAP TEMPO', `${newBpm.toFixed(1)} BPM • Beat 1 Synced`, '#10b981');
+      saveSessionState();
     }
   }
   // Toggle Framing Mode (Key M: World-Field / Radial Portal / Classic)
@@ -858,6 +1263,66 @@ if (threeCanvas && typeof THREE !== 'undefined') {
   }
 }
 
+// Rebuild WebGL Engine in-place on a fresh canvas (self-healing recovery for GPU hang or context loss)
+let engineRebuildCount = 0;
+export function rebuildThreeEngine(reason = 'manual') {
+  if (typeof THREE === 'undefined') return false;
+  try {
+    console.warn(`[Watchdog] Rebuilding Three.js WebGL Engine (reason: ${reason})...`);
+    const snap = threeEngine && threeEngine.getSnapshot ? threeEngine.getSnapshot() : { currentAssetIndex };
+    if (threeEngine && threeEngine.dispose) {
+      try { threeEngine.dispose(); } catch (_) {}
+    }
+
+    const container = document.getElementById('canvas-container');
+    const width = window.innerWidth || CONFIG.display.width;
+    const height = window.innerHeight || CONFIG.display.height;
+    if (container) {
+      const freshCanvas = document.createElement('canvas');
+      freshCanvas.id = 'three-canvas';
+      freshCanvas.width = width;
+      freshCanvas.height = height;
+      if (threeCanvas && threeCanvas.parentNode === container) {
+        container.replaceChild(freshCanvas, threeCanvas);
+      } else {
+        container.innerHTML = '';
+        container.appendChild(freshCanvas);
+      }
+      threeCanvas = freshCanvas;
+    }
+
+    threeEngine = new ThreeDisplacementEngine(threeCanvas, { skipDefaultTexture: true });
+    threeEngine.applySnapshot(snap);
+    if (threeEngine.preloadCrateAssets) {
+      threeEngine.preloadCrateAssets(getActiveCrateAssets(), currentAssetIndex, cuedAssetIndex);
+    }
+    window.threeEngine = threeEngine;
+    engineRebuildCount++;
+    lastFrameTime = performance.now();
+    console.log(`[Watchdog] WebGL Engine rebuilt and state restored (#${engineRebuildCount}).`);
+    return true;
+  } catch (err) {
+    recordLoopError('rebuildThreeEngine', err);
+    return false;
+  }
+}
+
+// Soft reset FX & risers back to clean artwork without reloading
+export function softResetEngine(reason = 'manual') {
+  try {
+    if (buildup) buildup.cancel();
+    if (threeEngine && threeEngine.softResetFx) threeEngine.softResetFx();
+    if (midi && midi.state && midi.state.pads) {
+      midi.state.pads.pad4 = false;
+      midi.state.pads.padB4 = false;
+    }
+    showEffectPreview('ENGINE RESET', 'All FX & Risers cleared to clean artwork', '#10b981');
+    console.log(`[Engine] Soft reset complete (${reason}).`);
+  } catch (err) {
+    recordLoopError('softResetEngine', err);
+  }
+}
+
 // Listen for asset change events (Pad 3 / direct select)
 window.addEventListener('engine:assetChange', (e) => {
   if (threeEngine) {
@@ -881,35 +1346,284 @@ window.addEventListener('engine:assetLoaded', (e) => {
   }
 });
 
-// Main Animation & Update Loop
-let lastLoopTime = performance.now();
-function loop() {
+// Ring-buffer error recorder (throttled so a repeating error never floods memory)
+const MAX_ERROR_LOG = 25;
+let lastErrorLogTime = 0;
+let lastErrorMessage = '';
+let totalErrorCount = 0;
+
+function recordLoopError(stage, err) {
+  totalErrorCount++;
   const now = performance.now();
-  const dt = Math.min(0.1, (now - lastLoopTime) / 1000);
+  const msg = `[${stage}] ${err && (err.message || err.stack || String(err))}`;
+  lastErrorMessage = msg;
+  if (now - lastErrorLogTime > 2000) {
+    lastErrorLogTime = now;
+    if (!window.__errors) window.__errors = [];
+    window.__errors.push(`${new Date().toISOString()} ${msg}`);
+    if (window.__errors.length > MAX_ERROR_LOG) {
+      window.__errors.shift();
+    }
+    console.error('[Engine Guard]', msg);
+  }
+}
+
+// Unkillable Main Animation & Update Loop
+const engineBootTime = performance.now();
+let lastLoopTime = performance.now();
+let lastFrameTime = performance.now();
+let currentRafId = 0;
+let watchdogFrameCount = 0;
+let lastFpsSampleTime = performance.now();
+let engineFps = 60;
+let watchdogRestartedLoop = false;
+let watchdogRebuiltEngine = false;
+
+const FALLBACK_MIDI = {
+  panX: 0.5,
+  aperture: 0.5,
+  joystickPan: 0.5,
+  joystickAperture: 0.5,
+  strobeLfoHz: 8.0,
+  hydraHue: 0.0,
+  hue: 0.0,
+  waveSpread: 2.5,
+  rippleRate: 1.0,
+  audioSensitivity: 1.5,
+  dropThresholdNorm: 0.5,
+  padSlam: false,
+};
+
+function loop() {
+  // 0. Schedule the next frame FIRST so an uncaught error can never stop the loop
+  currentRafId = requestAnimationFrame(loop);
+
+  const now = performance.now();
+  const dt = Math.min(0.1, Math.max(0.0001, (now - lastLoopTime) / 1000));
   lastLoopTime = now;
 
-  const computedMidi = midi.getComputedValues();
-  const audioState = audio.update(computedMidi.audioSensitivity, computedMidi.dropThresholdNorm);
+  let computedMidi = FALLBACK_MIDI;
+  try {
+    if (midi) computedMidi = midi.getComputedValues() || FALLBACK_MIDI;
+  } catch (err) {
+    recordLoopError('midi', err);
+  }
+
+  let audioState = null;
+  try {
+    if (audio) audioState = audio.update(computedMidi.audioSensitivity, computedMidi.dropThresholdNorm);
+  } catch (err) {
+    recordLoopError('audio', err);
+  }
 
   // 1. Update One-Shot Buildup Sequencer (4Hz -> 60Hz Strobe, Blinder Climax, Pre-Drop Silence)
-  const buildupState = buildup.update(dt, audioState ? audioState.bpm : 128.0, audioState);
+  let buildupState = null;
+  try {
+    if (buildup) buildupState = buildup.update(dt, audioState ? audioState.bpm : 128.0, audioState);
+  } catch (err) {
+    recordLoopError('buildup', err);
+  }
 
   // 2. Render Three.js 3D Mesh Displacement Engine with In-Shader Physical Cuts & Invert
-  if (threeEngine) {
-    threeEngine.update(computedMidi, audioState, buildupState);
+  let renderedFrame = false;
+  try {
+    if (threeEngine && !threeEngine.contextLost) {
+      threeEngine.update(computedMidi, audioState, buildupState);
+      renderedFrame = true;
+    }
+  } catch (err) {
+    recordLoopError('threeEngine', err);
   }
 
   // 3. Update diagnostic telemetry HUD
-  hud.update(midi.state, computedMidi, audioState, buildupState);
+  try {
+    if (hud && midi) hud.update(midi.state, computedMidi, audioState, buildupState);
+  } catch (err) {
+    recordLoopError('hud', err);
+  }
 
-  requestAnimationFrame(loop);
+  if (renderedFrame) {
+    lastFrameTime = now;
+    watchdogFrameCount++;
+    watchdogRestartedLoop = false;
+    watchdogRebuiltEngine = false;
+  }
 }
 
 // Start loop
-requestAnimationFrame(loop);
+currentRafId = requestAnimationFrame(loop);
 
-// Initial asset preview display on boot
-setTimeout(() => showAssetPreview(0), 500);
+// Self-Healing Frame Watchdog (monitors frame progress & WebGL context health every 1s)
+const resCfg = CONFIG.resilience || {};
+setInterval(() => {
+  const now = performance.now();
+  const elapsedFps = now - lastFpsSampleTime;
+  if (elapsedFps >= 900) {
+    engineFps = Math.round((watchdogFrameCount * 1000) / elapsedFps);
+    watchdogFrameCount = 0;
+    lastFpsSampleTime = now;
+  }
+
+  // Check if WebGL context has been lost and hasn't self-restored within timeout
+  if (threeEngine && threeEngine.contextLost) {
+    const lostDuration = now - (threeEngine.contextLostTime || now);
+    if (lostDuration > (resCfg.contextLostRebuildMs || 3500)) {
+      rebuildThreeEngine('webgl_context_lost_timeout');
+      return;
+    }
+  }
+
+  // Only trigger stall recovery when the projector tab is visible
+  if (document.visibilityState && document.visibilityState !== 'visible') {
+    return;
+  }
+
+  const stallMs = now - lastFrameTime;
+
+  // Stage 1 (> 2.2s stall): Re-kick rAF loop & wake AudioContext
+  if (stallMs > (resCfg.stallRestartMs || 2200) && !watchdogRestartedLoop) {
+    watchdogRestartedLoop = true;
+    console.warn(`[Watchdog] Frame stall detected (${Math.round(stallMs)}ms). Re-scheduling render loop...`);
+    try { cancelAnimationFrame(currentRafId); } catch (_) {}
+    currentRafId = requestAnimationFrame(loop);
+    if (audio && audio.audioCtx && audio.audioCtx.state === 'suspended' && isEngineEngaged) {
+      audio.audioCtx.resume().catch(() => {});
+    }
+  }
+
+  // Stage 2 (> 6s stall): Rebuild Three.js WebGL renderer on a fresh canvas
+  if (stallMs > (resCfg.stallRebuildMs || 6000) && !watchdogRebuiltEngine) {
+    watchdogRebuiltEngine = true;
+    rebuildThreeEngine(`frame_stall_${Math.round(stallMs)}ms`);
+    try { cancelAnimationFrame(currentRafId); } catch (_) {}
+    currentRafId = requestAnimationFrame(loop);
+  }
+
+  // Stage 3 (> 12s stall): Rate-limited page reload with automatic session restoration
+  if (stallMs > (resCfg.stallReloadMs || 12000)) {
+    try {
+      const reloadKey = 'dj_engine_watchdog_reloads';
+      const nowEpoch = Date.now();
+      const recent = JSON.parse(sessionStorage.getItem(reloadKey) || '[]').filter(t => (nowEpoch - t) < 600000);
+      const maxReloads = resCfg.maxAutoReloadsPer10Min || 3;
+      if (recent.length < maxReloads) {
+        recent.push(nowEpoch);
+        sessionStorage.setItem(reloadKey, JSON.stringify(recent));
+        console.error(`[Watchdog] Severe stall (${Math.round(stallMs)}ms). Saving state & reloading engine (${recent.length}/${maxReloads})...`);
+        saveSessionState({ autoEngage: true, reloadReason: 'watchdog_stall' });
+        window.location.reload();
+      }
+    } catch (_) {}
+  }
+}, resCfg.watchdogIntervalMs || 1000);
+
+// Live Health Telemetry Heartbeat to Server & Phone Remote (every 2000ms)
+function postHealthHeartbeat() {
+  const now = performance.now();
+  const computed = midi && midi.getComputedValues ? midi.getComputedValues() : FALLBACK_MIDI;
+  const isBlackout = Boolean(
+    (threeEngine && threeEngine.masterBlackout) ||
+    (buildup && (buildup.state === 'blackout_shut' || buildup.isBlackout))
+  );
+  const curPresetIdx = threeEngine ? (threeEngine.currentPresetIndex || 0) : 0;
+  const curPreset = CONFIG.visualStyles ? (CONFIG.visualStyles[curPresetIdx] || CONFIG.visualStyles[0]) : { name: 'Ripple' };
+  const liveControls = {
+    audioSensitivity: Math.round((computed.audioSensitivity || 1.5) * 100) / 100,
+    waveSpread: Math.round((computed.waveSpread || 2.5) * 100) / 100,
+    presetIndex: curPresetIdx,
+    presetName: curPreset.name,
+    blackout: isBlackout,
+    buildupState: buildup ? (buildup.state || 'idle') : 'idle',
+    buildupBars: buildup ? (buildup.totalBars || 4) : 4,
+    buildupProgress: buildup ? Math.round((buildup.progress || 0) * 100) / 100 : 0,
+    cleanProjection: isCleanProjection,
+    bpmPulse: Boolean(audio && audio.pulseMode),
+    bpm: audio && audio.state ? Math.round((audio.state.bpm || 128) * 10) / 10 : 128,
+  };
+  const health = {
+    fps: engineFps,
+    lastFrameAgeMs: Math.round(now - lastFrameTime),
+    contextLost: Boolean(threeEngine && threeEngine.contextLost),
+    cachedTextures: threeEngine && threeEngine.textureCache ? threeEngine.textureCache.size : 0,
+    maxTextures: threeEngine ? (threeEngine.maxCachedTextures || 10) : 10,
+    errorsCount: totalErrorCount,
+    lastError: lastErrorMessage || null,
+    rebuildCount: engineRebuildCount,
+    engaged: isEngineEngaged,
+    cleanProjection: isCleanProjection,
+    bpm: audio && audio.state ? Math.round((audio.state.bpm || 128) * 10) / 10 : 128,
+    uptimeSec: Math.round((now - engineBootTime) / 1000),
+    ts: Date.now(),
+  };
+  postActionToServer('heartbeat', null, { health, liveControls });
+}
+setInterval(postHealthHeartbeat, resCfg.healthPostIntervalMs || 2000);
+setTimeout(postHealthHeartbeat, 600);
+
+// Restore saved session state on boot (especially after a watchdog or remote reload)
+function restoreSessionOnBoot() {
+  try {
+    const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (!saved) return;
+
+    const ageMs = Date.now() - (saved.savedAt || 0);
+    // Restore crate and active asset if saved within the last 12 hours
+    if (ageMs < 12 * 3600 * 1000) {
+      if (saved.activeCrate && saved.activeCrate !== CONFIG.assets.activeCrate) {
+        CONFIG.assets.activeCrate = saved.activeCrate;
+      }
+      if (typeof saved.activeAssetId === 'number' && saved.activeAssetId >= 0 && saved.activeAssetId < CONFIG.assets.list.length) {
+        selectAsset(saved.activeAssetId, false);
+      }
+      if (typeof saved.cuedAssetId === 'number' && saved.cuedAssetId >= 0 && saved.cuedAssetId < CONFIG.assets.list.length) {
+        cuedAssetIndex = saved.cuedAssetId;
+      }
+      if (saved.cleanProjection) {
+        toggleCleanProjection(true);
+      }
+      if (audio) {
+        if (typeof saved.bpm === 'number' && saved.bpm >= 60 && saved.bpm <= 200) {
+          audio.setBpm(saved.bpm, Boolean(saved.pulseMode));
+        }
+        if (typeof saved.pulseMode === 'boolean' && saved.pulseMode) {
+          audio.togglePulseMode(true);
+        }
+      }
+      if (threeEngine) {
+        if (typeof saved.presetIndex === 'number') {
+          threeEngine.currentPresetIndex = saved.presetIndex;
+          if (threeEngine.uniforms?.uPreset) threeEngine.uniforms.uPreset.value = saved.presetIndex;
+        }
+        if (typeof saved.waveSpread === 'number' && midi && midi.state && midi.state.knobs) {
+          const k3 = CONFIG.midi?.knobs?.knob3 || { min: 1.8, max: 3.6 };
+          const norm = (saved.waveSpread - k3.min) / (k3.max - k3.min);
+          midi.state.knobs.knob3 = Math.max(0, Math.min(1, norm));
+        }
+        if (typeof saved.hueFlowActive === 'boolean') {
+          threeEngine.hueFlowActive = saved.hueFlowActive;
+        }
+        if (saved.framingManualOverride && typeof saved.framingMode === 'number') {
+          threeEngine.framingManualOverride = true;
+          threeEngine.setFramingMode(saved.framingMode);
+        }
+      }
+    }
+
+    // If reloaded by watchdog or remote within the last 60s (or already engaged), skip the start overlay automatically
+    if ((saved.autoEngage && ageMs < 60000) || (saved.engaged && ageMs < 6 * 3600 * 1000)) {
+      saveSessionState({ autoEngage: false });
+      engageEngine();
+    }
+  } catch (_) {}
+}
+
+// Initial asset preview & session restore on boot
+setTimeout(() => {
+  restoreSessionOnBoot();
+  if (!isCleanProjection) showAssetPreview(currentAssetIndex);
+}, 350);
 
 // Expose on window for diagnostics, OBS docks, and telemetry
 window.audio = audio;
@@ -918,6 +1632,11 @@ window.midi = midi;
 window.hud = hud;
 window.buildup = buildup;
 window.CONFIG = CONFIG;
+window.setActiveCrate = setActiveCrate;
+window.cycleCrate = cycleCrate;
+window.getActiveCrateAssets = getActiveCrateAssets;
+window.rebuildThreeEngine = rebuildThreeEngine;
+window.softResetEngine = softResetEngine;
 
 // URL Parameter Detection for OBS / Clean Projection Mode (?clean=1 or ?projection=1)
 try {

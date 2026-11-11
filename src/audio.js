@@ -45,6 +45,7 @@ export class AudioEngine {
       isBpmLocked: false,  // Stable tempo locked
       isBpmCoasting: false,// Holding locked tempo across kick-less breakdowns
       isBpmManual: false,  // Force-locked by DJ
+      pulseMode: false,    // Manual BPM Pulse Mode (visuals pulse to set BPM without audio input)
       beatPhase: 0.0,      // 0.0 to 1.0 phase within beat
       beatIndex: 0,        // 0, 1, 2, 3 in 4/4 measure
       dropIntensity: 0.0,  // 0.0 (quiet/breakdown) to 1.0 (peak drop slam)
@@ -54,6 +55,13 @@ export class AudioEngine {
       fft: new Float32Array(CONFIG.audio.fftSize / 2), // Normalized [0, 1] FFT bins
       rawFft: new Uint8Array(CONFIG.audio.fftSize / 2), // Raw 0-255 bytes
     };
+
+    // Manual BPM Pulse Mode clock state (independent of AudioContext/mic)
+    this.pulseMode = false;
+    this._pulsePhase = 0.0;
+    this._pulseBeatIndex = 0;
+    this._pulseJustTriggered = false;
+    this._lastPulseTime = performance.now();
 
     // Manual drop override: null (auto) | true (forced drop) | false (forced chill)
     this.manualDropOverride = null;
@@ -450,6 +458,7 @@ export class AudioEngine {
   }
 
   tapTempo() {
+    this.syncBeatPhase();
     if (this.bpmDetector) {
       const clamped = this.bpmDetector.tapTempo();
       this.state.bpm = clamped;
@@ -483,9 +492,159 @@ export class AudioEngine {
     return false;
   }
 
-  // Called once per animation frame (rAF)
+  /**
+   * Align internal beat clock phase to Beat 1 immediately
+   */
+  syncBeatPhase() {
+    this._pulsePhase = 0.0;
+    this._pulseBeatIndex = 0;
+    this._pulseJustTriggered = true;
+    this._lastPulseTime = performance.now();
+    this.state.beatPhase = 0.0;
+    this.state.beatIndex = 0;
+    if (this.bpmDetector) {
+      this.bpmDetector.beatPhase = 0.0;
+      this.bpmDetector.beatIndex = 0;
+    }
+  }
+
+  /**
+   * Toggle or set Manual BPM Pulse Mode (visuals pulse to set BPM without requiring audio input)
+   */
+  togglePulseMode(forceValue = null) {
+    if (forceValue !== null && forceValue !== undefined) {
+      this.pulseMode = Boolean(forceValue);
+    } else {
+      this.pulseMode = !this.pulseMode;
+    }
+    this.state.pulseMode = this.pulseMode;
+
+    if (this.pulseMode) {
+      this.syncBeatPhase();
+      this.state.isBpmManual = true;
+      this.state.isBpmLocked = true;
+      this.state.bpmConfidence = 1.0;
+      if (this.bpmDetector) {
+        this.bpmDetector.setBpm(this.state.bpm || 128.0, true);
+      }
+    } else if (this.bpmDetector) {
+      this.bpmDetector.isManual = false;
+      this.state.isBpmManual = false;
+    }
+
+    console.log(`[Audio] Manual BPM Pulse Mode: ${this.pulseMode ? `ON (${this.state.bpm.toFixed(1)} BPM)` : 'OFF (Audio Reactive)'}`);
+    window.dispatchEvent(new CustomEvent('engine:pulseModeChanged', {
+      detail: { active: this.pulseMode, bpm: this.state.bpm }
+    }));
+    return this.pulseMode;
+  }
+
+  /**
+   * Synthesize beat-locked kick, snare, FFT melody, and drop envelopes at this.state.bpm
+   */
+  _applySyntheticPulse(sensitivityMultiplier = 1.5, hasLiveAudio = false) {
+    const now = performance.now();
+    const dt = Math.max(0.001, Math.min(0.1, (now - (this._lastPulseTime || now)) / 1000));
+    this._lastPulseTime = now;
+
+    const bpm = Math.max(60.0, Math.min(200.0, this.state.bpm || 128.0));
+    const bps = bpm / 60.0;
+    let nextPhase = (this._pulsePhase || 0.0) + bps * dt;
+    let isBeatStrike = false;
+
+    if (this._pulseJustTriggered || nextPhase >= 1.0) {
+      isBeatStrike = true;
+      if (this._pulseJustTriggered) {
+        nextPhase = 0.0;
+        this._pulseJustTriggered = false;
+      } else {
+        nextPhase = nextPhase % 1.0;
+        this._pulseBeatIndex = ((this._pulseBeatIndex || 0) + 1) % 4;
+      }
+      this.lastKickTime = now;
+    }
+    this._pulsePhase = nextPhase;
+
+    // Normalize sensitivity (default 1.5x -> 1.0x reference)
+    const sensNorm = Math.max(0.15, Math.min(2.4, sensitivityMultiplier / 1.5));
+
+    // Crisp exponential kick envelope (peaks at phase 0.0, decays smoothly over beat)
+    const kickEnv = Math.pow(Math.max(0.0, 1.0 - nextPhase), 2.5);
+    const synthKickLevel = Math.min(1.0, kickEnv * 0.88 * sensNorm);
+    const synthKickPunch = Math.min(1.6, Math.pow(kickEnv, 1.8) * 1.15 * sensNorm);
+
+    // Backbeat snare/clap on beats 2 & 4 (beatIndex 1 and 3)
+    const isBackbeat = (this._pulseBeatIndex === 1 || this._pulseBeatIndex === 3);
+    const snareEnv = isBackbeat ? Math.pow(Math.max(0.0, 1.0 - nextPhase * 1.35), 2.8) : 0.0;
+    const synthHighLevel = Math.min(1.0, snareEnv * 0.72 * sensNorm);
+    const synthHighTrigger = isBeatStrike && isBackbeat;
+
+    this.state.bpm = bpm;
+    this.state.beatPhase = nextPhase;
+    this.state.beatIndex = this._pulseBeatIndex;
+    this.state.bpmConfidence = 1.0;
+    this.state.isBpmLocked = true;
+    this.state.isBpmManual = true;
+    this.state.kickCadenceLock = 1.0;
+
+    if (hasLiveAudio) {
+      this.state.kickTrigger = Boolean(this.state.kickTrigger || isBeatStrike);
+      this.state.highTrigger = Boolean(this.state.highTrigger || synthHighTrigger);
+      this.state.kickLevel = Math.max(this.state.kickLevel, synthKickLevel);
+      this.state.kickPunch = Math.max(this.state.kickPunch, synthKickPunch);
+      this.state.highLevel = Math.max(this.state.highLevel, synthHighLevel);
+    } else {
+      this.state.kickTrigger = isBeatStrike;
+      this.state.highTrigger = synthHighTrigger;
+      this.state.kickLevel = synthKickLevel;
+      this.state.kickPunch = synthKickPunch;
+      this.state.highLevel = synthHighLevel;
+    }
+
+    // Populate synthetic FFT bins so shader melody & harmonic rings breathe in tempo
+    if (this.state.fft && this.state.fft.length >= 65) {
+      const phraseWave = 0.5 + 0.5 * Math.sin((this._pulseBeatIndex + nextPhase) * Math.PI * 0.5);
+      const melodyVal = (0.18 + 0.28 * kickEnv + 0.16 * phraseWave) * sensNorm;
+      for (let i = 0; i <= 4; i++) {
+        this.state.fft[i] = Math.max(hasLiveAudio ? this.state.fft[i] : 0, synthKickLevel);
+      }
+      for (let i = 11; i <= 35; i++) {
+        this.state.fft[i] = Math.max(hasLiveAudio ? this.state.fft[i] : 0, melodyVal);
+      }
+      for (let i = 18; i <= 65; i++) {
+        this.state.fft[i] = Math.max(hasLiveAudio ? this.state.fft[i] : 0, synthHighLevel * 0.6);
+      }
+    }
+
+    this.state.energyLevel = Math.max(
+      hasLiveAudio ? this.state.energyLevel : 0,
+      synthKickLevel * 0.55 + synthHighLevel * 0.25 + 0.12 * sensNorm
+    );
+
+    // Drop intensity in BPM Pulse Mode:
+    // Respect manual drop override if set; otherwise scale with sensitivity so visuals pulse strongly
+    let targetDrop = Math.min(1.0, 0.72 * sensNorm);
+    if (this.manualDropOverride === true) targetDrop = 1.0;
+    else if (this.manualDropOverride === false) targetDrop = 0.0;
+
+    if (targetDrop > this.state.dropIntensity) {
+      this.state.dropIntensity = this.state.dropIntensity * 0.75 + targetDrop * 0.25;
+    } else {
+      this.state.dropIntensity = this.state.dropIntensity * 0.94 + targetDrop * 0.06;
+    }
+    this.state.isDrop = this.state.dropIntensity >= 0.50;
+
+    return this.state;
+  }
+
   // Called once per animation frame (rAF)
   update(sensitivityMultiplier = 1.0, dropThresholdSetting = 0.50) {
+    this.state.pulseMode = this.pulseMode;
+    // Fast-path: when Manual BPM Pulse Mode is active, synthesize beat-locked envelopes
+    // directly without running redundant microphone FFTs, BPM clustering, or array scans
+    if (this.pulseMode) {
+      return this._applySyntheticPulse(sensitivityMultiplier, false);
+    }
     if (!this.analyser || !this.isInitialized) {
       this.state.kickLevel *= 0.9;
       this.state.kickPunch *= 0.85;
@@ -494,6 +653,15 @@ export class AudioEngine {
       this.state.kickTrigger = false;
       this.state.highTrigger = false;
       return this.state;
+    }
+
+    // Self-heal if browser suspends AudioContext after hours of no laptop keyboard/mouse input
+    if (this.audioCtx && this.audioCtx.state === 'suspended' && this.state.active) {
+      const nowMs = performance.now();
+      if (!this._lastAutoResumeAttempt || (nowMs - this._lastAutoResumeAttempt) > 3000) {
+        this._lastAutoResumeAttempt = nowMs;
+        this.audioCtx.resume().catch(() => {});
+      }
     }
 
     this.analyser.getByteFrequencyData(this.state.rawFft);
@@ -579,8 +747,10 @@ export class AudioEngine {
       }
     }
 
-    // Purge kick timestamps older than 2500ms
-    this.recentKickTimes = this.recentKickTimes.filter(t => (now - t) < 2500);
+    // Purge kick timestamps older than 2500ms in-place (zero array allocations per frame)
+    while (this.recentKickTimes.length > 0 && (now - this.recentKickTimes[0]) >= 2500) {
+      this.recentKickTimes.shift();
+    }
 
     // Cadence decay: hold strong across beat gap, fade out smoothly if kicks absent > 900ms
     const timeSinceKick = now - this.lastKickTime;
@@ -706,6 +876,11 @@ export class AudioEngine {
       this.lastUpdateTime = now;
       const bps = this.state.bpm / 60;
       this.state.beatPhase = (this.state.beatPhase + bps * dt) % 1.0;
+    }
+
+    // 4. Manual BPM Pulse Mode synthesis (blends with or replaces silent audio input)
+    if (this.pulseMode) {
+      return this._applySyntheticPulse(sensitivityMultiplier, true);
     }
 
     return this.state;

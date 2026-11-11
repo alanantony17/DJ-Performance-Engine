@@ -91,6 +91,50 @@ export class DiagnosticHud {
       });
     }
 
+    // Party Crate Selector Telemetry
+    this.crateStatusEl = document.getElementById('hud-crate-status');
+    this.crateBtn = document.getElementById('hud-crate-btn');
+    if (this.crateBtn) {
+      this.crateBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (window.cycleCrate) window.cycleCrate();
+      });
+    }
+
+    window.addEventListener('engine:crateChanged', (e) => {
+      if (this.crateStatusEl && e.detail) {
+        const { crateInfo, count } = e.detail;
+        this.crateStatusEl.textContent = `${crateInfo.icon || '📦'} ${crateInfo.name} (${count})`;
+        if (crateInfo.id === 'halloween') {
+          this.crateStatusEl.style.color = '#f97316';
+        } else if (crateInfo.id === 'diwali') {
+          this.crateStatusEl.style.color = '#eab308';
+        } else if (crateInfo.id === 'master') {
+          this.crateStatusEl.style.color = '#38bdf8';
+        } else if (crateInfo.id === 'kabir') {
+          this.crateStatusEl.style.color = '#fbbf24';
+        }
+      }
+    });
+
+    window.addEventListener('engine:assetsDiscovered', (e) => {
+      if (this.crateStatusEl && e.detail && e.detail.activeCrate && e.detail.crates) {
+        const activeInfo = e.detail.crates.find(c => c.id === e.detail.activeCrate);
+        if (activeInfo) {
+          this.crateStatusEl.textContent = `${activeInfo.icon || '📦'} ${activeInfo.name} (${activeInfo.count})`;
+          if (activeInfo.id === 'halloween') {
+            this.crateStatusEl.style.color = '#f97316';
+          } else if (activeInfo.id === 'diwali') {
+            this.crateStatusEl.style.color = '#eab308';
+          } else if (activeInfo.id === 'master') {
+            this.crateStatusEl.style.color = '#38bdf8';
+          } else if (activeInfo.id === 'kabir') {
+            this.crateStatusEl.style.color = '#fbbf24';
+          }
+        }
+      }
+    });
+
     // BPM Header Controls
     this.bpmLockBadge = document.getElementById('hud-bpm-lock-badge');
     this.beatPulseEl = document.getElementById('hud-beat-pulse');
@@ -101,7 +145,9 @@ export class DiagnosticHud {
     if (this.bpmLockBadge) {
       this.bpmLockBadge.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (window.audio && window.audio.toggleBpmLock) {
+        if (window.audio && window.audio.togglePulseMode) {
+          window.audio.togglePulseMode();
+        } else if (window.audio && window.audio.toggleBpmLock) {
           window.audio.toggleBpmLock();
         }
       });
@@ -252,10 +298,78 @@ export class DiagnosticHud {
     this.barHigh = document.getElementById('hud-bar-high');
     this.valHigh = document.getElementById('hud-val-high');
 
-    // FPS Meter
+    // FPS Meter & DOM Throttle State
     this.frameCount = 0;
     this.lastFpsTime = performance.now();
     this.currentFps = 60;
+    this._lastDomUpdateTime = 0;
+    this._domCache = new WeakMap();
+  }
+
+  _setText(el, text) {
+    if (!el) return;
+    let rec = this._domCache.get(el);
+    if (!rec) {
+      rec = {};
+      this._domCache.set(el, rec);
+    }
+    if (rec.text !== text) {
+      rec.text = text;
+      el.textContent = text;
+    }
+  }
+
+  _setWidth(el, pctInt) {
+    if (!el) return;
+    let rec = this._domCache.get(el);
+    if (!rec) {
+      rec = {};
+      this._domCache.set(el, rec);
+    }
+    if (rec.width !== pctInt) {
+      rec.width = pctInt;
+      el.style.width = `${pctInt}%`;
+    }
+  }
+
+  _setColor(el, color) {
+    if (!el) return;
+    let rec = this._domCache.get(el);
+    if (!rec) {
+      rec = {};
+      this._domCache.set(el, rec);
+    }
+    if (rec.color !== color) {
+      rec.color = color;
+      el.style.color = color;
+    }
+  }
+
+  _setClass(el, className) {
+    if (!el) return;
+    let rec = this._domCache.get(el);
+    if (!rec) {
+      rec = {};
+      this._domCache.set(el, rec);
+    }
+    if (rec.className !== className) {
+      rec.className = className;
+      el.className = className;
+    }
+  }
+
+  _setActive(el, active) {
+    if (!el) return;
+    const isAct = Boolean(active);
+    let rec = this._domCache.get(el);
+    if (!rec) {
+      rec = {};
+      this._domCache.set(el, rec);
+    }
+    if (rec.active !== isAct) {
+      rec.active = isAct;
+      el.classList.toggle('active', isAct);
+    }
   }
 
   toggle() {
@@ -275,7 +389,7 @@ export class DiagnosticHud {
   update(midiState, computedMidi, audioState, buildupState = null) {
     if (!this.overlay || this.overlay.classList.contains('hidden')) return;
 
-    // 1. Calculate FPS & Update BPM
+    // 1. Calculate FPS on every frame, but throttle heavy DOM mutations to ~12Hz (85ms)
     this.frameCount++;
     const now = performance.now();
     const elapsed = now - this.lastFpsTime;
@@ -283,100 +397,129 @@ export class DiagnosticHud {
       this.currentFps = Math.round((this.frameCount * 1000) / elapsed);
       this.frameCount = 0;
       this.lastFpsTime = now;
-      if (this.fpsEl) this.fpsEl.textContent = `${this.currentFps} FPS`;
+      this._setText(this.fpsEl, `${this.currentFps} FPS`);
     }
+
+    if ((now - this._lastDomUpdateTime) < 85) return;
+    this._lastDomUpdateTime = now;
+
     if (this.bpmEl && audioState && audioState.bpm) {
-      this.bpmEl.textContent = `${audioState.bpm.toFixed(1)} BPM`;
+      this._setText(this.bpmEl, `${audioState.bpm.toFixed(1)} BPM`);
 
       if (this.bpmLockBadge) {
-        if (audioState.isBpmManual) {
-          this.bpmLockBadge.textContent = '🔒 MANUAL';
-          this.bpmLockBadge.style.background = 'rgba(59, 130, 246, 0.25)';
-          this.bpmLockBadge.style.color = '#60a5fa';
-          this.bpmLockBadge.style.borderColor = '#3b82f6';
+        let badgeKey = '';
+        let badgeText = '';
+        let bg = '';
+        let col = '';
+        let border = '';
+        if (audioState.pulseMode) {
+          badgeKey = 'pulse';
+          badgeText = '💓 PULSE';
+          bg = 'rgba(16, 185, 129, 0.28)';
+          col = '#6ee7b7';
+          border = '#10b981';
+        } else if (audioState.isBpmManual) {
+          badgeKey = 'manual';
+          badgeText = '🔒 MANUAL';
+          bg = 'rgba(59, 130, 246, 0.25)';
+          col = '#60a5fa';
+          border = '#3b82f6';
         } else if (audioState.isBpmCoasting) {
-          this.bpmLockBadge.textContent = '⚓ COAST';
-          this.bpmLockBadge.style.background = 'rgba(6, 182, 212, 0.25)';
-          this.bpmLockBadge.style.color = '#22d3ee';
-          this.bpmLockBadge.style.borderColor = '#06b6d4';
+          badgeKey = 'coast';
+          badgeText = '⚓ COAST';
+          bg = 'rgba(6, 182, 212, 0.25)';
+          col = '#22d3ee';
+          border = '#06b6d4';
         } else if (audioState.isBpmLocked) {
           const conf = Math.round((audioState.bpmConfidence || 1.0) * 100);
-          this.bpmLockBadge.textContent = `🔒 LOCKED ${conf}%`;
-          this.bpmLockBadge.style.background = 'rgba(34, 197, 94, 0.25)';
-          this.bpmLockBadge.style.color = '#4ade80';
-          this.bpmLockBadge.style.borderColor = '#22c55e';
+          badgeKey = `locked_${conf}`;
+          badgeText = `🔒 LOCKED ${conf}%`;
+          bg = 'rgba(34, 197, 94, 0.25)';
+          col = '#4ade80';
+          border = '#22c55e';
         } else {
           const conf = Math.round((audioState.bpmConfidence || 0.0) * 100);
-          this.bpmLockBadge.textContent = `⚡ SYNC ${conf}%`;
-          this.bpmLockBadge.style.background = 'rgba(234, 179, 8, 0.25)';
-          this.bpmLockBadge.style.color = '#fde047';
-          this.bpmLockBadge.style.borderColor = '#eab308';
+          badgeKey = `sync_${conf}`;
+          badgeText = `⚡ SYNC ${conf}%`;
+          bg = 'rgba(234, 179, 8, 0.25)';
+          col = '#fde047';
+          border = '#eab308';
+        }
+        if (this._lastBpmBadgeKey !== badgeKey) {
+          this._lastBpmBadgeKey = badgeKey;
+          this.bpmLockBadge.textContent = badgeText;
+          this.bpmLockBadge.style.background = bg;
+          this.bpmLockBadge.style.color = col;
+          this.bpmLockBadge.style.borderColor = border;
         }
       }
 
       if (this.beatPulseEl && audioState.beatIndex !== undefined) {
-        const dots = ['○', '○', '○', '○'];
-        dots[audioState.beatIndex % 4] = '●';
-        this.beatPulseEl.textContent = dots.join(' ');
+        const bIdx = audioState.beatIndex % 4;
+        if (this._lastBeatIdx !== bIdx) {
+          this._lastBeatIdx = bIdx;
+          const dots = ['○', '○', '○', '○'];
+          dots[bIdx] = '●';
+          this.beatPulseEl.textContent = dots.join(' ');
+        }
       }
     }
 
     // 2. MIDI Device Status
     if (this.midiDeviceEl) {
-      this.midiDeviceEl.textContent = midiState.deviceName;
-      this.midiDeviceEl.style.color = midiState.connected ? '#22c55e' : '#f59e0b';
+      this._setText(this.midiDeviceEl, midiState.deviceName);
+      this._setColor(this.midiDeviceEl, midiState.connected ? '#22c55e' : '#f59e0b');
     }
-    if (this.midiRawEl) {
-      this.midiRawEl.textContent = midiState.rawMessage;
-    }
+    this._setText(this.midiRawEl, midiState.rawMessage);
 
     // 3. Joystick & Knobs
-    if (this.barPan) this.barPan.style.width = `${Math.round(computedMidi.panX * 100)}%`;
-    if (this.valPan) this.valPan.textContent = computedMidi.panX.toFixed(2);
+    this._setWidth(this.barPan, Math.round(computedMidi.panX * 100));
+    this._setText(this.valPan, computedMidi.panX.toFixed(2));
 
-    if (this.barIris) this.barIris.style.width = `${Math.round(computedMidi.aperture * 100)}%`;
-    if (this.valIris) this.valIris.textContent = computedMidi.aperture.toFixed(2);
+    this._setWidth(this.barIris, Math.round(computedMidi.aperture * 100));
+    this._setText(this.valIris, computedMidi.aperture.toFixed(2));
 
-    if (this.barK1) this.barK1.style.width = `${Math.round(midiState.knobs.knob1 * 100)}%`;
-    if (this.valK1) this.valK1.textContent = `${computedMidi.strobeLfoHz.toFixed(1)} Hz`;
+    this._setWidth(this.barK1, Math.round(midiState.knobs.knob1 * 100));
+    this._setText(this.valK1, `${computedMidi.strobeLfoHz.toFixed(1)} Hz`);
 
-    if (this.barK2) this.barK2.style.width = `${Math.round(computedMidi.hydraHue * 100)}%`;
-    if (this.valK2) this.valK2.textContent = computedMidi.hydraHue.toFixed(2);
+    this._setWidth(this.barK2, Math.round(computedMidi.hydraHue * 100));
+    this._setText(this.valK2, computedMidi.hydraHue.toFixed(2));
 
-    if (this.barK3) this.barK3.style.width = `${Math.round(midiState.knobs.knob3 * 100)}%`;
-    if (this.valK3) this.valK3.textContent = (computedMidi.waveSpread || 2.5).toFixed(2);
+    this._setWidth(this.barK3, Math.round(midiState.knobs.knob3 * 100));
+    this._setText(this.valK3, (computedMidi.waveSpread || 2.5).toFixed(2));
 
-    if (this.barK4) this.barK4.style.width = `${Math.round(midiState.knobs.knob4 * 100)}%`;
-    if (this.valK4) this.valK4.textContent = `${computedMidi.audioSensitivity.toFixed(1)}x`;
+    this._setWidth(this.barK4, Math.round(midiState.knobs.knob4 * 100));
+    this._setText(this.valK4, `${computedMidi.audioSensitivity.toFixed(1)}x`);
 
-    if (this.barK5) this.barK5.style.width = `${Math.round(computedMidi.dropThresholdNorm * 100)}%`;
     const k5Norm = computedMidi.dropThresholdNorm;
+    const k5Pct = Math.round(k5Norm * 100);
+    this._setWidth(this.barK5, k5Pct);
     let threshDesc = 'Sweet Spot';
     if (k5Norm < 0.35) threshDesc = 'Sensitive';
     else if (k5Norm > 0.65) threshDesc = 'Strict';
-    if (this.valK5) this.valK5.textContent = `${Math.round(k5Norm * 100)}% (${threshDesc})`;
+    this._setText(this.valK5, `${k5Pct}% (${threshDesc})`);
 
     // 4. Buildup Sequencer Telemetry
     if (this.buildupStatusEl) {
       if (buildupState && buildupState.state === 'building') {
         const pct = Math.round(buildupState.progress * 100);
         const subDesc = buildupState.subdivision ? ` [1/${buildupState.subdivision}]` : '';
-        this.buildupStatusEl.textContent = `BAR ${buildupState.currentBar}/${buildupState.totalBars} (${pct}%)${subDesc} ${buildupState.strobeFreq.toFixed(0)}Hz`;
-        this.buildupStatusEl.style.color = '#eab308';
-        if (this.buildupBarEl) this.buildupBarEl.style.width = `${pct}%`;
+        this._setText(this.buildupStatusEl, `BAR ${buildupState.currentBar}/${buildupState.totalBars} (${pct}%)${subDesc} ${buildupState.strobeFreq.toFixed(0)}Hz`);
+        this._setColor(this.buildupStatusEl, '#eab308');
+        this._setWidth(this.buildupBarEl, pct);
       } else if (buildupState && buildupState.state === 'holding_climax') {
         const archName = buildupState.archetype?.name || 'CLIMAX';
-        this.buildupStatusEl.textContent = `🔥 PEAK CLIMAX [${archName.toUpperCase()}] - HIT SLAM!`;
-        this.buildupStatusEl.style.color = '#ef4444';
-        if (this.buildupBarEl) this.buildupBarEl.style.width = '100%';
+        this._setText(this.buildupStatusEl, `🔥 PEAK CLIMAX [${archName.toUpperCase()}] - HIT SLAM!`);
+        this._setColor(this.buildupStatusEl, '#ef4444');
+        this._setWidth(this.buildupBarEl, 100);
       } else if (buildupState && (buildupState.state === 'blackout_shut' || buildupState.isBlackout)) {
-        this.buildupStatusEl.textContent = '🛑 PRE-DROP SHUT [BLACKOUT]';
-        this.buildupStatusEl.style.color = '#ef4444';
-        if (this.buildupBarEl) this.buildupBarEl.style.width = '100%';
+        this._setText(this.buildupStatusEl, '🛑 PRE-DROP SHUT [BLACKOUT]');
+        this._setColor(this.buildupStatusEl, '#ef4444');
+        this._setWidth(this.buildupBarEl, 100);
       } else {
-        this.buildupStatusEl.textContent = 'IDLE';
-        this.buildupStatusEl.style.color = '#64748b';
-        if (this.buildupBarEl) this.buildupBarEl.style.width = '0%';
+        this._setText(this.buildupStatusEl, 'IDLE');
+        this._setColor(this.buildupStatusEl, '#64748b');
+        this._setWidth(this.buildupBarEl, 0);
       }
     }
 
@@ -388,24 +531,24 @@ export class DiagnosticHud {
     const slamActive = midiState.pads.pad4 || midiState.pads.padB4 || isShut;
 
     // --- BANK A: LIVE ACTION ---
-    if (this.pad1) this.pad1.classList.toggle('active', midiState.pads.pad1 || isBuild4);
-    if (this.pad2) this.pad2.classList.toggle('active', midiState.pads.pad2 || isBuild8);
-    if (this.pad3) this.pad3.classList.toggle('active', midiState.pads.pad3);
-    if (this.pad4) this.pad4.classList.toggle('active', slamActive);
-    if (this.pad5) this.pad5.classList.toggle('active', midiState.pads.pad5);
-    if (this.pad6) this.pad6.classList.toggle('active', midiState.pads.pad6 || (window.threeEngine && window.threeEngine.hueFlowActive));
-    if (this.pad7) this.pad7.classList.toggle('active', midiState.pads.pad7 || (window.threeEngine && (window.threeEngine.gratingActive || window.threeEngine.beatRepeatActive || window.threeEngine.slicerActive)));
-    if (this.pad8) this.pad8.classList.toggle('active', midiState.pads.pad8 || (window.threeEngine && window.threeEngine.negativeActive));
+    this._setActive(this.pad1, midiState.pads.pad1 || isBuild4);
+    this._setActive(this.pad2, midiState.pads.pad2 || isBuild8);
+    this._setActive(this.pad3, midiState.pads.pad3);
+    this._setActive(this.pad4, slamActive);
+    this._setActive(this.pad5, midiState.pads.pad5);
+    this._setActive(this.pad6, midiState.pads.pad6 || (window.threeEngine && window.threeEngine.hueFlowActive));
+    this._setActive(this.pad7, midiState.pads.pad7 || (window.threeEngine && (window.threeEngine.gratingActive || window.threeEngine.beatRepeatActive || window.threeEngine.slicerActive)));
+    this._setActive(this.pad8, midiState.pads.pad8 || (window.threeEngine && window.threeEngine.negativeActive));
 
     // --- BANK B: ARMING & CONFIG ---
-    if (this.padB1) this.padB1.classList.toggle('active', midiState.pads.padB1);
-    if (this.padB2) this.padB2.classList.toggle('active', midiState.pads.padB2);
-    if (this.padB3) this.padB3.classList.toggle('active', midiState.pads.padB3 || (audioState && audioState.dropMode === 'forced'));
-    if (this.padB4) this.padB4.classList.toggle('active', slamActive);
-    if (this.padB5) this.padB5.classList.toggle('active', midiState.pads.padB5 || (buildupState && buildupState.archetypeIndex === 0));
-    if (this.padB6) this.padB6.classList.toggle('active', midiState.pads.padB6 || (buildupState && buildupState.archetypeIndex === 1));
-    if (this.padB7) this.padB7.classList.toggle('active', midiState.pads.padB7 || (buildupState && buildupState.archetypeIndex === 2));
-    if (this.padB8) this.padB8.classList.toggle('active', midiState.pads.padB8 || (buildupState && buildupState.archetypeIndex === 3));
+    this._setActive(this.padB1, midiState.pads.padB1);
+    this._setActive(this.padB2, midiState.pads.padB2);
+    this._setActive(this.padB3, midiState.pads.padB3 || (audioState && audioState.dropMode === 'forced'));
+    this._setActive(this.padB4, slamActive);
+    this._setActive(this.padB5, midiState.pads.padB5 || (buildupState && buildupState.archetypeIndex === 0));
+    this._setActive(this.padB6, midiState.pads.padB6 || (buildupState && buildupState.archetypeIndex === 1));
+    this._setActive(this.padB7, midiState.pads.padB7 || (buildupState && buildupState.archetypeIndex === 2));
+    this._setActive(this.padB8, midiState.pads.padB8 || (buildupState && buildupState.archetypeIndex === 3));
 
     // Telemetry indicators
     if (this.gratingStatusEl && window.threeEngine) {
@@ -414,100 +557,105 @@ export class DiagnosticHud {
         const isBuilding = buildupState && (buildupState.state === 'building' || buildupState.state === 'holding_climax');
         const badge = curStyle ? (curStyle.badge || curStyle.name.toUpperCase()) : 'GRATING';
         if (isBuilding) {
-          this.gratingStatusEl.textContent = `${badge} (RISER SYNC)`;
-          this.gratingStatusEl.style.color = '#facc15';
+          this._setText(this.gratingStatusEl, `${badge} (RISER SYNC)`);
+          this._setColor(this.gratingStatusEl, '#facc15');
         } else {
-          this.gratingStatusEl.textContent = `${badge} ACTIVE`;
-          this.gratingStatusEl.style.color = '#00f0ff';
+          this._setText(this.gratingStatusEl, `${badge} ACTIVE`);
+          this._setColor(this.gratingStatusEl, '#00f0ff');
         }
       } else if (window.threeEngine.beatRepeatActive) {
         const curStyle = window.threeEngine.beatRepeatStyles[window.threeEngine.beatRepeatIndex];
-        this.gratingStatusEl.textContent = curStyle ? `${curStyle.name.toUpperCase()} [${window.threeEngine.beatRepeatIndex + 1}/4]` : 'ACTIVE';
-        this.gratingStatusEl.style.color = '#22d3ee';
+        this._setText(this.gratingStatusEl, curStyle ? `${curStyle.name.toUpperCase()} [${window.threeEngine.beatRepeatIndex + 1}/4]` : 'ACTIVE');
+        this._setColor(this.gratingStatusEl, '#22d3ee');
       } else {
-        this.gratingStatusEl.textContent = 'BYPASSED';
-        this.gratingStatusEl.style.color = '#64748b';
+        this._setText(this.gratingStatusEl, 'BYPASSED');
+        this._setColor(this.gratingStatusEl, '#64748b');
       }
     }
 
     if (this.armedRiserEl && buildupState) {
       const arch = buildupState.archetype;
       if (arch) {
-        this.armedRiserEl.textContent = `[${buildupState.archetypeIndex + 1}/4] ${arch.name}`;
-        this.armedRiserEl.style.color = arch.color || '#facc15';
+        this._setText(this.armedRiserEl, `[${buildupState.archetypeIndex + 1}/4] ${arch.name}`);
+        this._setColor(this.armedRiserEl, arch.color || '#facc15');
       }
     }
 
     if (this.loadedGratingEl && window.threeEngine) {
       const curStyle = window.threeEngine.gratingStyles ? window.threeEngine.gratingStyles[window.threeEngine.gratingStyle] : null;
       if (curStyle) {
-        this.loadedGratingEl.textContent = `[${window.threeEngine.gratingStyle + 1}/4] ${curStyle.name}`;
+        this._setText(this.loadedGratingEl, `[${window.threeEngine.gratingStyle + 1}/4] ${curStyle.name}`);
       }
     }
 
     if (this.riserRotationEl && buildupState) {
-      this.riserRotationEl.textContent = buildupState.autoCycle ? 'Auto-Cycle (Round-Robin)' : 'Manual Locked';
-      this.riserRotationEl.style.color = buildupState.autoCycle ? '#22c55e' : '#94a3b8';
+      this._setText(this.riserRotationEl, buildupState.autoCycle ? 'Auto-Cycle (Round-Robin)' : 'Manual Locked');
+      this._setColor(this.riserRotationEl, buildupState.autoCycle ? '#22c55e' : '#94a3b8');
     }
 
     if (this.laserStatusEl && window.threeEngine) {
       if (window.threeEngine.laserManualPunch) {
-        this.laserStatusEl.textContent = 'PUNCH ACTIVE';
-        this.laserStatusEl.style.color = '#00ff66';
+        this._setText(this.laserStatusEl, 'PUNCH ACTIVE');
+        this._setColor(this.laserStatusEl, '#00ff66');
       } else if (buildupState && buildupState.state === 'building' && (buildupState.highPass || 0) > 0.05) {
         const hpPct = Math.round((buildupState.highPass || 0) * 100);
-        this.laserStatusEl.textContent = `BUILDUP (${hpPct}%)`;
-        this.laserStatusEl.style.color = '#22d3ee';
+        this._setText(this.laserStatusEl, `BUILDUP (${hpPct}%)`);
+        this._setColor(this.laserStatusEl, '#22d3ee');
       } else {
-        this.laserStatusEl.textContent = 'BYPASS';
-        this.laserStatusEl.style.color = '#64748b';
+        this._setText(this.laserStatusEl, 'BYPASS');
+        this._setColor(this.laserStatusEl, '#64748b');
       }
     }
 
     if (this.projectionStatusEl) {
       const isClean = document.body.classList.contains('clean-projection');
-      this.projectionStatusEl.textContent = isClean ? 'CLEAN (100% VISUALS)' : 'OFF';
-      this.projectionStatusEl.style.color = isClean ? '#c084fc' : '#64748b';
+      this._setText(this.projectionStatusEl, isClean ? 'CLEAN (100% VISUALS)' : 'OFF');
+      this._setColor(this.projectionStatusEl, isClean ? '#c084fc' : '#64748b');
     }
 
     // 5. Audio Transient Followers & Source
     if (audioState) {
-      if (this.audioSourceEl && audioState.sourceName) {
-        this.audioSourceEl.textContent = audioState.sourceName;
+      if (this.audioSourceEl) {
+        this._setText(
+          this.audioSourceEl,
+          audioState.pulseMode
+            ? `💓 BPM Pulse (${Math.round(audioState.bpm || 128)} BPM)`
+            : (audioState.sourceName || 'Default Mic')
+        );
       }
-      if (this.barKick) this.barKick.style.width = `${Math.round(Math.min(1.0, audioState.kickLevel) * 100)}%`;
-      if (this.valKick) this.valKick.textContent = audioState.kickLevel.toFixed(2);
+      this._setWidth(this.barKick, Math.round(Math.min(1.0, audioState.kickLevel) * 100));
+      this._setText(this.valKick, audioState.kickLevel.toFixed(2));
 
       const punch = audioState.kickPunch !== undefined ? audioState.kickPunch : audioState.kickLevel;
-      if (this.barPunch) this.barPunch.style.width = `${Math.round(Math.min(1.0, punch / 1.5) * 100)}%`;
-      if (this.valPunch) this.valPunch.textContent = punch.toFixed(2);
+      this._setWidth(this.barPunch, Math.round(Math.min(1.0, punch / 1.5) * 100));
+      this._setText(this.valPunch, punch.toFixed(2));
 
       const dropPct = Math.round((audioState.dropIntensity || 0) * 100);
-      if (this.barDrop) this.barDrop.style.width = `${dropPct}%`;
-      if (this.valDrop) this.valDrop.textContent = `${dropPct}%`;
+      this._setWidth(this.barDrop, dropPct);
+      this._setText(this.valDrop, `${dropPct}%`);
 
-      if (this.barHigh) this.barHigh.style.width = `${Math.round(Math.min(1.0, audioState.highLevel) * 100)}%`;
-      if (this.valHigh) this.valHigh.textContent = audioState.highLevel.toFixed(2);
+      this._setWidth(this.barHigh, Math.round(Math.min(1.0, audioState.highLevel) * 100));
+      this._setText(this.valHigh, audioState.highLevel.toFixed(2));
 
       // Dynamic Drop Dynamics Badge & 4/4 Kick Cadence Lock Status
       if (this.dropBadge) {
         const intensity = audioState.dropIntensity || 0;
         const mode = audioState.dropMode || 'auto';
         if (mode === 'forced') {
-          this.dropBadge.className = 'hud-drop-badge drop';
-          this.dropBadge.textContent = '🔥 FORCED DROP';
+          this._setClass(this.dropBadge, 'hud-drop-badge drop');
+          this._setText(this.dropBadge, '🔥 FORCED DROP');
         } else if (mode === 'chill') {
-          this.dropBadge.className = 'hud-drop-badge verse';
-          this.dropBadge.textContent = '❄️ FORCED CHILL';
+          this._setClass(this.dropBadge, 'hud-drop-badge verse');
+          this._setText(this.dropBadge, '❄️ FORCED CHILL');
         } else if (intensity >= 0.50) {
-          this.dropBadge.className = 'hud-drop-badge drop';
-          this.dropBadge.textContent = `🔥 DROP / CHORUS (${Math.round(audioState.bpm)} BPM)`;
+          this._setClass(this.dropBadge, 'hud-drop-badge drop');
+          this._setText(this.dropBadge, `🔥 DROP / CHORUS (${Math.round(audioState.bpm)} BPM)`);
         } else if (intensity >= 0.22 || (audioState.kickCadenceLock && audioState.kickCadenceLock > 0.3)) {
-          this.dropBadge.className = 'hud-drop-badge buildup';
-          this.dropBadge.textContent = `⚡ BUILDING UP (${dropPct}%)`;
+          this._setClass(this.dropBadge, 'hud-drop-badge buildup');
+          this._setText(this.dropBadge, `⚡ BUILDING UP (${dropPct}%)`);
         } else {
-          this.dropBadge.className = 'hud-drop-badge verse';
-          this.dropBadge.textContent = '🌊 VERSE / CHILL';
+          this._setClass(this.dropBadge, 'hud-drop-badge verse');
+          this._setText(this.dropBadge, '🌊 VERSE / CHILL');
         }
       }
     }

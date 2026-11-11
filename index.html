@@ -36,8 +36,16 @@
     <h1 class="start-title">DJ Performance Engine</h1>
     <p class="start-desc">
       Hardware-accelerated audiovisual engine for AKAI MPK Mini 3 and OBS Studio.<br>
-      Tap any <strong>MIDI Pad</strong> or click below to engage the audio & lighting engine.
+      Tap any <strong>MIDI Pad</strong>, use the <strong>Phone Remote</strong>, or click below to engage.
     </p>
+    <div style="display: flex; align-items: center; justify-content: center; gap: 16px; margin: 14px 0 18px; padding: 12px 18px; border-radius: 14px; background: rgba(15, 23, 42, 0.78); border: 1px solid rgba(56, 189, 248, 0.35);">
+      <img id="start-qr-img" src="/api/qr.svg" alt="Scan for Phone Remote" style="width: 96px; height: 96px; border-radius: 8px; background: #fff; padding: 4px; flex-shrink: 0;">
+      <div style="text-align: left;">
+        <div style="font-size: 11px; font-weight: 800; letter-spacing: 1px; color: #38bdf8; text-transform: uppercase; margin-bottom: 4px;">📱 Scan for Phone Remote</div>
+        <div id="start-remote-url" style="font-family: monospace; font-size: 13px; font-weight: 700; color: #f8fafc; margin-bottom: 4px;">http://localhost:8000/remote</div>
+        <div style="font-size: 11px; color: #94a3b8;">Connect phone to same Wi-Fi / Hotspot &amp; scan camera</div>
+      </div>
+    </div>
     <button id="start-btn" class="start-button">ENGAGE ENGINE</button>
   </div>
 
@@ -131,12 +139,27 @@
       </div>
     </div>
 
+    <!-- Active Event Performance Crate -->
+    <div class="hud-section">
+      <div class="hud-section-title">📦 Active Party Crate</div>
+      <div class="hud-row">
+        <span>Active Crate:</span>
+        <span id="hud-crate-status" style="color: #f97316; font-weight: 700;">🎃 Halloween (23)</span>
+      </div>
+      <div class="hud-row" style="margin-top: 4px; margin-bottom: 2px;">
+        <button id="hud-crate-btn" class="audio-btn" style="width: 100%; padding: 4px; font-size: 10px; background: rgba(249, 115, 22, 0.15); border-color: rgba(249, 115, 22, 0.35); color: #fdba74;">Switch Party Crate (Key: K)</button>
+      </div>
+    </div>
+
     <!-- Phone Companion Remote Link -->
     <div class="hud-section">
       <div class="hud-section-title">📱 Phone Remote Cue Deck</div>
-      <div class="hud-row">
-        <span>Wi-Fi URL:</span>
-        <span id="hud-remote-url" style="color: #38bdf8; font-weight: 700; font-family: monospace; font-size: 10px;">http://192.168.1.168:8000/remote</span>
+      <div style="display: flex; align-items: center; gap: 10px; margin-top: 4px;">
+        <img id="hud-qr-img" src="/api/qr.svg" alt="Remote QR" style="width: 58px; height: 58px; border-radius: 6px; background: #fff; padding: 3px; flex-shrink: 0;">
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 9px; color: #94a3b8; margin-bottom: 2px;">Scan with Phone Camera:</div>
+          <div id="hud-remote-url" style="color: #38bdf8; font-weight: 700; font-family: monospace; font-size: 10px; word-break: break-all;">http://192.168.1.168:8000/remote</div>
+        </div>
       </div>
     </div>
 
@@ -325,7 +348,7 @@
       </div>
     </div>
     <div style="font-size: 9px; color: #64748b; text-align: center; margin-top: 8px;">
-      Press [D] to Toggle HUD | 'P' Clean Projection | Keys 1-8 Hotcues | Shift+1-8 Bank B | 'X' Laser | 'M' Framing | 'B' Drop | 'V' Style | 'U' Shutter | 'N' Invert
+      Press [D] to Toggle HUD | 'P' Clean Projection | 'K' Switch Crate | Keys 1-8 Hotcues | Shift+1-8 Bank B | 'X' Laser | 'M' Framing | 'B' Drop | 'V' Style | 'U' Shutter | 'N' Invert
     </div>
   </div>
 

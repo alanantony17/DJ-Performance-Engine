@@ -138,23 +138,25 @@ html, body {
   align-items: center;
   gap: 16px;
   padding: 12px 18px;
-  background: rgba(10, 14, 24, 0.85);
+  background: rgba(10, 14, 24, 0.95);
   border: 1px solid rgba(0, 240, 255, 0.6);
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 240, 255, 0.25);
-  backdrop-filter: blur(12px);
   transform: translateY(0);
   opacity: 0;
-  transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+  visibility: hidden;
+  transition: opacity 0.25s ease-out, transform 0.25s ease-out, visibility 0.25s;
 }
 
 #asset-preview-card.visible {
   opacity: 1;
+  visibility: visible;
   transform: translateY(0);
 }
 
 #asset-preview-card.hidden {
   opacity: 0;
+  visibility: hidden;
   transform: translateY(12px);
 }
 
@@ -209,14 +211,14 @@ html, body {
   align-items: center;
   gap: 14px;
   padding: 12px 18px;
-  background: rgba(12, 10, 26, 0.90);
+  background: rgba(12, 10, 26, 0.95);
   border: 1px solid rgba(168, 85, 247, 0.6);
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 22px rgba(168, 85, 247, 0.25);
-  backdrop-filter: blur(12px);
   transform: translateY(0);
   opacity: 0;
-  transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+  visibility: hidden;
+  transition: opacity 0.25s ease-out, transform 0.25s ease-out, visibility 0.25s;
 }
 
 #hue-preview-card {
@@ -248,6 +250,7 @@ html, body {
 #buildup-preview-card.visible,
 #framing-preview-card.visible {
   opacity: 1;
+  visibility: visible;
   transform: translateY(0);
 }
 
@@ -257,6 +260,7 @@ html, body {
 #buildup-preview-card.hidden,
 #framing-preview-card.hidden {
   opacity: 0;
+  visibility: hidden;
   transform: translateY(12px);
 }
 
@@ -317,8 +321,8 @@ html, body {
   left: 16px;
   z-index: 100;
   pointer-events: none;
-  background: rgba(8, 11, 20, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(8, 11, 20, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 12px;
   padding: 16px;
   width: 320px;
@@ -326,7 +330,7 @@ html, body {
   font-size: 11px;
   color: #cbd5e1;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(10px);
+  contain: layout style paint;
   transition: opacity 0.2s ease-in-out;
 }
 
@@ -389,7 +393,6 @@ html, body {
   width: 0%;
   background: #00f0ff;
   border-radius: 3px;
-  transition: width 0.05s linear;
 }
 
 .hud-meter-bar.kick {
@@ -547,8 +550,7 @@ html, body {
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.35), rgba(249, 115, 22, 0.35));
   border: 1px solid #ef4444;
   color: #fef08a;
-  box-shadow: 0 0 14px rgba(239, 68, 68, 0.6);
-  animation: dropGlow 0.4s infinite alternate ease-in-out;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
 }
 
 @keyframes dropGlow {
@@ -566,14 +568,13 @@ html, body {
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: rgba(15, 23, 42, 0.85);
+  background: rgba(15, 23, 42, 0.94);
   border: 1px solid rgba(0, 240, 255, 0.4);
   border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
   color: #cbd5e1;
   cursor: pointer;
-  backdrop-filter: blur(10px);
   box-shadow: 0 4px 16px rgba(0,0,0,0.5);
   transition: all 0.2s ease;
 }

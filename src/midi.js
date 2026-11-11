@@ -25,7 +25,7 @@ export class MidiController {
       knobs: {
         knob1: (CONFIG.midi.knobs.knob1.default - CONFIG.midi.knobs.knob1.min) / (CONFIG.midi.knobs.knob1.max - CONFIG.midi.knobs.knob1.min),
         knob2: CONFIG.midi.knobs.knob2.default,
-        knob3: CONFIG.midi.knobs.knob3.default,
+        knob3: (CONFIG.midi.knobs.knob3.default - CONFIG.midi.knobs.knob3.min) / (CONFIG.midi.knobs.knob3.max - CONFIG.midi.knobs.knob3.min),
         knob4: (CONFIG.midi.knobs.knob4.default - CONFIG.midi.knobs.knob4.min) / (CONFIG.midi.knobs.knob4.max - CONFIG.midi.knobs.knob4.min),
         knob5: CONFIG.midi.knobs.knob5 ? (CONFIG.midi.knobs.knob5.default - CONFIG.midi.knobs.knob5.min) / (CONFIG.midi.knobs.knob5.max - CONFIG.midi.knobs.knob5.min) : 0.5,
       },

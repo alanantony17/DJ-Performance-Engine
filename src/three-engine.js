@@ -23,9 +23,24 @@ export const FRAMING_MODES = [
 ];
 
 export class ThreeDisplacementEngine {
-  constructor(canvas) {
+  constructor(canvas, options = {}) {
     this.canvas = canvas;
     this.currentTexture = null;
+    this.textureCache = new Map(); // Bounded LRU GPU Texture Cache (disposes evicted textures)
+    this.maxCachedTextures = CONFIG.performance?.maxCachedTextures || 8;
+    this.maxTextureSize = CONFIG.performance?.maxTextureSize || 2048;
+    this._inFlightLoads = new Set();
+    this._preloadToken = 0;
+    this._preloadTimer = null;
+    this.contextLost = false;
+    this.contextLostTime = 0;
+    this.currentAssetIndex = 0;
+    this.currentAssetSource = null;
+    this.currentAssetName = 'Artwork';
+    this.currentAssetHintFraming = null;
+    this._paletteCanvas = null;
+    this._paletteCtx = null;
+
     this.rotSpeed = 0.005;
     this.rotationAngle = 0.0;
     this.surgeVelocity = 0.0;
@@ -62,11 +77,12 @@ export class ThreeDisplacementEngine {
     this.beatRepeatIndex = 0;
     this.beatRepeatStyles = this.gratingStyles;
 
-    // Physical In-Shader FX States (Legacy Slicer & Invert)
+    // Physical In-Shader FX States (Legacy Slicer & Invert & Master Blackout)
     this.slicerActive = false;
     this.slicerStyle = 0;
     this.slicerRotation = 0.785398;
     this.negativeActive = false;
+    this.masterBlackout = false;
 
     // ILDA Projector Laser & Spatial Strobe Engine Registers (Approach B)
     this.laserManualPunch = false;
@@ -119,23 +135,29 @@ export class ThreeDisplacementEngine {
     this.camera = new THREE.PerspectiveCamera(55, width / height, 0.1, 1000);
     this.camera.position.set(0, 0, 6.2);
 
-    // Renderer (alpha: true, powerPreference: high-performance)
+    // Renderer (opaque full-screen Pass 2 quad: disable MSAA, alpha, depth & stencil buffers for max FPS)
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
-      alpha: true,
-      antialias: true,
+      alpha: false,
+      antialias: false,
+      depth: false,
+      stencil: false,
       powerPreference: 'high-performance',
     });
     this.renderer.setSize(width, height, false);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.setClearColor(0x000000, 0.0);
+    const maxDpr = CONFIG.performance?.maxPixelRatio || 1.0;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
+    this.renderer.setClearColor(0x000000, 1.0);
+
+    // 0. WebGL Context Loss & Auto-Restoration Handlers
+    this.initContextLossHandlers();
 
     // 1. HARMONIZED 3D STARDUST PARTICLE FIELD
     this.initStardust();
 
     // 2. THE HERO PERFORMANCE MESH (16:9 Frustum Fill & Isotropic Cells)
-    // 16.0x9.0 units, 160x90 grid for perfect 16:9 widescreen frustum fill with isotropic square cells
-    this.geometry = new THREE.PlaneGeometry(16.0, 9.0, 160, 90);
+    // 16.0x9.0 units, 128x72 grid for 16:9 widescreen frustum fill with isotropic square cells & fast vertex throughput
+    this.geometry = new THREE.PlaneGeometry(16.0, 9.0, 128, 72);
     this.initMaterial();
     this.mesh = new THREE.Mesh(this.geometry, this.material);
     this.scene.add(this.mesh);
@@ -144,15 +166,42 @@ export class ThreeDisplacementEngine {
     this.initFeedbackPipeline(width, height);
 
     // Initial asset load & drag-and-drop
-    this.initDefaultTexture();
+    if (!options.skipDefaultTexture) {
+      this.initDefaultTexture();
+    }
     this.initDragAndDrop();
 
     console.log('[ThreeEngine] Harmonized Totem & Obsidian Void Silhouette Corona Engine initialized.');
   }
 
+  initContextLossHandlers() {
+    if (!this.canvas) return;
+    this._onContextLost = (e) => {
+      e.preventDefault();
+      this.contextLost = true;
+      this.contextLostTime = performance.now();
+      console.error('[ThreeEngine] WebGL context lost! Preventing default and awaiting GPU recovery...');
+      window.dispatchEvent(new CustomEvent('engine:webglContextLost', { detail: { time: this.contextLostTime } }));
+    };
+    this._onContextRestored = () => {
+      this.contextLost = false;
+      this.contextLostTime = 0;
+      console.log('[ThreeEngine] WebGL context restored! Re-uploading active texture and flushing stale GPU handles.');
+      this.clearTextureCache(false);
+      if (this.currentAssetSource) {
+        this.loadTexture(this.currentAssetSource, this.currentAssetName, this.currentAssetHintFraming);
+      } else {
+        this.initDefaultTexture();
+      }
+      window.dispatchEvent(new CustomEvent('engine:webglContextRestored'));
+    };
+    this.canvas.addEventListener('webglcontextlost', this._onContextLost, false);
+    this.canvas.addEventListener('webglcontextrestored', this._onContextRestored, false);
+  }
+
   // --- 1. Harmonized 3D Stardust Setup ---
   initStardust() {
-    this.starCount = 1800;
+    this.starCount = 900;
     this.starGeometry = new THREE.BufferGeometry();
     const starPositions = new Float32Array(this.starCount * 3);
     this.starVelocities = new Float32Array(this.starCount);
@@ -326,8 +375,8 @@ export class ThreeDisplacementEngine {
 
         // 3. Melody Fluid Harmonics (Dancing to vocals, leads, and harmonic chords)
         float melodyWave = 0.0;
+        float angle = (uMelody > 0.015 || uPreset == 2) ? atan(pos.y, pos.x) : 0.0;
         if (uMelody > 0.015) {
-          float angle = atan(pos.y, pos.x);
           float harm = sin(rMod * uSpread * 1.15 - uBeatPhase * 6.28318) * cos(angle * 4.0 + uTime * 0.85);
           melodyWave = harm * uMelody * 0.44;
         }
@@ -344,7 +393,6 @@ export class ThreeDisplacementEngine {
           z = (kickWave * 1.35 + centerPunch) * uAmp;
         } else if (uPreset == 2) {
           // PRESET 2: Melody Harmonic Waves (Fluid standing ripples dancing to vocals & melody)
-          float angle = atan(pos.y, pos.x);
           float standing = sin(rMod * uSpread - uBeatPhase * 6.28318) * cos(angle * 8.0);
           z = (melodyWave * 1.35 + standing * (uMelody * 0.5 + 0.12)) * uAmp;
         } else if (uPreset == 3) {
@@ -587,6 +635,8 @@ export class ThreeDisplacementEngine {
       minFilter: THREE.LinearFilter,
       magFilter: THREE.LinearFilter,
       format: THREE.RGBAFormat,
+      depthBuffer: false,
+      stencilBuffer: false,
     });
     this.renderTargetB = this.renderTargetA.clone();
 
@@ -706,7 +756,6 @@ export class ThreeDisplacementEngine {
           vec2 center = vec2(0.5);
           vec2 p = vUv - center;
           float r = length(p);
-          float angle = atan(p.y, p.x);
 
           // -------------------------------------------------------------
           // 2. SINGULARITY VOID HORIZON PINCH (Archetype 1)
@@ -812,30 +861,36 @@ export class ThreeDisplacementEngine {
 
           // -------------------------------------------------------------
           // 5. OBSIDIAN VOID HARMONIC BASE & FLUID CORONA
+          // Fast-path: skip 3x feedback texture reads & trig on opaque foreground pixels
+          // (100% of screen in World-Field mode and center totem in Radial Portal mode)
           // -------------------------------------------------------------
-          vec3 deepVoid = vec3(0.008, 0.010, 0.014) + uColorPrimary * 0.012;
-          if (effectiveLaser > 0.05) {
-            deepVoid *= (1.0 - effectiveLaser * 0.92);
+          vec3 finalRgb = curr.rgb;
+          if (curr.a < 0.999) {
+            vec3 deepVoid = vec3(0.008, 0.010, 0.014) + uColorPrimary * 0.012;
+            if (effectiveLaser > 0.05) {
+              deepVoid *= (1.0 - effectiveLaser * 0.92);
+            }
+
+            float zoom = 1.0 + (0.010 * uSpreadReach) + (uKick * 0.030);
+            vec2 warpedUv = p / zoom + center;
+            float curlOffset = sin(r * 14.0 - uTime * 2.0) * (0.0022 * uCurl) * (1.0 + uKick * 1.2);
+            vec2 radialDir = r > 0.0001 ? (p / r) : vec2(0.0);
+            warpedUv += radialDir * curlOffset;
+
+            vec4 prev1 = texture2D(uPrevFeedback, warpedUv);
+            vec4 prev2 = texture2D(uPrevFeedback, warpedUv + vec2(0.0018, 0.0018));
+            vec4 prev3 = texture2D(uPrevFeedback, warpedUv - vec2(0.0018, 0.0018));
+            vec4 prev = (prev1 * 0.50 + prev2 * 0.25 + prev3 * 0.25) * uDecay;
+
+            vec3 corona = prev.rgb * (uCoronaIntensity * 0.90);
+            if (effectiveLaser > 0.05) {
+              corona *= (1.0 - effectiveLaser * 0.85);
+            }
+            vec3 environment = deepVoid + corona;
+
+            // Composite foreground Totem + Stardust over Environment
+            finalRgb = mix(environment, curr.rgb, curr.a);
           }
-
-          float zoom = 1.0 + (0.010 * uSpreadReach) + (uKick * 0.030);
-          vec2 warpedUv = p / zoom + center;
-          float curlOffset = sin(r * 14.0 - uTime * 2.0) * (0.0022 * uCurl) * (1.0 + uKick * 1.2);
-          warpedUv += vec2(cos(angle), sin(angle)) * curlOffset;
-
-          vec4 prev1 = texture2D(uPrevFeedback, warpedUv);
-          vec4 prev2 = texture2D(uPrevFeedback, warpedUv + vec2(0.0018, 0.0018));
-          vec4 prev3 = texture2D(uPrevFeedback, warpedUv - vec2(0.0018, 0.0018));
-          vec4 prev = (prev1 * 0.50 + prev2 * 0.25 + prev3 * 0.25) * uDecay;
-
-          vec3 corona = prev.rgb * (uCoronaIntensity * 0.90);
-          if (effectiveLaser > 0.05) {
-            corona *= (1.0 - effectiveLaser * 0.85);
-          }
-          vec3 environment = deepVoid + corona;
-
-          // Composite foreground Totem + Stardust over Environment
-          vec3 finalRgb = mix(environment, curr.rgb, curr.a);
 
           // -------------------------------------------------------------
           // 6. MASTER STROBE SHUTTER & RETINAL PHOSPHOR GHOSTING
@@ -923,6 +978,7 @@ export class ThreeDisplacementEngine {
             } else if (uGratingStyle == 1) {
               // Style 1: Radial Gobo Teeth - Clockwork Radar Spoke Spawn & Iris Choke (BPM Synced)
               // Rotates in tempo: 1 full 360° revolution every 16 beats (4 musical bars)
+              float angle = atan(p.y, p.x);
               float normAngle = (angle + 3.14159265) / 6.2831853; // 0.0 to 1.0
               
               float maxSpokes = max(6.0, floor(uGratingDensity * 0.75));
@@ -1018,11 +1074,15 @@ export class ThreeDisplacementEngine {
   // --- 4. Dynamic Harmonic Palette Extraction (Primary & Secondary Tones) ---
   extractHarmonicPalette(img) {
     try {
-      const canvas = document.createElement('canvas');
       const size = 64;
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext('2d');
+      if (!this._paletteCanvas) {
+        this._paletteCanvas = document.createElement('canvas');
+        this._paletteCanvas.width = size;
+        this._paletteCanvas.height = size;
+        this._paletteCtx = this._paletteCanvas.getContext('2d', { willReadFrequently: true });
+      }
+      const ctx = this._paletteCtx;
+      ctx.clearRect(0, 0, size, size);
       ctx.drawImage(img, 0, 0, size, size);
       const data = ctx.getImageData(0, 0, size, size).data;
 
@@ -1166,6 +1226,75 @@ export class ThreeDisplacementEngine {
     }));
   }
 
+  // Downscale oversized images (>2048px) to a power-of-two dimension before GPU upload
+  downscaleImageIfNeeded(img) {
+    try {
+      const maxEdge = this.maxTextureSize || 2048;
+      const w = img?.naturalWidth || img?.width || 0;
+      const h = img?.naturalHeight || img?.height || 0;
+      if (!w || !h || (w <= maxEdge && h <= maxEdge)) return img;
+
+      const scale = maxEdge / Math.max(w, h);
+      const snapPot = (v) => Math.min(maxEdge, Math.max(256, Math.pow(2, Math.floor(Math.log2(Math.max(1, v))))));
+      const targetW = snapPot(Math.round(w * scale));
+      const targetH = snapPot(Math.round(h * scale));
+      const c = document.createElement('canvas');
+      c.width = targetW;
+      c.height = targetH;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, targetW, targetH);
+      return c;
+    } catch (_) {
+      return img;
+    }
+  }
+
+  // Bounded LRU GPU Texture Cache Management
+  touchCachedTexture(source) {
+    if (!this.textureCache.has(source)) return null;
+    const entry = this.textureCache.get(source);
+    this.textureCache.delete(source);
+    this.textureCache.set(source, entry);
+    return entry;
+  }
+
+  cacheTexture(source, entry) {
+    if (this.textureCache.has(source)) {
+      const prev = this.textureCache.get(source);
+      if (prev && prev.texture && prev.texture !== entry.texture && prev.texture !== this.currentTexture) {
+        try { prev.texture.dispose(); } catch (_) {}
+      }
+      this.textureCache.delete(source);
+    }
+    this.textureCache.set(source, entry);
+
+    const limit = this.maxCachedTextures || 10;
+    if (this.textureCache.size > limit) {
+      for (const [key, val] of this.textureCache.entries()) {
+        if (this.textureCache.size <= limit) break;
+        if (key === this.currentAssetSource || (val && val.texture === this.currentTexture)) {
+          continue;
+        }
+        if (val && val.texture) {
+          try { val.texture.dispose(); } catch (_) {}
+        }
+        this.textureCache.delete(key);
+      }
+    }
+  }
+
+  clearTextureCache(keepCurrent = true) {
+    for (const [key, val] of this.textureCache.entries()) {
+      if (keepCurrent && (key === this.currentAssetSource || (val && val.texture === this.currentTexture))) {
+        continue;
+      }
+      if (val && val.texture) {
+        try { val.texture.dispose(); } catch (_) {}
+      }
+      this.textureCache.delete(key);
+    }
+  }
+
   initDefaultTexture() {
     const defaultAsset = CONFIG.assets.list[0];
     const initialPath = defaultAsset ? defaultAsset.path : 'assets/wheel.png';
@@ -1175,28 +1304,43 @@ export class ThreeDisplacementEngine {
   }
 
   loadTexture(source, name = 'Artwork', hintFraming = null) {
+    this.currentAssetSource = source;
+    this.currentAssetName = name;
+    this.currentAssetHintFraming = hintFraming;
+
+    // 1. Instant 0ms LRU Texture Cache Hit
+    const cached = this.touchCachedTexture(source);
+    if (cached) {
+      this.currentTexture = cached.texture;
+      this.uniforms.uTexture.value = cached.texture;
+      this.applyHarmonicPalette(cached.palette, name);
+
+      let chosenMode = cached.chosenMode;
+      if (hintFraming === 'totem') {
+        chosenMode = 1;
+      } else if (hintFraming === 'world') {
+        chosenMode = 0;
+      }
+      this.framingManualOverride = false;
+      this.setFramingMode(chosenMode);
+      return;
+    }
+
+    // 2. First-Time Load & Bounded GPU Cache Registration
+    this._inFlightLoads.add(source);
     const loader = new THREE.TextureLoader();
     loader.load(
       source,
       (texture) => {
-        if (this.currentTexture) {
-          this.currentTexture.dispose();
-        }
-        this.currentTexture = texture;
-        this.currentAssetName = name;
-
+        this._inFlightLoads.delete(source);
+        const palette = this.extractHarmonicPalette(texture.image);
+        texture.image = this.downscaleImageIfNeeded(texture.image);
         texture.wrapS = THREE.MirroredRepeatWrapping;
         texture.wrapT = THREE.MirroredRepeatWrapping;
         texture.generateMipmaps = true;
         texture.minFilter = THREE.LinearMipmapLinearFilter;
         texture.magFilter = THREE.LinearFilter;
         texture.needsUpdate = true;
-
-        this.uniforms.uTexture.value = texture;
-
-        // Extract and apply harmonic palette & shape inspection
-        const palette = this.extractHarmonicPalette(texture.image);
-        this.applyHarmonicPalette(palette, name);
 
         // Native framing lock: circular assets ALWAYS load in Radial Portal (mode 1), square assets ALWAYS in World-Field (mode 0)
         let chosenMode = 0; // World-Field
@@ -1207,19 +1351,124 @@ export class ThreeDisplacementEngine {
         } else {
           chosenMode = palette.isCornerVoid ? 1 : 0;
         }
-        this.framingManualOverride = false;
-        this.setFramingMode(chosenMode);
 
-        console.log(`[ThreeEngine] Ingested Artwork: ${name} [${this.getFramingMode().name}] with Harmonic Palette.`);
+        // Do not cache massive base64 drag-and-drop data URLs in the persistent map
+        if (!source.startsWith('data:')) {
+          this.cacheTexture(source, { texture, palette, chosenMode });
+        }
+
+        // Only apply to live screen if this is still the requested active asset
+        if (this.currentAssetSource === source) {
+          this.currentTexture = texture;
+          this.uniforms.uTexture.value = texture;
+          this.applyHarmonicPalette(palette, name);
+          this.framingManualOverride = false;
+          this.setFramingMode(chosenMode);
+          console.log(`[ThreeEngine] Ingested Artwork: ${name} [${this.getFramingMode().name}] (LRU Cache: ${this.textureCache.size}/${this.maxCachedTextures}).`);
+        }
       },
       undefined,
-      (err) => console.error('[ThreeEngine] Failed to load texture:', err)
+      (err) => {
+        this._inFlightLoads.delete(source);
+        console.error('[ThreeEngine] Failed to load texture:', err);
+      }
     );
   }
 
+  // Smart Neighbor-Only Pre-caching (keeps next/prev & cued assets warm without flooding VRAM)
+  preloadCrateAssets(assets, centerAssetId = null, cuedAssetId = null) {
+    if (!assets || !Array.isArray(assets) || assets.length === 0) return;
+
+    // Cancel any running preload chain immediately
+    const token = ++this._preloadToken;
+    if (this._preloadTimer) {
+      clearTimeout(this._preloadTimer);
+      this._preloadTimer = null;
+    }
+
+    const activeId = centerAssetId !== null ? centerAssetId : this.currentAssetIndex;
+    let centerPos = assets.findIndex(a => a && a.id === activeId);
+    if (centerPos < 0) centerPos = 0;
+
+    // Build small priority window: cued asset + next 3 in crate + previous 1 in crate
+    const queue = [];
+    const seen = new Set();
+    const pushCandidate = (a) => {
+      if (!a || !a.path || seen.has(a.path)) return;
+      seen.add(a.path);
+      queue.push(a);
+    };
+
+    if (cuedAssetId !== null && cuedAssetId !== undefined) {
+      const cued = CONFIG.assets.list[cuedAssetId];
+      pushCandidate(cued);
+    }
+
+    const maxNeighbors = Math.min(
+      CONFIG.performance?.preloadNeighbors || 1,
+      Math.max(1, (this.maxCachedTextures || 8) - 2)
+    );
+    const offsets = [1, -1];
+    for (const off of offsets) {
+      if (queue.length >= maxNeighbors) break;
+      const idx = (centerPos + off + assets.length) % assets.length;
+      pushCandidate(assets[idx]);
+    }
+
+    const loader = new THREE.TextureLoader();
+    let qIdx = 0;
+    const loadNext = () => {
+      if (token !== this._preloadToken || this.contextLost) return;
+      if (qIdx >= queue.length) return;
+      const a = queue[qIdx++];
+      if (!a || !a.path || this.textureCache.has(a.path) || this._inFlightLoads.has(a.path)) {
+        if (a && a.path && this.textureCache.has(a.path)) {
+          this.touchCachedTexture(a.path);
+        }
+        this._preloadTimer = setTimeout(loadNext, 50);
+        return;
+      }
+
+      this._inFlightLoads.add(a.path);
+      loader.load(
+        a.path,
+        (texture) => {
+          this._inFlightLoads.delete(a.path);
+          if (token !== this._preloadToken || this.contextLost) {
+            try { texture.dispose(); } catch (_) {}
+            return;
+          }
+          const palette = this.extractHarmonicPalette(texture.image);
+          texture.image = this.downscaleImageIfNeeded(texture.image);
+          texture.wrapS = THREE.MirroredRepeatWrapping;
+          texture.wrapT = THREE.MirroredRepeatWrapping;
+          texture.generateMipmaps = true;
+          texture.minFilter = THREE.LinearMipmapLinearFilter;
+          texture.magFilter = THREE.LinearFilter;
+          texture.needsUpdate = true;
+
+          let chosenMode = 0;
+          if (a.framing === 'totem') chosenMode = 1;
+          else if (a.framing === 'world') chosenMode = 0;
+          else chosenMode = palette.isCornerVoid ? 1 : 0;
+
+          this.cacheTexture(a.path, { texture, palette, chosenMode });
+          this._preloadTimer = setTimeout(loadNext, 350);
+        },
+        undefined,
+        () => {
+          this._inFlightLoads.delete(a.path);
+          this._preloadTimer = setTimeout(loadNext, 150);
+        }
+      );
+    };
+    // Wait 1.5s of idle time before background preloading so live transitions stay at locked 60 FPS
+    this._preloadTimer = setTimeout(loadNext, 1500);
+  }
+
   initDragAndDrop() {
-    window.addEventListener('dragover', (e) => e.preventDefault());
-    window.addEventListener('drop', (e) => {
+    this._onDragOver = (e) => e.preventDefault();
+    this._onDrop = (e) => {
       e.preventDefault();
       const file = e.dataTransfer.files[0];
       if (file && file.type.startsWith('image/')) {
@@ -1232,11 +1481,14 @@ export class ThreeDisplacementEngine {
         };
         reader.readAsDataURL(file);
       }
-    });
+    };
+    window.addEventListener('dragover', this._onDragOver);
+    window.addEventListener('drop', this._onDrop);
   }
 
   setAsset(index) {
     if (index >= 0 && index < CONFIG.assets.list.length) {
+      this.currentAssetIndex = index;
       const asset = CONFIG.assets.list[index];
       this.loadTexture(asset.path, asset.name, asset.framing);
     }
@@ -1580,8 +1832,12 @@ export class ThreeDisplacementEngine {
       this.uniforms.uSnareRings.value[i].set(ring.radius, ring.intensity, ring.width);
     }
 
-    // 2. Advance Subtle Harmonized Stardust Stream
-    if (this.starGeometry) {
+    // 2. Advance Subtle Harmonized Stardust Stream (only visible outside opaque World-Field mode)
+    const showStars = this.framingMode !== 0;
+    if (this.starParticles) {
+      this.starParticles.visible = showStars;
+    }
+    if (this.starGeometry && showStars) {
       const starPos = this.starGeometry.attributes.position.array;
       let forwardVelocity = (1.0 * 3.5 + bass * 4.0) * dt;
 
@@ -1709,11 +1965,12 @@ export class ThreeDisplacementEngine {
     if (computedMidi.padSlam) {
       if (this.slicerActive) this.resetSlicer();
       if (this.gratingActive) this.resetGrating();
+      this.masterBlackout = false;
     }
     this.uniforms.uPadSlam.value = computedMidi.padSlam ? 1.0 : 0.0;
 
     const isBuilding = buildupState && (buildupState.state === 'building' || buildupState.state === 'holding_climax');
-    const isShut = buildupState && (buildupState.state === 'blackout_shut' || buildupState.isBlackout);
+    const isShut = Boolean(this.masterBlackout || (buildupState && (buildupState.state === 'blackout_shut' || buildupState.isBlackout)));
 
     this.uniforms.uBuildupActive.value = isBuilding ? 1.0 : 0.0;
     this.uniforms.uStrobePulse.value = isBuilding ? buildupState.strobePulse : 1.0;
@@ -1911,7 +2168,9 @@ export class ThreeDisplacementEngine {
     this.feedbackMaterial.uniforms.uJoystickPan.value = computedMidi.joystickPan !== undefined ? computedMidi.joystickPan : 0.5;
     this.feedbackMaterial.uniforms.uJoystickTilt.value = computedMidi.joystickAperture !== undefined ? computedMidi.joystickAperture : 0.5;
 
-    // 8. 2-Pass Ping-Pong Render Execution
+    // 8. 2-Pass Ping-Pong Render Execution (guarded when WebGL context is lost)
+    if (this.contextLost || !this.renderer) return;
+
     // Pass 1: Render Crisp Totem Mesh & Stardust Motes to RenderTarget A
     this.renderer.setRenderTarget(this.renderTargetA);
     this.renderer.clear();
@@ -1930,16 +2189,107 @@ export class ThreeDisplacementEngine {
     this.renderTargetB = temp;
   }
 
+  toggleMasterBlackout(force = null) {
+    this.masterBlackout = force !== null ? Boolean(force) : !this.masterBlackout;
+    return this.masterBlackout;
+  }
+
+  // Reset all live FX overlays back to clean artwork state (panic recovery)
+  softResetFx() {
+    this.resetGrating();
+    this.resetSlicer();
+    this.resetLaser();
+    this.masterBlackout = false;
+    this.negativeActive = false;
+    if (this.uniforms && this.uniforms.uNegative) {
+      this.uniforms.uNegative.value = 0.0;
+    }
+  }
+
+  // Capture engine visual state so a watchdog renderer rebuild is seamless
+  getSnapshot() {
+    return {
+      currentAssetIndex: this.currentAssetIndex,
+      currentAssetSource: this.currentAssetSource,
+      currentAssetName: this.currentAssetName,
+      currentAssetHintFraming: this.currentAssetHintFraming,
+      framingMode: this.framingMode,
+      framingManualOverride: this.framingManualOverride,
+      currentPresetIndex: this.currentPresetIndex,
+      hueFlowActive: this.hueFlowActive,
+      autoHue: this.autoHue,
+      gratingActive: this.gratingActive,
+      gratingStyle: this.gratingStyle,
+      slicerActive: this.slicerActive,
+      slicerStyle: this.slicerStyle,
+      negativeActive: this.negativeActive,
+      masterBlackout: this.masterBlackout,
+      laserManualPunch: this.laserManualPunch,
+      rotationAngle: this.rotationAngle,
+    };
+  }
+
+  applySnapshot(snap) {
+    if (!snap) return;
+    if (snap.currentAssetIndex !== undefined) this.currentAssetIndex = snap.currentAssetIndex;
+    if (snap.currentPresetIndex !== undefined) {
+      this.currentPresetIndex = snap.currentPresetIndex;
+      if (this.uniforms?.uPreset) this.uniforms.uPreset.value = this.currentPresetIndex;
+    }
+    if (snap.hueFlowActive !== undefined) this.hueFlowActive = snap.hueFlowActive;
+    if (snap.autoHue !== undefined) this.autoHue = snap.autoHue;
+    if (snap.gratingActive !== undefined) {
+      this.gratingActive = snap.gratingActive;
+      this.beatRepeatActive = snap.gratingActive;
+    }
+    if (snap.gratingStyle !== undefined) this.gratingStyle = snap.gratingStyle;
+    if (snap.slicerActive !== undefined) this.slicerActive = snap.slicerActive;
+    if (snap.slicerStyle !== undefined) this.slicerStyle = snap.slicerStyle;
+    if (snap.negativeActive !== undefined) this.negativeActive = snap.negativeActive;
+    if (snap.masterBlackout !== undefined) this.masterBlackout = snap.masterBlackout;
+    if (snap.laserManualPunch !== undefined) this.laserManualPunch = snap.laserManualPunch;
+    if (snap.rotationAngle !== undefined) this.rotationAngle = snap.rotationAngle;
+
+    if (snap.currentAssetSource) {
+      this.loadTexture(snap.currentAssetSource, snap.currentAssetName, snap.currentAssetHintFraming);
+    } else if (snap.currentAssetIndex !== undefined) {
+      this.setAsset(snap.currentAssetIndex);
+    } else {
+      this.initDefaultTexture();
+    }
+
+    if (snap.framingManualOverride && snap.framingMode !== undefined) {
+      this.framingManualOverride = true;
+      this.setFramingMode(snap.framingMode);
+    }
+  }
+
   dispose() {
-    if (this.currentTexture) this.currentTexture.dispose();
-    if (this.geometry) this.geometry.dispose();
-    if (this.material) this.material.dispose();
-    if (this.starGeometry) this.starGeometry.dispose();
-    if (this.starMaterial) this.starMaterial.dispose();
-    if (this.feedbackQuadGeo) this.feedbackQuadGeo.dispose();
-    if (this.feedbackMaterial) this.feedbackMaterial.dispose();
-    if (this.renderTargetA) this.renderTargetA.dispose();
-    if (this.renderTargetB) this.renderTargetB.dispose();
-    if (this.renderer) this.renderer.dispose();
+    this._preloadToken++;
+    if (this._preloadTimer) {
+      clearTimeout(this._preloadTimer);
+      this._preloadTimer = null;
+    }
+    if (this.canvas) {
+      if (this._onContextLost) this.canvas.removeEventListener('webglcontextlost', this._onContextLost);
+      if (this._onContextRestored) this.canvas.removeEventListener('webglcontextrestored', this._onContextRestored);
+    }
+    if (this._onDragOver) window.removeEventListener('dragover', this._onDragOver);
+    if (this._onDrop) window.removeEventListener('drop', this._onDrop);
+
+    this.clearTextureCache(false);
+    if (this.currentTexture) {
+      try { this.currentTexture.dispose(); } catch (_) {}
+      this.currentTexture = null;
+    }
+    if (this.geometry) try { this.geometry.dispose(); } catch (_) {}
+    if (this.material) try { this.material.dispose(); } catch (_) {}
+    if (this.starGeometry) try { this.starGeometry.dispose(); } catch (_) {}
+    if (this.starMaterial) try { this.starMaterial.dispose(); } catch (_) {}
+    if (this.feedbackQuadGeo) try { this.feedbackQuadGeo.dispose(); } catch (_) {}
+    if (this.feedbackMaterial) try { this.feedbackMaterial.dispose(); } catch (_) {}
+    if (this.renderTargetA) try { this.renderTargetA.dispose(); } catch (_) {}
+    if (this.renderTargetB) try { this.renderTargetB.dispose(); } catch (_) {}
+    if (this.renderer) try { this.renderer.dispose(); } catch (_) {}
   }
 }

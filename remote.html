@@ -84,6 +84,85 @@
       background: #ef4444;
       box-shadow: 0 0 8px #ef4444;
     }
+    .status-dot.warning {
+      background: var(--cue-amber);
+      box-shadow: 0 0 8px var(--cue-amber);
+    }
+
+    .health-pill {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      padding: 4px 8px;
+      border-radius: 12px;
+      background: rgba(16, 185, 129, 0.14);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #34d399;
+      cursor: pointer;
+    }
+    .health-pill.stalled {
+      background: rgba(239, 68, 68, 0.22);
+      border-color: #ef4444;
+      color: #fca5a5;
+    }
+
+    .freeze-alert-banner {
+      display: none;
+      margin: 8px 14px 0;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(239, 68, 68, 0.18);
+      border: 1px solid rgba(239, 68, 68, 0.65);
+      color: #fecaca;
+      font-size: 12px;
+      font-weight: 600;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .freeze-alert-banner.visible {
+      display: flex;
+    }
+    .recovery-drawer {
+      display: none;
+      margin: 8px 14px 0;
+      padding: 10px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      gap: 8px;
+      flex-direction: column;
+    }
+    .recovery-drawer.visible {
+      display: flex;
+    }
+    .recovery-btn-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .recovery-btn {
+      padding: 9px 6px;
+      border-radius: 9px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.07);
+      color: #f8fafc;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+    }
+    .recovery-btn.danger {
+      background: rgba(239, 68, 68, 0.22);
+      border-color: rgba(239, 68, 68, 0.6);
+      color: #fecaca;
+    }
+    .recovery-meta {
+      font-size: 10px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
 
     .mode-toggle-btn {
       background: rgba(255, 255, 255, 0.08);
@@ -109,6 +188,111 @@
       border-color: var(--cyan-accent);
       color: var(--cyan-accent);
       background: rgba(0, 240, 255, 0.15);
+    }
+
+    /* Party Crate Selector */
+    .crate-selector-section {
+      padding: 10px 14px 4px;
+    }
+    .crate-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .crate-section-title {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .crate-badge {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(249, 115, 22, 0.2);
+      border: 1px solid #f97316;
+      color: #fb923c;
+      transition: all 0.2s ease;
+    }
+    .crate-bar {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+    @media (min-width: 600px) {
+      .crate-bar {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+    .crate-btn {
+      background: var(--card-bg);
+      border: 1.5px solid var(--card-border);
+      color: #cbd5e1;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 8px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+    }
+    .crate-btn:active {
+      transform: scale(0.97);
+    }
+    .crate-btn .crate-count {
+      font-size: 9px;
+      font-weight: 800;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 1px 5px;
+      border-radius: 4px;
+      color: var(--text-muted);
+    }
+    .crate-btn[data-crate="halloween"].active {
+      background: rgba(249, 115, 22, 0.18);
+      border-color: #f97316;
+      color: #fff;
+      box-shadow: 0 0 12px rgba(249, 115, 22, 0.35);
+    }
+    .crate-btn[data-crate="halloween"].active .crate-count {
+      background: #f97316;
+      color: #000;
+    }
+    .crate-btn[data-crate="diwali"].active {
+      background: rgba(234, 179, 8, 0.18);
+      border-color: #eab308;
+      color: #fff;
+      box-shadow: 0 0 12px rgba(234, 179, 8, 0.35);
+    }
+    .crate-btn[data-crate="diwali"].active .crate-count {
+      background: #eab308;
+      color: #000;
+    }
+    .crate-btn[data-crate="master"].active {
+      background: rgba(0, 240, 255, 0.18);
+      border-color: #00f0ff;
+      color: #fff;
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.35);
+    }
+    .crate-btn[data-crate="master"].active .crate-count {
+      background: #00f0ff;
+      color: #000;
+    }
+    .crate-btn[data-crate="kabir"].active {
+      background: rgba(245, 158, 11, 0.18);
+      border-color: #f59e0b;
+      color: #fff;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
+    }
+    .crate-btn[data-crate="kabir"].active .crate-count {
+      background: #f59e0b;
+      color: #000;
     }
 
     /* Dual Deck Dock: LIVE vs CUED */
@@ -259,6 +443,261 @@
     }
     .clear-btn:active {
       background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* Simple Live Performance Controls (Risers, Blackout & Audio Sensitivity) */
+    .live-fx-strip {
+      margin: 0 14px 10px;
+      padding: 10px;
+      border-radius: 12px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .fx-action-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+    .fx-btn {
+      position: relative;
+      overflow: hidden;
+      padding: 11px 6px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.06);
+      color: #f8fafc;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+    .fx-btn:active {
+      transform: scale(0.96);
+    }
+    .fx-btn.riser-active {
+      border-color: #eab308;
+      background: rgba(234, 179, 8, 0.22);
+      color: #fef08a;
+      box-shadow: 0 0 12px rgba(234, 179, 8, 0.35);
+    }
+    .fx-btn.blackout-active {
+      border-color: #ef4444;
+      background: rgba(239, 68, 68, 0.28);
+      color: #fecaca;
+      box-shadow: 0 0 14px rgba(239, 68, 68, 0.45);
+    }
+    .sens-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .sens-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+    }
+    .sens-badge {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--cyan-accent);
+      background: rgba(0, 240, 255, 0.12);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      padding: 2px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .sens-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.14);
+      outline: none;
+    }
+    .sens-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--cyan-accent);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+      cursor: pointer;
+    }
+
+    .spread-badge {
+      font-size: 11px;
+      font-weight: 800;
+      color: #c084fc;
+      background: rgba(192, 132, 252, 0.12);
+      border: 1px solid rgba(192, 132, 252, 0.35);
+      padding: 2px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .spread-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.14);
+      outline: none;
+    }
+    .spread-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #c084fc;
+      box-shadow: 0 0 10px rgba(192, 132, 252, 0.6);
+      cursor: pointer;
+    }
+
+    .preset-btn {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(192, 132, 252, 0.35);
+      background: rgba(192, 132, 252, 0.12);
+      color: #f1f5f9;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .preset-btn:active {
+      transform: scale(0.98);
+      background: rgba(192, 132, 252, 0.25);
+    }
+    .preset-name-badge {
+      color: #c084fc;
+      font-weight: 800;
+      background: rgba(192, 132, 252, 0.22);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+    }
+
+    /* Manual BPM Pulse Mode Row */
+    .bpm-pulse-row {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .bpm-controls-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .pulse-toggle-btn {
+      flex: 1.2;
+      padding: 8px 10px;
+      border-radius: 9px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.06);
+      color: #cbd5e1;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+    .pulse-toggle-btn.active {
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.24);
+      color: #6ee7b7;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.38);
+    }
+    .bpm-step-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .bpm-nudge-btn {
+      width: 30px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.07);
+      color: #f8fafc;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .bpm-nudge-btn:active {
+      transform: scale(0.94);
+      background: rgba(255, 255, 255, 0.16);
+    }
+    .bpm-readout {
+      min-width: 68px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 800;
+      color: #10b981;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 6px 6px;
+      border-radius: 8px;
+    }
+    .tap-tempo-btn {
+      padding: 8px 11px;
+      border-radius: 9px;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      background: rgba(245, 158, 11, 0.16);
+      color: #fde68a;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .tap-tempo-btn:active {
+      transform: scale(0.94);
+      background: rgba(245, 158, 11, 0.35);
+    }
+    .bpm-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 7px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.12);
+      outline: none;
+    }
+    .bpm-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+      cursor: pointer;
     }
 
     /* Category Filter Pills */
@@ -474,12 +913,49 @@
         <span class="status-dot" id="status-dot"></span>
         <span id="status-text">ONLINE</span>
       </div>
-      <button class="mode-toggle-btn cue-mode" id="mode-toggle-btn">
-        <span id="mode-icon">🎯</span>
-        <span id="mode-text">MODE: CUE NEXT</span>
-      </button>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <button class="health-pill" id="health-pill" title="Projector Health & Recovery">⚡ -- FPS · 🛠</button>
+        <button class="mode-toggle-btn cue-mode" id="mode-toggle-btn">
+          <span id="mode-icon">🎯</span>
+          <span id="mode-text">MODE: CUE NEXT</span>
+        </button>
+      </div>
     </div>
   </header>
+
+  <!-- Automatic Freeze / Stall Alert Banner -->
+  <div class="freeze-alert-banner" id="freeze-alert-banner">
+    <span id="freeze-alert-text">⚠️ Projector frame stall detected!</span>
+    <button class="recovery-btn danger" id="alert-reload-btn" style="padding:6px 10px;white-space:nowrap;">🔄 Reload Now</button>
+  </div>
+
+  <!-- On-Demand Recovery & Health Drawer -->
+  <div class="recovery-drawer" id="recovery-drawer">
+    <div class="recovery-meta">
+      <span id="recovery-health-summary">Projector: awaiting telemetry...</span>
+      <span id="recovery-cache-summary">GPU Cache: --</span>
+    </div>
+    <div class="recovery-btn-row" style="grid-template-columns: repeat(4, 1fr);">
+      <button class="recovery-btn" id="btn-clean-projection">👁 Clean</button>
+      <button class="recovery-btn" id="btn-soft-reset">✨ Reset FX</button>
+      <button class="recovery-btn" id="btn-rebuild-gpu">🔧 Rebuild</button>
+      <button class="recovery-btn danger" id="btn-reload-engine">🔄 Reload</button>
+    </div>
+  </div>
+
+  <!-- Party Crate Selector Bar -->
+  <section class="crate-selector-section">
+    <div class="crate-header">
+      <span class="crate-section-title">ACTIVE CRATE (PAD 3 SCOPE)</span>
+      <span class="crate-badge" id="active-crate-badge">🎃 HALLOWEEN</span>
+    </div>
+    <div class="crate-bar" id="crate-bar">
+      <button class="crate-btn active" data-crate="halloween">🎃 Halloween <span class="crate-count" id="count-halloween">23</span></button>
+      <button class="crate-btn" data-crate="diwali">🪔 Diwali <span class="crate-count" id="count-diwali">29</span></button>
+      <button class="crate-btn" data-crate="master">📁 Master Vault <span class="crate-count" id="count-master">64</span></button>
+      <button class="crate-btn" data-crate="kabir">📖 Kabir Story <span class="crate-count" id="count-kabir">17</span></button>
+    </div>
+  </section>
 
   <!-- Dual Deck Dock: LIVE vs CUED -->
   <section class="dual-dock">
@@ -522,14 +998,54 @@
     <button class="clear-btn" id="clear-btn" disabled>CLEAR</button>
   </div>
 
+  <!-- Simple Live Performance Controls: Risers, Blackout & Audio Sensitivity -->
+  <section class="live-fx-strip">
+    <div class="fx-action-row">
+      <button class="fx-btn" id="btn-riser-4">📈 4-BAR RISER</button>
+      <button class="fx-btn" id="btn-riser-8">🚀 8-BAR RISER</button>
+      <button class="fx-btn" id="btn-blackout">🌑 BLACKOUT</button>
+    </div>
+    <div>
+      <button class="preset-btn" id="btn-cycle-preset" title="Cycle 3D Motion Preset (Pad 5 / Key V)">
+        <span style="display:flex;align-items:center;gap:6px;"><span>✨</span><span>3D PRESET</span></span>
+        <span class="preset-name-badge" id="preset-name-badge">Liquid Ripple</span>
+      </button>
+    </div>
+    <div class="sens-row">
+      <div class="sens-header">
+        <span>🎙️ AUDIO SENSITIVITY</span>
+        <span class="sens-badge" id="sens-value-badge" title="Tap to reset to 1.5x">1.5x (Reset)</span>
+      </div>
+      <input type="range" class="sens-slider" id="sens-slider" min="0.2" max="3.5" step="0.1" value="1.5">
+    </div>
+    <div class="sens-row">
+      <div class="sens-header">
+        <span>🌊 WAVE SPREAD</span>
+        <span class="spread-badge" id="spread-value-badge" title="Tap to reset to 2.50">2.50 (Reset)</span>
+      </div>
+      <input type="range" class="spread-slider" id="spread-slider" min="1.8" max="3.6" step="0.05" value="2.5">
+    </div>
+    <div class="bpm-pulse-row">
+      <div class="bpm-controls-bar">
+        <button class="pulse-toggle-btn" id="btn-bpm-pulse" title="Pulse visuals to BPM without audio">💓 PULSE: OFF</button>
+        <div class="bpm-step-group">
+          <button class="bpm-nudge-btn" id="btn-bpm-minus" title="BPM -1">−</button>
+          <span class="bpm-readout" id="bpm-value-badge">128 BPM</span>
+          <button class="bpm-nudge-btn" id="btn-bpm-plus" title="BPM +1">+</button>
+        </div>
+        <button class="tap-tempo-btn" id="btn-tap-tempo" title="Tap on beat to set BPM & sync Beat 1">🥁 TAP</button>
+      </div>
+      <input type="range" class="bpm-slider" id="bpm-slider" min="60" max="180" step="1" value="128">
+    </div>
+  </section>
+
   <!-- Category Filter Pills -->
   <div class="filter-scroll">
-    <button class="filter-pill active" data-cat="all">ALL ABSTRACT (69)</button>
-    <button class="filter-pill" data-cat="totem">TOTEMS / SACRED</button>
-    <button class="filter-pill" data-cat="cosmic">COSMIC / SPACE</button>
-    <button class="filter-pill" data-cat="fluid">FLUID & ORGANIC</button>
+    <button class="filter-pill active" data-cat="all">ALL IN CRATE</button>
+    <button class="filter-pill" data-cat="totem">TOTEMS / RADIAL</button>
     <button class="filter-pill" data-cat="world">WORLD 16:9</button>
-    <button class="filter-pill" data-cat="kabir" style="border-color: rgba(245, 158, 11, 0.45); color: #fbbf24; background: rgba(245, 158, 11, 0.08);">📖 KABIR'S UNIVERSE (16)</button>
+    <button class="filter-pill" data-cat="cosmic">COSMIC</button>
+    <button class="filter-pill" data-cat="fluid">FLUID</button>
   </div>
 
   <!-- Search Filter -->
@@ -554,6 +1070,8 @@
     let allAssets = [];
     let activeAssetId = 0;
     let cuedAssetId = null;
+    let activeCrate = 'halloween';
+    let cratesMeta = [];
     let activeFilter = 'all';
     let searchQuery = '';
     let tapMode = 'cue'; // 'cue' | 'direct'
@@ -582,6 +1100,8 @@
     const gridContainer = document.getElementById('grid-container');
     const searchInput = document.getElementById('search-input');
     const filterPills = document.querySelectorAll('.filter-pill');
+    const crateBtns = document.querySelectorAll('.crate-btn');
+    const activeCrateBadge = document.getElementById('active-crate-badge');
 
     // BroadcastChannel for multi-tab zero-latency local communication
     const remoteChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('dj_engine_assets') : null;
@@ -635,28 +1155,53 @@
       return 'totem'; // mandalas, diya, rangoli, jalebi, wheel, etc.
     }
 
-    // Render Grid
+    // Crate UI update helper
+    function updateCrateUi() {
+      crateBtns.forEach(btn => {
+        const cId = btn.dataset.crate;
+        btn.classList.toggle('active', cId === activeCrate);
+      });
+      if (activeCrateBadge) {
+        if (activeCrate === 'halloween') {
+          activeCrateBadge.textContent = '🎃 HALLOWEEN';
+          activeCrateBadge.style.borderColor = '#f97316';
+          activeCrateBadge.style.color = '#fb923c';
+          activeCrateBadge.style.background = 'rgba(249, 115, 22, 0.2)';
+        } else if (activeCrate === 'diwali') {
+          activeCrateBadge.textContent = '🪔 DIWALI';
+          activeCrateBadge.style.borderColor = '#eab308';
+          activeCrateBadge.style.color = '#fde047';
+          activeCrateBadge.style.background = 'rgba(234, 179, 8, 0.2)';
+        } else if (activeCrate === 'master') {
+          activeCrateBadge.textContent = '📁 MASTER VAULT';
+          activeCrateBadge.style.borderColor = '#00f0ff';
+          activeCrateBadge.style.color = '#67e8f9';
+          activeCrateBadge.style.background = 'rgba(0, 240, 255, 0.2)';
+        } else if (activeCrate === 'kabir') {
+          activeCrateBadge.textContent = "📖 KABIR'S UNIVERSE";
+          activeCrateBadge.style.borderColor = '#f59e0b';
+          activeCrateBadge.style.color = '#fcd34d';
+          activeCrateBadge.style.background = 'rgba(245, 158, 11, 0.2)';
+        }
+      }
+    }
+
+    // Render Grid (Scoped to active crate)
     function renderGrid() {
       gridContainer.innerHTML = '';
 
-      const filtered = allAssets.filter(asset => {
-        const isKabir = asset.collection === 'kabir' || (asset.filename && asset.filename.includes("Kabir's universe"));
+      // 1. Filter strictly by active crate if assets have crate tags
+      const hasCrateTags = allAssets.some(a => a.crate);
+      const crateScoped = hasCrateTags ? allAssets.filter(a => a.crate === activeCrate) : allAssets;
 
-        // Category filter
-        if (activeFilter === 'kabir') {
-          // Strictly show only the Kabir story collection
-          if (!isKabir) return false;
-        } else {
-          // Keep all regular abstract collections completely clean of story cards!
-          if (isKabir) return false;
-
-          if (activeFilter !== 'all') {
-            const cat = getCategory(asset);
-            if (activeFilter === 'totem' && cat !== 'totem') return false;
-            if (activeFilter === 'cosmic' && cat !== 'cosmic') return false;
-            if (activeFilter === 'fluid' && cat !== 'fluid') return false;
-            if (activeFilter === 'world' && cat !== 'world' && asset.framing !== 'world') return false;
-          }
+      const filtered = crateScoped.filter(asset => {
+        // Category sub-filter
+        if (activeFilter !== 'all') {
+          const cat = getCategory(asset);
+          if (activeFilter === 'totem' && asset.framing !== 'totem' && cat !== 'totem') return false;
+          if (activeFilter === 'world' && asset.framing !== 'world' && cat !== 'world') return false;
+          if (activeFilter === 'cosmic' && cat !== 'cosmic') return false;
+          if (activeFilter === 'fluid' && cat !== 'fluid') return false;
         }
 
         // Search query
@@ -714,10 +1259,12 @@
         liveImg.style.display = 'block';
         livePlaceholder.style.display = 'none';
         liveName.textContent = liveAsset.name;
+        const cName = liveAsset.crateName ? `${liveAsset.crateIcon || '📦'} ${liveAsset.crateName}` : 'Asset';
+        const frameLabel = liveAsset.framing === 'world' ? '16:9 World' : 'Radial Totem';
         if (liveAsset.collection === 'kabir') {
-          liveSub.textContent = `Story Chapter ${liveAsset.chapter || ''} • 16:9 World-Field`;
+          liveSub.textContent = `${cName} • Ch ${liveAsset.chapter || ''} • 16:9 World-Field`;
         } else {
-          liveSub.textContent = `Asset #${liveAsset.id + 1} (${liveAsset.framing === 'world' ? '16:9 Field' : 'Radial Totem'})`;
+          liveSub.textContent = `${cName} • ${frameLabel}`;
         }
       } else {
         liveImg.style.display = 'none';
@@ -765,7 +1312,7 @@
     }
 
     // Post Action to Server & BroadcastChannel
-    async function postAction(action, id = null) {
+    async function postAction(action, id = null, extra = {}) {
       // Local optimistic update
       if (action === 'select_asset') {
         activeAssetId = id;
@@ -779,14 +1326,19 @@
           activeAssetId = cuedAssetId;
           cuedAssetId = null;
         }
+      } else if (action === 'select_crate' && (extra.crateId || extra.crate)) {
+        activeCrate = extra.crateId || extra.crate;
+        updateCrateUi();
       }
 
       updateDock();
       renderGrid();
 
+      const payload = { action, id, source: 'remote', ...extra };
+
       // Broadcast to local tabs
       if (remoteChannel) {
-        remoteChannel.postMessage({ action, id, source: 'remote' });
+        remoteChannel.postMessage(payload);
       }
 
       // Send to server API
@@ -794,12 +1346,15 @@
         const res = await fetch('/api/action', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action, id, source: 'remote' })
+          body: JSON.stringify(payload)
         });
         if (res.ok) {
           const data = await res.json();
           if (data.activeAssetId !== undefined) activeAssetId = data.activeAssetId;
           if (data.cuedAssetId !== undefined) cuedAssetId = data.cuedAssetId;
+          if (data.state && data.state.liveControls) {
+            updateLiveControlsUi(data.state.liveControls);
+          }
           updateDock();
           renderGrid();
           setConnectionStatus(true);
@@ -821,12 +1376,356 @@
       }
     }
 
+    // Engine Health & Freeze Detection on Mobile Remote
+    const healthPill = document.getElementById('health-pill');
+    const freezeAlertBanner = document.getElementById('freeze-alert-banner');
+    const freezeAlertText = document.getElementById('freeze-alert-text');
+    const alertReloadBtn = document.getElementById('alert-reload-btn');
+    const recoveryDrawer = document.getElementById('recovery-drawer');
+    const recoveryHealthSummary = document.getElementById('recovery-health-summary');
+    const recoveryCacheSummary = document.getElementById('recovery-cache-summary');
+    const btnSoftReset = document.getElementById('btn-soft-reset');
+    const btnRebuildGpu = document.getElementById('btn-rebuild-gpu');
+    const btnReloadEngine = document.getElementById('btn-reload-engine');
+
+    function updateHealthUi(health, serverTimeSec = null) {
+      if (!health) return;
+      const nowSec = serverTimeSec || (Date.now() / 1000);
+      const hbAgeSec = health.serverReceivedAt ? Math.max(0, nowSec - health.serverReceivedAt) : 0;
+      const frameAgeMs = health.lastFrameAgeMs || 0;
+      const fps = health.fps !== undefined ? health.fps : '--';
+      const isStalled = hbAgeSec > 6.5 || frameAgeMs > 3000 || Boolean(health.contextLost);
+
+      if (healthPill) {
+        healthPill.textContent = isStalled ? `⚠️ STALL · 🛠` : `⚡ ${fps} FPS · 🛠`;
+        healthPill.classList.toggle('stalled', isStalled);
+      }
+      if (freezeAlertBanner) {
+        freezeAlertBanner.classList.toggle('visible', isStalled);
+        if (isStalled && freezeAlertText) {
+          if (health.contextLost) {
+            freezeAlertText.textContent = '⚠️ Projector WebGL GPU context lost!';
+          } else if (hbAgeSec > 6.5) {
+            freezeAlertText.textContent = `⚠️ Projector stopped responding (${Math.round(hbAgeSec)}s ago)!`;
+          } else {
+            freezeAlertText.textContent = `⚠️ Projector frame frozen (${(frameAgeMs / 1000).toFixed(1)}s)!`;
+          }
+        }
+      }
+      if (recoveryHealthSummary) {
+        const upMin = Math.floor((health.uptimeSec || 0) / 60);
+        recoveryHealthSummary.textContent = `Projector: ${fps} FPS • Up ${upMin}m • Errs: ${health.errorsCount || 0}`;
+      }
+      if (recoveryCacheSummary) {
+        recoveryCacheSummary.textContent = `VRAM Cache: ${health.cachedTextures ?? '--'}/${health.maxTextures ?? 10}`;
+      }
+    }
+
+    const btnCleanProjection = document.getElementById('btn-clean-projection');
+    const btnRiser4 = document.getElementById('btn-riser-4');
+    const btnRiser8 = document.getElementById('btn-riser-8');
+    const btnBlackout = document.getElementById('btn-blackout');
+    const sensSlider = document.getElementById('sens-slider');
+    const sensValueBadge = document.getElementById('sens-value-badge');
+    const spreadSlider = document.getElementById('spread-slider');
+    const spreadValueBadge = document.getElementById('spread-value-badge');
+    const btnCyclePreset = document.getElementById('btn-cycle-preset');
+    const presetNameBadge = document.getElementById('preset-name-badge');
+    const btnBpmPulse = document.getElementById('btn-bpm-pulse');
+    const btnBpmMinus = document.getElementById('btn-bpm-minus');
+    const btnBpmPlus = document.getElementById('btn-bpm-plus');
+    const bpmValueBadge = document.getElementById('bpm-value-badge');
+    const btnTapTempo = document.getElementById('btn-tap-tempo');
+    const bpmSlider = document.getElementById('bpm-slider');
+    let isDraggingSens = false;
+    let lastSensPostTime = 0;
+    let lastUserSensActionTime = 0;
+    let isDraggingSpread = false;
+    let lastSpreadPostTime = 0;
+    let lastUserSpreadActionTime = 0;
+    let isDraggingBpm = false;
+    let lastBpmPostTime = 0;
+    let remoteTapTimes = [];
+    const PRESET_LIST = [
+      'Liquid Ripple',
+      'Kick Shockwave',
+      'Melody Waves',
+      'Snare & Kick Interlock'
+    ];
+    let currentPresetIdx = 0;
+
+    function postControl(cmd, value = null) {
+      return postAction('control', null, { cmd, value });
+    }
+
+    function updateLiveControlsUi(lc) {
+      if (!lc) return;
+      const bState = lc.buildupState || 'idle';
+      const bBars = lc.buildupBars || 4;
+      const bPct = Math.round((lc.buildupProgress || 0) * 100);
+      const isBuilding = bState === 'building' || bState === 'holding_climax';
+
+      if (btnRiser4) {
+        const active4 = isBuilding && bBars === 4;
+        btnRiser4.classList.toggle('riser-active', active4);
+        btnRiser4.textContent = active4
+          ? (bState === 'holding_climax' ? '🔥 4-BAR PEAK' : `📈 4-BAR (${bPct}%)`)
+          : '📈 4-BAR RISER';
+      }
+      if (btnRiser8) {
+        const active8 = isBuilding && bBars === 8;
+        btnRiser8.classList.toggle('riser-active', active8);
+        btnRiser8.textContent = active8
+          ? (bState === 'holding_climax' ? '🔥 8-BAR PEAK' : `🚀 8-BAR (${bPct}%)`)
+          : '🚀 8-BAR RISER';
+      }
+      if (btnBlackout) {
+        const isBlack = Boolean(lc.blackout || bState === 'blackout_shut');
+        btnBlackout.classList.toggle('blackout-active', isBlack);
+        btnBlackout.textContent = isBlack ? '🌑 BLACKOUT ON' : '🌑 BLACKOUT';
+      }
+      if (btnCleanProjection && lc.cleanProjection !== undefined) {
+        btnCleanProjection.textContent = lc.cleanProjection ? '👁 Clean ON' : '👁 Clean';
+        btnCleanProjection.style.borderColor = lc.cleanProjection ? '#10b981' : '';
+        btnCleanProjection.style.color = lc.cleanProjection ? '#34d399' : '';
+      }
+      const isSensTouchLocked = isDraggingSens || (performance.now() - lastUserSensActionTime < 1800);
+      if (!isSensTouchLocked && lc.audioSensitivity !== undefined && sensSlider && sensValueBadge) {
+        const sVal = Number(lc.audioSensitivity) || 1.5;
+        sensSlider.value = sVal.toFixed(1);
+        sensValueBadge.textContent = `${sVal.toFixed(1)}x (Reset)`;
+      }
+      const isSpreadTouchLocked = isDraggingSpread || (performance.now() - lastUserSpreadActionTime < 1800);
+      if (!isSpreadTouchLocked && lc.waveSpread !== undefined && spreadSlider && spreadValueBadge) {
+        const spVal = Number(lc.waveSpread) || 2.5;
+        spreadSlider.value = spVal.toFixed(2);
+        spreadValueBadge.textContent = `${spVal.toFixed(2)} (Reset)`;
+      }
+      if (presetNameBadge && lc.presetName) {
+        presetNameBadge.textContent = lc.presetName.replace('Beat-Synced ', '').replace('Kinetic ', '');
+      }
+      if (lc.presetIndex !== undefined) {
+        currentPresetIdx = parseInt(lc.presetIndex, 10) || 0;
+      }
+      if (btnBpmPulse && lc.bpmPulse !== undefined) {
+        const pOn = Boolean(lc.bpmPulse);
+        btnBpmPulse.classList.toggle('active', pOn);
+        btnBpmPulse.textContent = pOn ? '💓 PULSE: ON' : '💓 PULSE: OFF';
+      }
+      if (!isDraggingBpm && lc.bpm !== undefined && bpmSlider && bpmValueBadge) {
+        const bVal = Math.round(Number(lc.bpm) || 128);
+        bpmSlider.value = String(Math.max(60, Math.min(180, bVal)));
+        bpmValueBadge.textContent = `${bVal} BPM`;
+      }
+    }
+
+    if (healthPill && recoveryDrawer) {
+      healthPill.addEventListener('click', () => {
+        haptic(15);
+        recoveryDrawer.classList.toggle('visible');
+      });
+    }
+    if (btnCleanProjection) {
+      btnCleanProjection.addEventListener('click', () => {
+        haptic(25);
+        postControl('clean_projection_toggle');
+      });
+    }
+    if (btnSoftReset) {
+      btnSoftReset.addEventListener('click', () => {
+        haptic(35);
+        postAction('soft_reset');
+      });
+    }
+    if (btnRebuildGpu) {
+      btnRebuildGpu.addEventListener('click', () => {
+        haptic(45);
+        postAction('rebuild_webgl');
+      });
+    }
+    if (btnReloadEngine) {
+      btnReloadEngine.addEventListener('click', () => {
+        haptic(60);
+        postAction('reload_engine');
+      });
+    }
+    if (alertReloadBtn) {
+      alertReloadBtn.addEventListener('click', () => {
+        haptic(60);
+        postAction('reload_engine');
+      });
+    }
+    if (btnRiser4) {
+      btnRiser4.addEventListener('click', () => {
+        haptic(35);
+        postControl('riser_4');
+      });
+    }
+    if (btnRiser8) {
+      btnRiser8.addEventListener('click', () => {
+        haptic(35);
+        postControl('riser_8');
+      });
+    }
+    if (btnBlackout) {
+      btnBlackout.addEventListener('click', () => {
+        haptic(45);
+        postControl('blackout_toggle');
+      });
+    }
+    if (sensSlider) {
+      sensSlider.addEventListener('pointerdown', () => { isDraggingSens = true; lastUserSensActionTime = performance.now(); });
+      sensSlider.addEventListener('pointerup', () => { isDraggingSens = false; lastUserSensActionTime = performance.now(); });
+      sensSlider.addEventListener('pointercancel', () => { isDraggingSens = false; });
+      sensSlider.addEventListener('input', (e) => {
+        lastUserSensActionTime = performance.now();
+        const val = parseFloat(e.target.value) || 1.5;
+        if (sensValueBadge) sensValueBadge.textContent = `${val.toFixed(1)}x (Reset)`;
+        const now = performance.now();
+        if (now - lastSensPostTime > 45) {
+          lastSensPostTime = now;
+          postControl('set_sensitivity', val);
+        }
+      });
+      sensSlider.addEventListener('change', (e) => {
+        isDraggingSens = false;
+        lastUserSensActionTime = performance.now();
+        const val = parseFloat(e.target.value) || 1.5;
+        if (sensValueBadge) sensValueBadge.textContent = `${val.toFixed(1)}x (Reset)`;
+        postControl('set_sensitivity', val);
+      });
+    }
+    if (sensValueBadge && sensSlider) {
+      sensValueBadge.addEventListener('click', () => {
+        haptic(20);
+        lastUserSensActionTime = performance.now();
+        sensSlider.value = '1.5';
+        sensValueBadge.textContent = '1.5x (Reset)';
+        postControl('set_sensitivity', 1.5);
+      });
+    }
+    if (btnCyclePreset) {
+      btnCyclePreset.addEventListener('click', () => {
+        haptic(35);
+        currentPresetIdx = (currentPresetIdx + 1) % PRESET_LIST.length;
+        if (presetNameBadge) presetNameBadge.textContent = PRESET_LIST[currentPresetIdx];
+        postControl('cycle_preset');
+      });
+    }
+    if (spreadSlider) {
+      spreadSlider.addEventListener('pointerdown', () => { isDraggingSpread = true; lastUserSpreadActionTime = performance.now(); });
+      spreadSlider.addEventListener('pointerup', () => { isDraggingSpread = false; lastUserSpreadActionTime = performance.now(); });
+      spreadSlider.addEventListener('pointercancel', () => { isDraggingSpread = false; });
+      spreadSlider.addEventListener('input', (e) => {
+        lastUserSpreadActionTime = performance.now();
+        const val = parseFloat(e.target.value) || 2.5;
+        if (spreadValueBadge) spreadValueBadge.textContent = `${val.toFixed(2)} (Reset)`;
+        const now = performance.now();
+        if (now - lastSpreadPostTime > 45) {
+          lastSpreadPostTime = now;
+          postControl('set_spread', val);
+        }
+      });
+      spreadSlider.addEventListener('change', (e) => {
+        isDraggingSpread = false;
+        lastUserSpreadActionTime = performance.now();
+        const val = parseFloat(e.target.value) || 2.5;
+        if (spreadValueBadge) spreadValueBadge.textContent = `${val.toFixed(2)} (Reset)`;
+        postControl('set_spread', val);
+      });
+    }
+    if (spreadValueBadge && spreadSlider) {
+      spreadValueBadge.addEventListener('click', () => {
+        haptic(20);
+        lastUserSpreadActionTime = performance.now();
+        spreadSlider.value = '2.50';
+        spreadValueBadge.textContent = '2.50 (Reset)';
+        postControl('set_spread', 2.5);
+      });
+    }
+    if (btnBpmPulse) {
+      btnBpmPulse.addEventListener('click', () => {
+        haptic(35);
+        const nextActive = !btnBpmPulse.classList.contains('active');
+        btnBpmPulse.classList.toggle('active', nextActive);
+        btnBpmPulse.textContent = nextActive ? '💓 PULSE: ON' : '💓 PULSE: OFF';
+        postControl('bpm_pulse_toggle', nextActive);
+      });
+    }
+    if (btnBpmMinus && bpmSlider && bpmValueBadge) {
+      btnBpmMinus.addEventListener('click', () => {
+        haptic(20);
+        const nextBpm = Math.max(60, Math.min(200, (parseInt(bpmSlider.value, 10) || 128) - 1));
+        bpmSlider.value = String(Math.min(180, nextBpm));
+        bpmValueBadge.textContent = `${nextBpm} BPM`;
+        postControl('set_bpm', nextBpm);
+      });
+    }
+    if (btnBpmPlus && bpmSlider && bpmValueBadge) {
+      btnBpmPlus.addEventListener('click', () => {
+        haptic(20);
+        const nextBpm = Math.max(60, Math.min(200, (parseInt(bpmSlider.value, 10) || 128) + 1));
+        bpmSlider.value = String(Math.min(180, nextBpm));
+        bpmValueBadge.textContent = `${nextBpm} BPM`;
+        postControl('set_bpm', nextBpm);
+      });
+    }
+    if (bpmSlider && bpmValueBadge) {
+      bpmSlider.addEventListener('pointerdown', () => { isDraggingBpm = true; });
+      bpmSlider.addEventListener('pointerup', () => { isDraggingBpm = false; });
+      bpmSlider.addEventListener('pointercancel', () => { isDraggingBpm = false; });
+      bpmSlider.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value, 10) || 128;
+        bpmValueBadge.textContent = `${val} BPM`;
+        const now = performance.now();
+        if (now - lastBpmPostTime > 55) {
+          lastBpmPostTime = now;
+          postControl('set_bpm', val);
+        }
+      });
+      bpmSlider.addEventListener('change', (e) => {
+        isDraggingBpm = false;
+        const val = parseInt(e.target.value, 10) || 128;
+        bpmValueBadge.textContent = `${val} BPM`;
+        postControl('set_bpm', val);
+      });
+    }
+    if (btnTapTempo) {
+      btnTapTempo.addEventListener('click', () => {
+        haptic(30);
+        const now = performance.now();
+        remoteTapTimes = remoteTapTimes.filter(t => (now - t) < 3200);
+        remoteTapTimes.push(now);
+        let tappedBpm = null;
+        if (remoteTapTimes.length >= 2) {
+          const intervals = [];
+          for (let i = 1; i < remoteTapTimes.length; i++) {
+            intervals.push(remoteTapTimes[i] - remoteTapTimes[i - 1]);
+          }
+          const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+          const calc = Math.round(60000 / avg);
+          if (calc >= 60 && calc <= 200) {
+            tappedBpm = calc;
+            if (bpmSlider) bpmSlider.value = String(Math.min(180, calc));
+            if (bpmValueBadge) bpmValueBadge.textContent = `${calc} BPM`;
+          }
+        }
+        postControl('tap_tempo', tappedBpm);
+      });
+    }
+
     // Poll State from Server
     async function pollState() {
       try {
         const res = await fetch('/api/state?t=' + Date.now());
         if (res.ok) {
           const state = await res.json();
+          if (state.health) {
+            updateHealthUi(state.health, state.serverTime);
+          }
+          if (state.liveControls) {
+            updateLiveControlsUi(state.liveControls);
+          }
           // Auto-detect when new assets have been added to the engine folder
           if (state.assetCount !== undefined && state.assetCount !== allAssets.length) {
             await loadAssets();
@@ -841,6 +1740,18 @@
             cuedAssetId = state.cuedAssetId;
             changed = true;
           }
+          if (state.activeCrate && state.activeCrate !== activeCrate) {
+            activeCrate = state.activeCrate;
+            updateCrateUi();
+            changed = true;
+          }
+          if (state.crates && Array.isArray(state.crates)) {
+            cratesMeta = state.crates;
+            state.crates.forEach(c => {
+              const el = document.getElementById('count-' + c.id);
+              if (el) el.textContent = c.count;
+            });
+          }
           if (changed) {
             updateDock();
             renderGrid();
@@ -853,8 +1764,79 @@
         setConnectionStatus(false);
       }
     }
-    setInterval(pollState, 450);
-    setInterval(loadAssets, 10000); // Dynamic asset sync
+    // Real-Time Server-Sent Events (SSE) Push Stream (< 15ms)
+    let sseRemote = null;
+    function initSSE() {
+      if (typeof EventSource === 'undefined') return;
+      try {
+        if (sseRemote) sseRemote.close();
+        sseRemote = new EventSource('/api/events');
+        sseRemote.onopen = () => setConnectionStatus(true);
+        sseRemote.onmessage = (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            if (!data) return;
+            const { action, id, crate, state, source } = data;
+            let changed = false;
+            if (state) {
+              if (state.health) {
+                updateHealthUi(state.health, state.serverTime);
+              }
+              if (state.liveControls) {
+                updateLiveControlsUi(state.liveControls);
+              }
+              if (state.activeAssetId !== undefined && state.activeAssetId !== activeAssetId) {
+                activeAssetId = state.activeAssetId;
+                changed = true;
+              }
+              if (state.cuedAssetId !== undefined && state.cuedAssetId !== cuedAssetId) {
+                cuedAssetId = state.cuedAssetId;
+                changed = true;
+              }
+              if (state.activeCrate && state.activeCrate !== activeCrate) {
+                activeCrate = state.activeCrate;
+                updateCrateUi();
+                changed = true;
+              }
+            } else if (source === 'engine') {
+              if (action === 'select_asset' && id !== undefined && id !== activeAssetId) {
+                activeAssetId = id;
+                cuedAssetId = null;
+                changed = true;
+              } else if (action === 'cue_asset' && id !== undefined) {
+                cuedAssetId = id;
+                changed = true;
+              } else if (action === 'commit_cued') {
+                if (cuedAssetId !== null) {
+                  activeAssetId = cuedAssetId;
+                  cuedAssetId = null;
+                  changed = true;
+                }
+              } else if (action === 'select_crate' && (crate || id)) {
+                activeCrate = crate || id;
+                updateCrateUi();
+                changed = true;
+              }
+            }
+            if (changed) {
+              updateDock();
+              renderGrid();
+            }
+            setConnectionStatus(true);
+          } catch (_) {}
+        };
+        sseRemote.onerror = () => {
+          // Automatic browser reconnect
+        };
+      } catch (err) {
+        console.warn('[SSE] EventSource fallback:', err);
+      }
+    }
+    initSSE();
+
+    // Low-overhead background heartbeat (2500ms) as backup
+    setInterval(pollState, 2500);
+    setInterval(loadAssets, 15000); // Dynamic asset sync
 
     // Initial Fetch of All Assets
     async function loadAssets() {
@@ -864,6 +1846,15 @@
           const data = await res.json();
           if (data && Array.isArray(data.assets)) {
             allAssets = data.assets;
+            if (data.activeCrate) activeCrate = data.activeCrate;
+            if (data.crates) {
+              cratesMeta = data.crates;
+              data.crates.forEach(c => {
+                const el = document.getElementById('count-' + c.id);
+                if (el) el.textContent = c.count;
+              });
+            }
+            updateCrateUi();
             updateDock();
             renderGrid();
           }
@@ -909,7 +1900,13 @@
 
     slamBtn.addEventListener('click', () => {
       haptic(50);
-      postAction('commit_cued');
+      if (cuedAssetId !== null) {
+        activeAssetId = cuedAssetId;
+        cuedAssetId = null;
+        updateDock();
+        renderGrid();
+      }
+      postControl('drop_slam');
     });
 
     filterPills.forEach(pill => {
@@ -927,11 +1924,35 @@
       renderGrid();
     });
 
+    // Crate Button Click Handlers
+    crateBtns.forEach(btn => {
+      btn.addEventListener('click', async () => {
+        haptic(25);
+        const targetCrate = btn.dataset.crate;
+        if (targetCrate && targetCrate !== activeCrate) {
+          activeCrate = targetCrate;
+          updateCrateUi();
+          renderGrid();
+          await postAction('select_crate', null, { crateId: targetCrate, crate: targetCrate });
+        }
+      });
+    });
+
     // Listen to local BroadcastChannel messages
     if (remoteChannel) {
       remoteChannel.onmessage = (e) => {
-        const { action, id, source } = e.data || {};
+        const { action, id, source, crate, crateId, health, liveControls } = e.data || {};
         if (source === 'engine') {
+          if (action === 'heartbeat') {
+            if (health) updateHealthUi(health);
+            if (liveControls) updateLiveControlsUi(liveControls);
+            return;
+          }
+          if (action === 'select_crate' && (crate || crateId)) {
+            activeCrate = crate || crateId;
+            updateCrateUi();
+            renderGrid();
+          }
           if (action === 'select_asset' && id !== undefined) {
             activeAssetId = id;
             cuedAssetId = null;
